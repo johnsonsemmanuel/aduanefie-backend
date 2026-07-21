@@ -65,11 +65,6 @@ class RouteServiceProvider extends ServiceProvider
                         ->middleware('web')
                         ->namespace($this->namespace)
                         ->group(base_path('routes/vendor.php'));
-
-                    Route::middleware('api')
-                        ->namespace($this->namespace)
-                        ->prefix('api/v1')
-                        ->group(base_path('routes/api/v1/api.php'));
                 });
             } else {
                 Route::prefix('admin')
@@ -81,12 +76,12 @@ class RouteServiceProvider extends ServiceProvider
                     ->middleware('web')
                     ->namespace($this->namespace)
                     ->group(base_path('routes/vendor.php'));
-
-                Route::middleware('api')
-                    ->namespace($this->namespace)
-                    ->prefix('api/v1')
-                    ->group(base_path('routes/api/v1/api.php'));
             }
+
+            Route::middleware('api')
+                ->namespace($this->namespace)
+                ->prefix('api/v1')
+                ->group(base_path('routes/api/v1/api.php'));
         });
     }
 
