@@ -52,20 +52,41 @@ class RouteServiceProvider extends ServiceProvider
                 ->namespace($this->namespace)
                 ->group(base_path('routes/web.php'));
 
-            Route::prefix('admin')
-                ->middleware('web')
-                ->namespace($this->namespace)
-                ->group(base_path('routes/admin.php'));
+            $hostDomain = config('app.host_domain');
 
-            Route::prefix('vendor-panel')
-                ->middleware('web')
-                ->namespace($this->namespace)
-                ->group(base_path('routes/vendor.php'));
+            if ($hostDomain) {
+                Route::domain($hostDomain)->group(function () {
+                    Route::prefix('admin')
+                        ->middleware('web')
+                        ->namespace($this->namespace)
+                        ->group(base_path('routes/admin.php'));
 
-            Route::middleware('api')
-                ->namespace($this->namespace)
-                ->prefix('api/v1')
-                ->group(base_path('routes/api/v1/api.php'));
+                    Route::prefix('vendor-panel')
+                        ->middleware('web')
+                        ->namespace($this->namespace)
+                        ->group(base_path('routes/vendor.php'));
+
+                    Route::middleware('api')
+                        ->namespace($this->namespace)
+                        ->prefix('api/v1')
+                        ->group(base_path('routes/api/v1/api.php'));
+                });
+            } else {
+                Route::prefix('admin')
+                    ->middleware('web')
+                    ->namespace($this->namespace)
+                    ->group(base_path('routes/admin.php'));
+
+                Route::prefix('vendor-panel')
+                    ->middleware('web')
+                    ->namespace($this->namespace)
+                    ->group(base_path('routes/vendor.php'));
+
+                Route::middleware('api')
+                    ->namespace($this->namespace)
+                    ->prefix('api/v1')
+                    ->group(base_path('routes/api/v1/api.php'));
+            }
         });
     }
 
