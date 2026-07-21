@@ -82,6 +82,10 @@ class AppServiceProvider extends ServiceProvider
             }
         }
 
+        if (app()->environment('production')) {
+            \URL::forceScheme('https');
+        }
+
         try
         {
             Request::macro('isAny', function (array $patterns) {
