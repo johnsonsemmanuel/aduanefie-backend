@@ -133,6 +133,8 @@ RUN mkdir -p storage/framework/{sessions,views,cache,testing} \
 # Fix PHP-FPM listen for Nginx
 RUN sed -i 's|^listen = .*|listen = 127.0.0.1:9000|' /usr/local/etc/php-fpm.d/www.conf
 
+# Force rebuild for proxy header + asset path fixes
+
 EXPOSE 8080
 
 CMD ["sh", "start.sh"]
