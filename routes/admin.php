@@ -556,6 +556,7 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
                 //file_system
                 Route::get('storage-connection', 'BusinessSettingsController@storage_connection_index')->name('storage_connection_index');
                 Route::post('storage-connection-update/{name}', 'BusinessSettingsController@storage_connection_update')->name('storage_connection_update');
+                Route::post('storage-connection-test', 'BusinessSettingsController@storage_connection_test')->name('storage_connection_test');
             });
             // Offline payment Methods
             Route::get('/offline-payment', 'OfflinePaymentMethodController@index')->name('offline');

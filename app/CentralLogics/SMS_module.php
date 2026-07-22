@@ -33,6 +33,11 @@ class SMS_module
             return self::alphanet_sms($receiver, $otp);
         }
 
+        $config = self::get_settings('intek_sms');
+        if (isset($config) && $config['status'] == 1) {
+            return self::intek_sms($receiver, $otp);
+        }
+
         return 'not_found';
     }
 
@@ -244,6 +249,54 @@ class SMS_module
 
 
 
+
+    public static function intek_sms($receiver, $otp): string
+    {
+        $config = self::get_settings('intek_sms');
+        $response = 'error';
+        if (isset($config) && $config['status'] == 1) {
+            $message = str_replace("#OTP#", $otp, $config['otp_template']);
+            $sender_id = $config['sender_id'];
+            $api_key = $config['api_key'];
+
+            $curl = curl_init();
+            curl_setopt_array($curl, array(
+                CURLOPT_URL => 'https://inteksms.top/api/v1/messages/send',
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_ENCODING => '',
+                CURLOPT_MAXREDIRS => 10,
+                CURLOPT_TIMEOUT => 30,
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                CURLOPT_CUSTOMREQUEST => 'POST',
+                CURLOPT_POSTFIELDS => json_encode(array(
+                    'sender_id' => (int) $sender_id,
+                    'message' => $message,
+                    'recipients' => array($receiver),
+                )),
+                CURLOPT_HTTPHEADER => array(
+                    'Content-Type: application/json',
+                    'Accept: application/json',
+                    'Authorization: Bearer ' . $api_key,
+                ),
+            ));
+
+            $response = curl_exec($curl);
+            $err = curl_error($curl);
+            curl_close($curl);
+
+            if (!$err) {
+                $decoded = json_decode($response, true);
+                if (isset($decoded['success']) && $decoded['success'] === true) {
+                    $response = 'success';
+                } else {
+                    $response = 'error';
+                }
+            } else {
+                $response = 'error';
+            }
+        }
+        return $response;
+    }
 
     public static function get_settings($name)
     {

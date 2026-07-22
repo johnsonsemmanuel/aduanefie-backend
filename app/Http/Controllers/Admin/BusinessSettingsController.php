@@ -2053,6 +2053,7 @@ class BusinessSettingsController extends Controller
             Helpers::businessUpdateOrInsert(['key' => 's3_credential'], [
                 'key' => 's3_credential',
                 'value' => json_encode([
+                    'provider' => $request['provider'] ?? 's3',
                     'key' => $request['key'],
                     'secret' => $request['secret'],
                     'region' => $request['region'],
@@ -2068,6 +2069,24 @@ class BusinessSettingsController extends Controller
         Toastr::success(translate('messages.updated_successfully'));
 
         return back();
+    }
+
+    public function storage_connection_test(Request $request)
+    {
+        Config::set('filesystems.disks.s3.key', $request->key);
+        Config::set('filesystems.disks.s3.secret', $request->secret);
+        Config::set('filesystems.disks.s3.region', $request->region);
+        Config::set('filesystems.disks.s3.bucket', $request->bucket);
+        Config::set('filesystems.disks.s3.url', $request->url);
+        Config::set('filesystems.disks.s3.endpoint', $request->end_point);
+
+        try {
+            Storage::disk('s3')->put('_test/connection-test.txt', 'ok');
+            Storage::disk('s3')->delete('_test/connection-test.txt');
+            return response()->json(['success' => true, 'message' => translate('Connection_successful')]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()]);
+        }
     }
 
     // Send Mail
