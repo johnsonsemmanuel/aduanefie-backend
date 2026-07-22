@@ -27,6 +27,37 @@ class SMSModuleController extends Controller
             }
         }
         $data_values=  Setting::where('settings_type','sms_config')->whereIn('key_name', ['twilio','nexmo','2factor','msg91','alphanet_sms','intek_sms'])->orderByDesc('is_active')->get() ?? [];
+
+        // Auto-create intek_sms row if it doesn't exist yet
+        if (!$data_values->contains('key_name', 'intek_sms')) {
+            DB::table('addon_settings')->updateOrInsert(
+                ['key_name' => 'intek_sms', 'settings_type' => 'sms_config'],
+                [
+                    'key_name' => 'intek_sms',
+                    'live_values' => json_encode([
+                        'gateway' => 'intek_sms',
+                        'mode' => 'test',
+                        'status' => 0,
+                        'api_key' => '',
+                        'sender_id' => '',
+                        'otp_template' => 'Your OTP is #OTP#',
+                    ]),
+                    'test_values' => json_encode([
+                        'gateway' => 'intek_sms',
+                        'mode' => 'test',
+                        'status' => 0,
+                        'api_key' => '',
+                        'sender_id' => '',
+                        'otp_template' => 'Your OTP is #OTP#',
+                    ]),
+                    'settings_type' => 'sms_config',
+                    'mode' => 'test',
+                    'is_active' => 0,
+                ]
+            );
+            $data_values = Setting::where('settings_type','sms_config')->whereIn('key_name', ['twilio','nexmo','2factor','msg91','alphanet_sms','intek_sms'])->orderByDesc('is_active')->get() ?? [];
+        }
+
         return view('admin-views.business-settings.sms-index',compact('data_values','published_status','payment_url'));
     }
 

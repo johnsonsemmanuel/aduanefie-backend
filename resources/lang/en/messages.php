@@ -12696,4 +12696,5 @@ Smartly or Earn. ',
   'R2_bucket_name' => 'R2 bucket name',
   'R2_public_access_URL_(e.g._https://pub-hash.r2.dev_or_custom_domain)' => 'R2 public access URL (e.g. https://pub-hash.r2.dev or custom domain)',
   'R2_endpoint:_https://account-id.r2.cloudflarestorage.com' => 'R2 endpoint: https://account-id.r2.cloudflarestorage.com',
+  'intek_sms' => 'Intek SMS',
 );
