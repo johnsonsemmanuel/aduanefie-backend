@@ -994,14 +994,53 @@ class ItemController extends Controller
         $filter = $request->query('filter', '');
         $filter = $filter?(is_array($filter)?$filter:str_getcsv(trim($filter, "[]"), ',')):'';
         $category_ids = $request->query('category_ids', '');
+        $is_in_season = $request->has('is_in_season') ? (bool) $request->query('is_in_season') : null;
 
         $zone_id = $request->header('zoneId');
 
-        $items = ProductLogic::organic_products($zone_id, $request['limit']??25, $request['offset']??1, $type, $category_ids, $filter, $min_price, $max_price, $rating_count, $request['search'], auth('api')->id());
+        $items = ProductLogic::organic_products($zone_id, $request['limit']??25, $request['offset']??1, $type, $category_ids, $filter, $min_price, $max_price, $rating_count, $request['search'], auth('api')->id(), $is_in_season);
         $items['categories'] = $items['categories'];
         $items['products'] = Helpers::productListDataFormatting($items['products']);
 
         return response()->json($items, 200);
+    }
+
+    public function get_farm_inputs(Request $request)
+    {
+        Helpers::setZoneIds($request);
+
+        $type = $request->query('type', 'all');
+        $zone_id = $request->header('zoneId');
+        $limit = $request->get('limit', 25);
+        $offset = $request->get('offset', 1);
+
+        $query = Item::active()->type($type)
+            ->whereHas('store', function ($q) use ($zone_id) {
+                $q->where('status', 1)
+                    ->when(config('module.current_module_data'), function ($query) {
+                        $query->where('module_id', config('module.current_module_data')['id']);
+                    })
+                    ->whereIn('zone_id', json_decode($zone_id, true));
+            });
+
+        if ($request->filled('category_id')) {
+            $query->whereHas('category', function ($q) use ($request) {
+                $q->where('id', $request->category_id)
+                  ->orWhere('parent_id', $request->category_id);
+            });
+        }
+
+        $paginator = $query->latest()
+            ->paginate($limit, ['*'], 'page', $offset);
+
+        $data = [
+            'total_size' => $paginator->total(),
+            'limit' => $limit,
+            'offset' => $offset,
+            'products' => Helpers::product_data_formatting($paginator->items(), true, false, app()->getLocale()),
+        ];
+
+        return response()->json($data, 200);
     }
 
     public function get_products(Request $request)

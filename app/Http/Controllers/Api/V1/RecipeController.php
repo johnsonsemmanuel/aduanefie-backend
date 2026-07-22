@@ -53,9 +53,46 @@ class RecipeController extends Controller
     {
         $recipe = Recipe::where('id', $id)
             ->where('status', 1)
+            ->with('ingredients')
             ->firstOrFail();
 
-        return response()->json($recipe, 200);
+        $ingredientNames = $recipe->ingredients->pluck('name')->filter()->map(function ($name) {
+            return trim($name);
+        })->toArray();
+
+        $recommendedProducts = [];
+        if (!empty($ingredientNames)) {
+            $matchedItems = \App\Models\Item::active()
+                ->whereHas('store', function ($q) {
+                    $q->where('status', 1);
+                })
+                ->where(function ($q) use ($ingredientNames) {
+                    foreach ($ingredientNames as $name) {
+                        $q->orWhere('name', 'LIKE', "%{$name}%");
+                    }
+                })
+                ->limit(12)
+                ->get();
+
+            $recommendedProducts = Helpers::product_data_formatting($matchedItems, true, false, app()->getLocale());
+        }
+
+        return response()->json([
+            'id' => $recipe->id,
+            'title' => $recipe->title,
+            'description' => $recipe->description,
+            'image' => $recipe->image,
+            'image_full_url' => $recipe->image_full_url,
+            'category' => $recipe->category,
+            'prep_time' => $recipe->prep_time,
+            'cook_time' => $recipe->cook_time,
+            'servings' => $recipe->servings,
+            'difficulty' => $recipe->difficulty,
+            'status' => $recipe->status,
+            'ingredients' => $recipe->ingredients,
+            'recommended_products' => $recommendedProducts,
+            'matched_products' => $recommendedProducts,
+        ], 200);
     }
 
     public function ingredients($id)

@@ -1456,7 +1456,7 @@ class ProductLogic
         ];
     }
 
-    public static function organic_products($zone_id, $limit = 25, $offset = 1, $type = 'all', $category_ids = null, $filter = null, $min = false, $max = false, $rating_count = null, $search = null, $user_id = null)
+    public static function organic_products($zone_id, $limit = 25, $offset = 1, $type = 'all', $category_ids = null, $filter = null, $min = false, $max = false, $rating_count = null, $search = null, $user_id = null, $is_in_season = null)
     {
         $latest_items_default_status = 1;
         $latest_items_sort_by_general = Helpers::getPriorityList(name: 'latest_items_sort_by_general', type: 'general');
@@ -1482,6 +1482,9 @@ class ProductLogic
                 $query->where('module_id', config('module.current_module_data')['id']);
             })
             ->where('organic', 1)
+            ->when(!is_null($is_in_season), function ($query) use ($is_in_season) {
+                $query->where('is_in_season', $is_in_season ? 1 : 0);
+            })
             ->whereHas('store', function($query)use($zone_id , $filter){
                 $query->whereIn('zone_id', json_decode($zone_id, true))
                     ->when($filter && in_array('free_delivery',$filter),function ($qurey){
