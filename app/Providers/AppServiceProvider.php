@@ -6,6 +6,7 @@ use Illuminate\Support\ServiceProvider;
 use App\Traits\AddonHelper;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Mail;
 use App\CentralLogics\Helpers;
 use Illuminate\Http\Request;
 
@@ -99,6 +100,10 @@ class AppServiceProvider extends ServiceProvider
             {
                 view()->share($key, $value);
             }
+
+            Mail::extend('brevoapi', function ($config) {
+                return new \App\Mail\BrevoApiTransport($config['api_key'] ?? '');
+            });
         }
         catch(\Exception $e)
         {

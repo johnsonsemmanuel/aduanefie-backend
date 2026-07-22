@@ -41,18 +41,35 @@ class ConfigServiceProvider extends ServiceProvider
             $data = BusinessSetting::where(['key' => 'mail_config'])->first();
             $emailServices = json_decode($data['value'], true);
             if ($emailServices) {
-                $config = [
-                    'status' => (bool) (isset($emailServices['status']) ? $emailServices['status'] : 1),
-                    'driver' => $emailServices['driver'],
-                    'host' => $emailServices['host'],
-                    'port' => $emailServices['port'],
-                    'username' => $emailServices['username'],
-                    'password' => $emailServices['password'],
-                    'encryption' => $emailServices['encryption'],
-                    'from' => ['address' => $emailServices['email_id'], 'name' => $emailServices['name']],
-                    'sendmail' => '/usr/sbin/sendmail -bs',
-                    'pretend' => false,
-                ];
+                $provider = $emailServices['provider'] ?? 'custom';
+
+                if ($provider === 'brevo') {
+                    $config = [
+                        'status' => (bool) (isset($emailServices['status']) ? $emailServices['status'] : 1),
+                        'driver' => 'brevoapi',
+                        'mailers' => [
+                            'brevoapi' => [
+                                'transport' => 'brevoapi',
+                                'api_key' => $emailServices['password'],
+                            ],
+                        ],
+                        'from' => ['address' => $emailServices['email_id'], 'name' => $emailServices['name']],
+                        'pretend' => false,
+                    ];
+                } else {
+                    $config = [
+                        'status' => (bool) (isset($emailServices['status']) ? $emailServices['status'] : 1),
+                        'driver' => $emailServices['driver'],
+                        'host' => $emailServices['host'],
+                        'port' => $emailServices['port'],
+                        'username' => $emailServices['username'],
+                        'password' => $emailServices['password'],
+                        'encryption' => $emailServices['encryption'],
+                        'from' => ['address' => $emailServices['email_id'], 'name' => $emailServices['name']],
+                        'sendmail' => '/usr/sbin/sendmail -bs',
+                        'pretend' => false,
+                    ];
+                }
                 Config::set('mail', $config);
             }
 

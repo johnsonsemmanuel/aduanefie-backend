@@ -178,7 +178,7 @@
                                     </div>
                                     <div class="col-md-4">
                                         <div class="form-group mb-0">
-                                            <label for="password" class="form-label">{{ translate('messages.password') }}</label><br>
+                                            <label for="password" class="form-label" id="password-label">{{ translate('messages.password') }}</label><br>
                                             <input id="password" type="text" class="form-control" name="password" placeholder="{{translate('messages.Ex : 5+ Characters')}}"
                                                 value="{{ getEnvMode() != 'demo' ? $data['password'] ?? '' : '' }}" required>
                                         </div>
@@ -373,17 +373,23 @@
                 driver: 'smtp',
                 port: '587',
                 encryption: 'tls',
-                helpText: '{{ translate("Enter your Brevo SMTP key as the password. Get it from Brevo → SMTP & API → SMTP.") }}'
+                helpText: '{{ translate("Paste your Brevo SMTP key below. Get it from: Brevo → Settings → SMTP & API → SMTP Key.") }}',
+                passwordLabel: '{{ translate("SMTP API Key") }}',
+                passwordPlaceholder: 'xsmtp-...'
             },
             gmail: {
                 host: 'smtp.gmail.com',
                 driver: 'smtp',
                 port: '587',
                 encryption: 'tls',
-                helpText: '{{ translate("Enable 2FA on your Google account, then generate an App Password at myaccount.google.com/apppasswords.") }}'
+                helpText: '{{ translate("Enable 2FA on your Google account, then generate an App Password at myaccount.google.com/apppasswords.") }}',
+                passwordLabel: '{{ translate("App Password") }}',
+                passwordPlaceholder: 'abcdefghijklmnop'
             },
             custom: {
-                helpText: '{{ translate("Enter your custom SMTP server details below.") }}'
+                helpText: '{{ translate("Enter your custom SMTP server details below.") }}',
+                passwordLabel: '{{ translate("messages.password") }}',
+                passwordPlaceholder: '{{ translate("messages.Ex : 5+ Characters") }}'
             }
         };
 
@@ -399,6 +405,8 @@
                 $('#encryption').val(preset.encryption);
             }
             $('#provider-help-text').text(preset.helpText);
+            $('#password-label').text(preset.passwordLabel);
+            $('#password').attr('placeholder', preset.passwordPlaceholder);
         });
 
         $('#mail-config-form').submit(function(){
