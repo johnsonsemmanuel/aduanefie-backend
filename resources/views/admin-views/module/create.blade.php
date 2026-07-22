@@ -292,12 +292,13 @@
     });
 
     $(document).ready(function () {
-        $('.ckeditor').ckeditor();
+        CKEDITOR.config.customConfig = '';
+        CKEDITOR.replaceAll('ckeditor');
     });
 
         $('#reset_btn').click(function(){
-            $('.ckeditor').each(function() {
-                CKEDITOR.instances[$(this).attr('id')].setData('');
+            Object.values(CKEDITOR.instances).forEach(function(editor) {
+                editor.setData('');
             });
             $('#viewer').attr('src','{{asset('public/assets/admin/img/400x400/img2.jpg')}}');
             $('#viewer2').attr('src','{{asset('public/assets/admin/img/400x400/img2.jpg')}}');

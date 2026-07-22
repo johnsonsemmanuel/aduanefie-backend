@@ -496,10 +496,11 @@
 
 @push('script_2')
 <script src="{{asset('public/assets/admin/ckeditor/ckeditor.js')}}"></script>
-<script>
-    "use strict";
-    $(document).ready(function () {
-        $('.ckeditor').ckeditor();
-    });
-</script>
+    <script>
+        "use strict";
+        $(document).ready(function () {
+            CKEDITOR.config.customConfig = '';
+            CKEDITOR.replaceAll('ckeditor');
+        });
+    </script>
 @endpush

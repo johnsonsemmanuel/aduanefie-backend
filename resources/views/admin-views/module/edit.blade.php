@@ -250,12 +250,14 @@ active
             @if ($module->module_type=='parcel')
                 $('#module_des_card').hide();
             @endif
-            $('.ckeditor').ckeditor();
+            CKEDITOR.config.customConfig = '';
+            CKEDITOR.replaceAll('ckeditor');
         });
 
         $('#reset_btn').click(function(){
             $('.ckeditor').each(function() {
-                CKEDITOR.instances[$(this).attr('id')].setData($(this).data('value'));
+                var editor = CKEDITOR.instances[$(this).attr('id')];
+                if (editor) editor.setData($(this).data('value') || '');
             });
 
             $('#viewer').attr('src','{{ $module['icon_full_url'] }}');

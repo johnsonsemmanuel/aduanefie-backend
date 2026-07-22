@@ -819,7 +819,8 @@
     <script>
         "use strict";
         $(document).ready(function () {
-            $('.ckeditor').ckeditor();
+            CKEDITOR.config.customConfig = '';
+            CKEDITOR.replaceAll('ckeditor');
         });
     </script>
 @endpush
