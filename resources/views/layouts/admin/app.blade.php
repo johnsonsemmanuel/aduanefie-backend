@@ -391,7 +391,7 @@ $countryCode = strtolower($country ? $country : 'auto');
                             <div>
                                 <div class="text-center">
                                     <img alt="" class="mb-4" id="deleteIcon"
-                                        src="{{asset('Modules/RideShare/public/assets/img/ride-share/safety-alert-shield-icon-red.png')}}">
+                                        src="{{asset('assets/admin/img/safety-alert-shield-icon-red.png')}}" onerror="this.style.display='none'">
                                     <h5 class="modal-title mb-3" id="safetyAlertNotificationTitle"></h5>
                                 </div>
                                 <div class="text-center mb-4 pb-2">
@@ -739,8 +739,10 @@ if (in_array(config('module.current_module_type'), config('module.module_type'))
                 appId: "{{isset($fcm_credentials['appId']) ? $fcm_credentials['appId'] : ''}}",
                 measurementId: "{{isset($fcm_credentials['measurementId']) ? $fcm_credentials['measurementId'] : ''}}"
             };
-            firebase.initializeApp(firebaseConfig);
-            const messaging = firebase.messaging();
+            if (firebaseConfig.projectId && firebaseConfig.apiKey) {
+                try {
+                    firebase.initializeApp(firebaseConfig);
+                    const messaging = firebase.messaging();
 
             function startFCM() {
                 messaging
@@ -778,6 +780,10 @@ if (in_array(config('module.current_module_type'), config('module.module_type'))
                 }).catch(error => {
                     console.error('Subscription error:', error);
                 });
+            }
+                } catch (e) {
+                    console.warn('Firebase messaging not available:', e.message);
+                }
             }
 
 
@@ -990,7 +996,7 @@ if (in_array(config('module.current_module_type'), config('module.module_type'))
                 }
             });
 
-            startFCM();
+            if (typeof startFCM === 'function') startFCM();
             @if(\App\CentralLogics\Helpers::module_permission_check('customer_management'))
             conversationList();
             @endif

@@ -304,10 +304,12 @@ $(document).on("ready", function () {
     // INITIALIZATION OF SELECT2
     // =======================================================
     $(".js-select2-custom").each(function () {
-        let verifiedConfig = window.hsSelect2VerifiedTemplate
-            ? { templateResult: window.hsSelect2VerifiedTemplate, templateSelection: window.hsSelect2VerifiedTemplate }
-            : {};
-        let select2 = $.HSCore.components.HSSelect2.init($(this), verifiedConfig);
+        if ($.HSCore && $.HSCore.components && $.HSCore.components.HSSelect2) {
+            let verifiedConfig = window.hsSelect2VerifiedTemplate
+                ? { templateResult: window.hsSelect2VerifiedTemplate, templateSelection: window.hsSelect2VerifiedTemplate }
+                : {};
+            let select2 = $.HSCore.components.HSSelect2.init($(this), verifiedConfig);
+        }
     });
 
     // INITIALIZATION OF DATERANGEPICKER
@@ -735,9 +737,13 @@ $(document).ready(function () {
                     .find(".select2-selection--multiple")
                     .addClass("custom-select");
             }, 10);
-        })
-        .trigger("select2:open")
-        .select2("close");
+        });
+    // Only trigger/close if select2 is already initialized
+    $("select.js-select2-custom, select.multiple-select2").each(function () {
+        if ($(this).data('select2')) {
+            $(this).trigger("select2:open").select2("close");
+        }
+    });
 });
 
 function initializeTooltipWithHoverContent() {
