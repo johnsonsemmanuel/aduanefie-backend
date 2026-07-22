@@ -7,7 +7,7 @@ use Modules\Builder\ValueObjects\HostCapabilities;
 use Modules\Builder\ValueObjects\StorefrontScope;
 
 /**
- * 6amMart capability manifest adapter.
+ * Aduanefie capability manifest adapter.
  *
  * Phase 1: passes through the published `config/builder.php` capabilities block.
  * As each capability axis is wired (location, payment rails, currency, …), the

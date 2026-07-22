@@ -154,7 +154,7 @@ class InstallController extends Controller
             $hostBaseDomain = Helpers::host_base_domain($hostDomain);
             $publicIp = $request->server('SERVER_ADDR')
                 ?: (filter_var($hostDomain, FILTER_VALIDATE_IP) ? $hostDomain : '');
-            $output = 'APP_NAME=6ammart'.time().
+            $output = 'APP_NAME=Aduanefie'.time().
                     'APP_ENV=live
                     APP_KEY=base64:' . $key . '
                     APP_DEBUG=false

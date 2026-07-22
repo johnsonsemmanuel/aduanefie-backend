@@ -1448,7 +1448,7 @@ class Helpers
                 ],
                 "android" => [
                     "notification" => [
-                        "channelId" => '6ammart',
+                        "channelId" => 'Aduanefie',
                     ]
                 ],
                 "apns" => [
@@ -1513,7 +1513,7 @@ class Helpers
                     ],
                     "android" => [
                         "notification" => [
-                            "channelId" => '6ammart',
+                            "channelId" => 'Aduanefie',
                         ]
                     ],
                     "apns" => [
@@ -1545,7 +1545,7 @@ class Helpers
                     ],
                     "android" => [
                         "notification" => [
-                            "channelId" => '6ammart',
+                            "channelId" => 'Aduanefie',
                         ]
                     ],
                     "apns" => [

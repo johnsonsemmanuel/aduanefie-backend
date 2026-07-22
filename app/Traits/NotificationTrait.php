@@ -56,7 +56,7 @@ trait NotificationTrait
                     ],
                     "android" => [
                         "notification" => [
-                            "channelId" => '6ammart',
+                            "channelId" => 'Aduanefie',
                         ]
                     ],
                     "apns" => [
@@ -88,7 +88,7 @@ trait NotificationTrait
                     ],
                     "android" => [
                         "notification" => [
-                            "channelId" => '6ammart',
+                            "channelId" => 'Aduanefie',
                         ]
                     ],
                     "apns" => [
@@ -160,7 +160,7 @@ trait NotificationTrait
                 ],
                 "android" => [
                     "notification" => [
-                        "channelId" => '6ammart',
+                        "channelId" => 'Aduanefie',
                     ]
                 ],
                 "apns" => [

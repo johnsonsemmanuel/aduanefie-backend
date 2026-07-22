@@ -27,7 +27,7 @@ use Modules\Builder\ValueObjects\Storefront\CheckoutSnapshotDTO;
 use Modules\Builder\ValueObjects\StorefrontScope;
 
 /**
- * Host adapter wiring the storefront checkout to 6amMart's existing
+ * Host adapter wiring the storefront checkout to Aduanefie's existing
  * order-placement pipeline (PlaceNewOrder trait + BusinessSetting + Helpers).
  *
  * Three responsibilities — see CheckoutProvider contract for the canonical
@@ -1163,7 +1163,7 @@ class CheckoutProvider implements CheckoutProviderContract
             'extra_packaging_amount' => $quote['extraPackaging'],
             'unavailable_item_note'  => $state['unavailableAction'] ?? null,
             'delivery_instruction'   => $state['instructions'] ?? null,
-            // Free-text order note (checkout.orderNote capability). 6amMart has
+            // Free-text order note (checkout.orderNote capability). Aduanefie has
             // no order_note column so the trait ignores it; hosts that support
             // it persist this key.
             'order_note'             => $state['orderNote'] ?? null,

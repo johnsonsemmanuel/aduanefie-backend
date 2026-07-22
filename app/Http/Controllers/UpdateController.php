@@ -53,7 +53,7 @@ class UpdateController extends Controller
         Helpers::setEnvironmentValue('APP_MODE', 'live');
         Helpers::setEnvironmentValue('SOFTWARE_VERSION', '4.0');
         Helpers::setEnvironmentValue('REACT_APP_KEY', '45370351');
-        Helpers::setEnvironmentValue('APP_NAME', '6amMart' . time());
+        Helpers::setEnvironmentValue('APP_NAME', 'Aduanefie' . time());
 
         $hostDomain = parse_url(env('APP_URL', ''), PHP_URL_HOST) ?: '';
         if (!env('APP_HOST_DOMAIN') && $hostDomain !== '') {
@@ -90,7 +90,7 @@ class UpdateController extends Controller
             "app_url_ios_status" => "0",
             "app_url_ios" => "https://www.apple.com/app-store",
             "web_app_url_status" => "0",
-            "web_app_url" => "https://6ammart-web.6amtech.com/"
+            "web_app_url" => "https://Aduanefie-web.6amtech.com/"
         ]));
 
         //version 1.5.0

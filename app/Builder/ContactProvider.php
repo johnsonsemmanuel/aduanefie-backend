@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Http;
 use Modules\Builder\Contracts\ContactProvider as ContactProviderContract;
 
 /**
- * 6amMart host adapter for ContactProvider.
+ * Aduanefie host adapter for ContactProvider.
  *
  * Writes storefront contact messages into the same `contacts` table
  * the admin landing's `HomeController::send_message` uses, so admins

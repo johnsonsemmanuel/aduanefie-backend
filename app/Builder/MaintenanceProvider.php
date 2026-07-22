@@ -12,7 +12,7 @@ use Modules\Builder\ValueObjects\MaintenanceState;
 use Modules\Builder\ValueObjects\StorefrontScope;
 
 /**
- * 6amMart maintenance adapter.
+ * Aduanefie maintenance adapter.
  *
  * Mirrors the host's admin maintenance feature (Business Settings → Maintenance
  * Mode), but enforces it for the builder storefront when the dedicated

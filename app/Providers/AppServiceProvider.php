@@ -34,7 +34,7 @@ class AppServiceProvider extends ServiceProvider
      */
     private function registerBuilderBindings(): void
     {
-        // Gate on the 6amMart addon-activation status, not just disk
+        // Gate on the Aduanefie addon-activation status, not just disk
         // presence. A customer may have installed Builder (files
         // extracted to Modules/Builder/) but not yet clicked "Activate"
         // in the admin panel — in that state `is_published` is 0 and

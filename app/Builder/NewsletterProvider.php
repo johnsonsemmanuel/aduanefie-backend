@@ -6,7 +6,7 @@ use App\Models\Newsletter;
 use Modules\Builder\Contracts\NewsletterProvider as NewsletterProviderContract;
 
 /**
- * 6amMart host adapter for NewsletterProvider.
+ * Aduanefie host adapter for NewsletterProvider.
  *
  * Writes storefront footer newsletter subscriptions into the same
  * `newsletters` table the admin landing's

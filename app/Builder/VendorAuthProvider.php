@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Auth;
 use Modules\Builder\Contracts\VendorAuthProvider as VendorAuthProviderContract;
 
 /**
- * 6amMart host adapter for VendorAuthProvider.
+ * Aduanefie host adapter for VendorAuthProvider.
  *
  * The vendor panel uses two Auth guards — `vendor` for the owner
  * account and `vendor_employee` for sub-accounts. Both can reach the
@@ -39,7 +39,7 @@ class VendorAuthProvider implements VendorAuthProviderContract
 
     public function logoutUrl(): string
     {
-        // 6amMart exposes a single `GET /logout` endpoint (named
+        // Aduanefie exposes a single `GET /logout` endpoint (named
         // `logout`) which dynamically dispatches based on the currently
         // authenticated guard — see App\Http\Controllers\LoginController
         // ::logout(). It auto-detects vendor vs vendor_employee vs

@@ -24,7 +24,7 @@ class PasswordResetController extends Controller
 {
     /**
      * Host scope tuple. Mobile API V1 is exclusively a host-customer
-     * channel (the legacy 6amMart customer app), so every aux-table
+     * channel (the legacy Aduanefie customer app), so every aux-table
      * query and insert in this controller pins to (0, 0). Without this,
      * after the per-storefront migration a host customer reading an OTP
      * by phone/email could match a storefront row with the same value.

@@ -109,7 +109,7 @@ class CartProvider implements CartProviderContract
             $cart->item_type = $modelClass;
             $cart->quantity = $qtyDelta;
             $cart->price = $priceDelta;
-            // Match the existing 6amMart API CartController convention
+            // Match the existing Aduanefie API CartController convention
             // (json_encode at the call site even though the Cart model has
             // an 'array' cast on these columns). The cast then encodes a
             // second time, which is exactly the storage shape the rest of
