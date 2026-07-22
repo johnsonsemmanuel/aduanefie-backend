@@ -49,7 +49,7 @@ LABEL maintainer="Aduanefie Marketplace"
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl zip unzip \
         libonig-dev libzip-dev libpng-dev libjpeg-dev libfreetype6-dev \
-        libwebp7 libwebpdemux2 libwebpmux3 \
+        libwebp-dev libwebp7 libwebpdemux2 libwebpmux3 \
         nginx \
         supervisor \
         libicu-dev \
