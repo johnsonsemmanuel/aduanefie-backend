@@ -1292,9 +1292,9 @@ class ConfigController extends Controller
         return response()->json(
             [
                 'base_urls' => [
-                    'fixed_header_image' => asset('storage/app/public/fixed_header_image'),
-                    'special_criteria_image' => asset('storage/app/public/special_criteria'),
-                    'download_user_app_image' => asset('storage/app/public/download_user_app_image'),
+                    'fixed_header_image' => asset('storage/fixed_header_image'),
+                    'special_criteria_image' => asset('storage/special_criteria'),
+                    'download_user_app_image' => asset('storage/download_user_app_image'),
                 ],
 
                 's3_base_urls' => [

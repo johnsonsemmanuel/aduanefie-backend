@@ -30,8 +30,6 @@ class MediaUrlResolver implements MediaUrlResolverContract
 
     public function storageBaseUrl(): string
     {
-        // Aduanefie's public disk is served from /storage/app/public; expose that
-        // true base so the storefront resolves relative/legacy media correctly.
-        return asset('storage/app/public');
+        return asset('storage');
     }
 }

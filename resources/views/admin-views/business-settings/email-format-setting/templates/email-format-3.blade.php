@@ -13,7 +13,7 @@
                             <td class="p-10">
                                 <span class="d-block text-center">
                                     @php($restaurant_logo = \App\Models\BusinessSetting::where(['key' => 'logo'])->first())
-                                    <img class="mb-2 mail-img-2 onerror-image" data-onerror-image="{{ asset('storage/app/public/business/' . $restaurant_logo) }}"
+                                    <img class="mb-2 mail-img-2 onerror-image" data-onerror-image="{{ asset('storage/business/' . $restaurant_logo) }}"
                                     src="{{ $data?->logo ? $data->logo_full_url : \App\CentralLogics\Helpers::get_full_url('business',$restaurant_logo?->value,$restaurant_logo?->storage[0]?->value ?? 'public', 'favicon') }}"
                                     id="logoViewer" alt="">
                                     <h3 class="mb-3 mt-0">{{ translate('Order_Info') }}</h3>

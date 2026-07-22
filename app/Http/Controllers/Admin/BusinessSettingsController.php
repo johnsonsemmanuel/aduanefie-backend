@@ -7496,8 +7496,18 @@ class BusinessSettingsController extends Controller
 
     private function updateImages(Request $request): void
     {
-        $this->updateImage('logo', $request->file('logo'));
-        $this->updateImage('icon', $request->file('icon'));
+        try {
+            $this->updateImage('logo', $request->file('logo'));
+        } catch (\Exception $e) {
+            \Log::error('Logo upload failed: ' . $e->getMessage());
+            Toastr::error(translate('Logo upload failed') . ': ' . $e->getMessage());
+        }
+        try {
+            $this->updateImage('icon', $request->file('icon'));
+        } catch (\Exception $e) {
+            \Log::error('Favicon upload failed: ' . $e->getMessage());
+            Toastr::error(translate('Favicon upload failed') . ': ' . $e->getMessage());
+        }
     }
 
     private function updateImage(string $key, $file = null): void

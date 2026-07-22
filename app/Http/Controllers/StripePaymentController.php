@@ -74,7 +74,7 @@ class StripePaymentController extends Controller
             $logo = $logo->value ?? '';
             $name = \App\Models\BusinessSetting::where('key', 'business_name')->first();
             $business_name = $name->value ?? "my_business";
-            $business_logo = $logo ? asset('storage/app/public/business/' . $logo): url('/');
+            $business_logo = $logo ? asset('storage/business/' . $logo): url('/');
         }
 
         $currencies_not_supported_cents = ['BIF', 'CLP', 'DJF', 'GNF', 'JPY', 'KMF', 'KRW', 'MGA', 'PYG', 'RWF', 'UGX', 'VND', 'VUV', 'XAF', 'XOF', 'XPF'];

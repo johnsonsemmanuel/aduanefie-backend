@@ -259,7 +259,7 @@ class ConversationController extends Controller
             $image_name = 'def.png';
         }
 
-        $url = asset('storage/app/public/conversation') . '/' . $image_name;
+        $url = asset('storage/conversation') . '/' . $image_name;
 
         return response()->json(['image_url' => $url], 200);
     }

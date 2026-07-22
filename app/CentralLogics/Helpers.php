@@ -2300,8 +2300,15 @@ class Helpers
         } catch (InvalidUploadException $e) {
             throw $e;
         } catch (\Throwable $e) {
+            \Log::error('Image upload failed', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'disk' => self::getDisk(),
+                'dir' => $dir,
+            ]);
             throw new InvalidUploadException(
-                'Image upload failed. Please try again.'
+                'Image upload failed: ' . $e->getMessage()
             );
         }
 
@@ -3434,7 +3441,7 @@ class Helpers
         }
 
         if ($data && Storage::disk('public')->exists($path . '/' . $data)) {
-            return asset('storage/app/public') . '/' . $path . '/' . $data;
+            return asset('storage') . '/' . $path . '/' . $data;
         }
 
         if (request()->is('api/*')) {

@@ -133,7 +133,7 @@ trait ConversationTrait
 
     public static function ai_product_image_full_path($image_name)
     {
-        $path = asset('storage/app/public/product/ai_product_image/' . $image_name);
+        $path = asset('storage/product/ai_product_image/' . $image_name);
         return $path;
     }
 }

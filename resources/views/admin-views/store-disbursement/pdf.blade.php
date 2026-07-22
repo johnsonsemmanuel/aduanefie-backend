@@ -208,7 +208,7 @@
                 <td class="text-right">
                     <div class="right text-right">
                         <div class="logo">
-                            <img style="width: 160px;object-fit: contain;object-position: right center" src="{{ asset('storage/app/public/business/' . $logo ?? '') }}" alt="logo">
+                            <img style="width: 160px;object-fit: contain;object-position: right center" src="{{ asset('storage/business/' . $logo ?? '') }}" alt="logo">
                         </div>
                         <div>{{ $address }}</div>
                     </div>

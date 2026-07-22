@@ -95,7 +95,7 @@ if (!function_exists('device_notification')) {
 if (!function_exists('topic_notification')) {
     function topic_notification($topic, $title, $description, $image, $booking_id, $type='status')
     {
-        $image = asset('storage/app/public/push-notification') . '/' . $image;
+        $image = asset('storage/push-notification') . '/' . $image;
 
         $postData = [
             'message' => [
@@ -136,7 +136,7 @@ if (!function_exists('device_notification_for_bidding')) {
     function device_notification_for_bidding($fcm_token, $title, $description, $image, $type='bidding', $booking_id = null, $post_id = null, $provider_id = null, $data=null)
     {
         $title = text_variable_data_format($title, $booking_id, $type, $data);
-        $image = asset('storage/app/public/push-notification') . '/' . $image;
+        $image = asset('storage/push-notification') . '/' . $image;
 
         $postData = [
             'message' => [
@@ -178,7 +178,7 @@ if (!function_exists('device_notification_for_bidding')) {
 if (!function_exists('device_notification_for_chatting')) {
     function device_notification_for_chatting($fcm_token, $title, $description, $image, $channel_id, $user_name, $user_image, $user_phone, $user_type, $type = 'status')
     {
-        $image = asset('storage/app/public/push-notification') . '/' . $image;
+        $image = asset('storage/push-notification') . '/' . $image;
 
         $postData = [
             'message' => [
@@ -275,7 +275,7 @@ if (!function_exists('sendTopicNotification')) {
     function sendTopicNotification($topic, $title, $description, $image = null, $ride_request_id = null, $type = null, $sentBy = null, $tripReferenceId = null, $route = null): bool|string
     {
 
-        $image = asset('storage/app/public/push-notification') . '/' . $image;
+        $image = asset('storage/push-notification') . '/' . $image;
         $postData = [
             'message' => [
                 'topic' => $topic,

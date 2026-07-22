@@ -208,7 +208,7 @@
                                                 </p>
                                             </div>
                                             @include('admin-views.partials._image-uploader', [
-                                                    'id' => 'image-input',
+                                                    'id' => 'logo-input',
                                                     'name' => 'logo',
                                                     'ratio' => '3:1',
                                                     'isRequired' => true,
@@ -230,7 +230,7 @@
                                                     </p>
                                                 </div>
                                                 @include('admin-views.partials._image-uploader', [
-                                                    'id' => 'image-input',
+                                                    'id' => 'icon-input',
                                                     'name' => 'icon',
                                                     'ratio' => '1:1',
                                                     'isRequired' => true,
