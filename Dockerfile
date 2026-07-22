@@ -15,8 +15,9 @@ WORKDIR /build
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git curl zip unzip \
         libonig-dev libzip-dev libpng-dev libjpeg-dev libfreetype6-dev \
+        libwebp-dev \
         libxml2-dev libcurl4-openssl-dev libssl-dev libpq-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j$(nproc) pdo_mysql pdo_pgsql pgsql mbstring zip bcmath gd xml simplexml opcache \
     && pecl install redis && docker-php-ext-enable redis \
     && rm -rf /var/lib/apt/lists/*
@@ -48,6 +49,7 @@ LABEL maintainer="Aduanefie Marketplace"
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl zip unzip \
         libonig-dev libzip-dev libpng-dev libjpeg-dev libfreetype6-dev \
+        libwebp7 libwebpdemux2 libwebpmux3 \
         nginx \
         supervisor \
         libicu-dev \
@@ -60,7 +62,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libpq-dev \
         default-mysql-client \
         unzip \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j$(nproc) pdo_mysql pdo_pgsql pgsql mbstring zip bcmath gd xml simplexml opcache intl \
     && pecl install redis && docker-php-ext-enable redis \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
