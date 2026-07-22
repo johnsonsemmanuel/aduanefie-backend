@@ -7490,6 +7490,10 @@ class BusinessSettingsController extends Controller
                 Helpers::businessUpdateOrInsert(['key' => $key], ['value' => $value]);
             }
 
+            \Cache::forget('business_settings_config_keys');
+            \Cache::forget('business_settings_config_logo_storage');
+            \Cache::forget('business_settings_config_icon_storage');
+
             Config::set('currency', $request->currency);
             Config::set('currency_symbol_position', $request->currency_symbol_position);
     }
@@ -7508,6 +7512,10 @@ class BusinessSettingsController extends Controller
             \Log::error('Favicon upload failed: ' . $e->getMessage());
             Toastr::error(translate('Favicon upload failed') . ': ' . $e->getMessage());
         }
+
+        \Cache::forget('business_settings_config_keys');
+        \Cache::forget('business_settings_config_logo_storage');
+        \Cache::forget('business_settings_config_icon_storage');
     }
 
     private function updateImage(string $key, $file = null): void
