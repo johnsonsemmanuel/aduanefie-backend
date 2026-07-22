@@ -39,7 +39,7 @@ php artisan view:clear    2>/dev/null || true
 # 4. Cache for production
 # -------------------------------------------
 echo "--- Caching config & routes..."
-php artisan config:cache && echo "  config:cache ✓" || echo "  WARNING: config:cache failed"
+php artisan config:clear 2>/dev/null || true
 php artisan route:cache  && echo "  route:cache  ✓" || echo "  WARNING: route:cache failed"
 php artisan event:cache  && echo "  event:cache  ✓" || echo "  WARNING: event:cache failed"
 

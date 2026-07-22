@@ -118,11 +118,11 @@
                                             </div>
                                             <small class="text-muted d-block mt-1" id="provider-help-text">
                                                 @if($currentProvider == 'brevo')
-                                                    {{ translate('Enter your Brevo SMTP key as the password. Get it from Brevo → SMTP & API → SMTP.') }}
+                                                    ⚠️ You need a Brevo API key (starts with xkeysib-), NOT the SMTP key. Go to Brevo → Settings → SMTP & API → API Keys → Generate.
                                                 @elseif($currentProvider == 'gmail')
-                                                    {{ translate('Enable 2FA on your Google account, then generate an App Password at myaccount.google.com/apppasswords.') }}
+                                                    Enable 2FA on your Google account, then generate an App Password at myaccount.google.com/apppasswords.
                                                 @else
-                                                    {{ translate('Enter your custom SMTP server details below.') }}
+                                                    Enter your custom SMTP server details below.
                                                 @endif
                                             </small>
                                         </div>
@@ -373,23 +373,23 @@
                 driver: 'smtp',
                 port: '587',
                 encryption: 'tls',
-                helpText: '{{ translate("Paste your Brevo SMTP key below. Get it from: Brevo → Settings → SMTP & API → SMTP Key.") }}',
-                passwordLabel: '{{ translate("SMTP API Key") }}',
-                passwordPlaceholder: 'xsmtp-...'
+                helpText: '⚠️ You need a Brevo API key (starts with xkeysib-), NOT the SMTP key. Go to Brevo → Settings → SMTP & API → API Keys → Generate.',
+                passwordLabel: 'API Key',
+                passwordPlaceholder: 'xkeysib-...'
             },
             gmail: {
                 host: 'smtp.gmail.com',
                 driver: 'smtp',
                 port: '587',
                 encryption: 'tls',
-                helpText: '{{ translate("Enable 2FA on your Google account, then generate an App Password at myaccount.google.com/apppasswords.") }}',
-                passwordLabel: '{{ translate("App Password") }}',
+                helpText: 'Enable 2FA on your Google account, then generate an App Password at myaccount.google.com/apppasswords.',
+                passwordLabel: 'App Password',
                 passwordPlaceholder: 'abcdefghijklmnop'
             },
             custom: {
-                helpText: '{{ translate("Enter your custom SMTP server details below.") }}',
-                passwordLabel: '{{ translate("messages.password") }}',
-                passwordPlaceholder: '{{ translate("messages.Ex : 5+ Characters") }}'
+                helpText: 'Enter your custom SMTP server details below.',
+                passwordLabel: 'Password',
+                passwordPlaceholder: '5+ Characters'
             }
         };
 
