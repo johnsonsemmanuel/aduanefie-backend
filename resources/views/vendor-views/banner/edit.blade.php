@@ -77,7 +77,7 @@
         <script>
             "use strict";
             $('#reset_btn').click(function(){
-                $('#viewer').attr('src','{{asset('storage/app/public/banner')}}/{{$banner['image']}}');
+                $('#viewer').attr('src','{{asset('storage/banner')}}/{{$banner['image']}}');
             })
         </script>
 

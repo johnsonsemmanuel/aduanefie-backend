@@ -250,7 +250,7 @@
                                 <label class="text-center position-relative d-inline-block mb-3">
                                     <img class="img--176 border" id="viewer"
                                             @if(isset($category))
-                                                src="{{asset('storage/app/public/category')}}/{{$category['image']}}"
+                                                src="{{asset('storage/category')}}/{{$category['image']}}"
                                             @else
                                                 src="{{asset('public/assets/admin/img/upload-img.png')}}"
                                             @endif

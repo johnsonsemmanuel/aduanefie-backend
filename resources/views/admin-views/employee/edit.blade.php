@@ -221,7 +221,7 @@ active
         });
     });
         $('#reset_btn').click(function(){
-            $('#viewer').attr('src', "{{asset('storage/app/public/admin')}}/{{$employee['image']}}') }}");
+            $('#viewer').attr('src', "{{asset('storage/admin')}}/{{$employee['image']}}') }}");
             $('#customFileUpload').val(null);
             $('#zone_id').val("{{ $employee->zone_id  }}").trigger('change');
             $('#role_id').val("{{ $employee['role_id'] }}").trigger('change');

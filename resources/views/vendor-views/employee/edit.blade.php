@@ -172,7 +172,7 @@
 
     // Reset button functionality
     $('#reset_btn').click(function(){
-        $('#viewer').attr('src','{{asset('storage/app/public/vendor')}}/{{$e['image']}}');
+        $('#viewer').attr('src','{{asset('storage/vendor')}}/{{$e['image']}}');
     });
 
     // Image preview functionality

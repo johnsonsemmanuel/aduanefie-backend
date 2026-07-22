@@ -101,7 +101,7 @@
         "use strict";
         $('#reset_btn').click(function(){
             $('#module_id').val("{{ $condition->module_id }}").trigger('change');
-            $('#viewer').attr('src', "{{asset('storage/app/public/condition')}}/{{$condition['image']}}");
+            $('#viewer').attr('src', "{{asset('storage/condition')}}/{{$condition['image']}}");
         })
     </script>
 @endpush

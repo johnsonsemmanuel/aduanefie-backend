@@ -232,7 +232,7 @@
                                         @php($extention = explode('.', $banner_video_content?->value))
                                         <video width="320" height="140" id="video-preview" controls>
                                             <source
-                                                src="{{(count($banner_video_content?->storage) > 0 && $banner_video_content?->storage[0]?->value == 's3') ? $awsBaseURL . 'promotional_banner/video/' . $banner_video_content?->value : asset('storage/app/public/promotional_banner/video') . '/' . $banner_video_content?->value}}"
+                                                src="{{(count($banner_video_content?->storage) > 0 && $banner_video_content?->storage[0]?->value == 's3') ? $awsBaseURL . 'promotional_banner/video/' . $banner_video_content?->value : asset('storage/promotional_banner/video') . '/' . $banner_video_content?->value}}"
                                                 type="video/{{ data_get($extention, 1, 'mp4') }}">
                                         </video>
                                     </div>

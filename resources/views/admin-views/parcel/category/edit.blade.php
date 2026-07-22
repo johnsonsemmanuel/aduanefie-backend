@@ -222,7 +222,7 @@
         $('#reset_btn').click(function() {
             $('#module_id').val("{{ $parcel_category->module_id }}").trigger('change');
             $('#viewer').attr('src',
-                "{{ asset('storage/app/public/parcel_category') }}/{{ $parcel_category['image'] }}");
+                "{{ asset('storage/parcel_category') }}/{{ $parcel_category['image'] }}");
         })
     </script>
 @endpush

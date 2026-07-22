@@ -199,7 +199,7 @@
                                     <div class="d-flex gap-3 align-items-center">
                                         <input type="radio" required id="{{$item['gateway'] }}" name="payment_gateway" value="{{$item['gateway'] }}">
                                         <label for="{{$item['gateway'] }}" class="d-flex align-items-center gap-3 mb-0">
-                                            <img height="24" src="{{ asset('storage/app/public/payment_modules/gateway_image/'. $item['gateway_image']) }}" alt="">
+                                            <img height="24" src="{{ asset('storage/payment_modules/gateway_image/'. $item['gateway_image']) }}" alt="">
                                             {{ $item['gateway_title'] }}
                                         </label>
                                     </div>

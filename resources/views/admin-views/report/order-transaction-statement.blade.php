@@ -221,7 +221,7 @@
                 </h4>
             </th>
             <th class="content-position-y text-right">
-                <img height="50" src="{{asset("/storage/app/public/business/$company_web_logo")}}" alt="">
+                <img height="50" src="{{asset("/storage/business/$company_web_logo")}}" alt="">
             </th>
         </tr>
     </table>

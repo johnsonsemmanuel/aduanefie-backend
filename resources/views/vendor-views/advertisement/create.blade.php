@@ -393,7 +393,7 @@ $p_data=["type" => "pending",'new_ad' => true];
             const videoEl = $(".video > video")
             let blobURL = "";
             // prev video attachment file
-            {{-- blobURL = "{{asset('storage/app/public/advertisement').'/' . $advertisement?->attachment?->file_name}}"; --}}
+            {{-- blobURL = "{{asset('storage/advertisement').'/' . $advertisement?->attachment?->file_name}}"; --}}
 
             videoEl.css('display', 'block');
             videoEl.attr('src', blobURL);

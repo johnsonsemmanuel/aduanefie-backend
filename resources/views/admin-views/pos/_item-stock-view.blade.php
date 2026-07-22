@@ -24,7 +24,7 @@
 
 
                 data-onerror-image="{{ asset('public/assets/admin/img/160x160/img2.jpg') }}"
-                data-zoom="{{ asset('storage/app/public/product') }}/{{ $product['image'] }}" alt="Product image"
+                data-zoom="{{ asset('storage/product') }}/{{ $product['image'] }}" alt="Product image"
                 width="">
             <div class="cz-image-zoom-pane"></div>
         </div>
