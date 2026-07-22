@@ -512,6 +512,7 @@ class BusinessSettingsController extends Controller
             [
                 'value' => json_encode([
                     'status' => $request['status'] ?? 0,
+                    'provider' => $request['provider'] ?? 'custom',
                     'name' => $request['name'],
                     'host' => $request['host'],
                     'driver' => $request['driver'],
@@ -545,6 +546,7 @@ class BusinessSettingsController extends Controller
             [
                 'value' => json_encode([
                     'status' => $request['status'] ?? 0,
+                    'provider' => $data['provider'] ?? 'custom',
                     'name' => $data['name'] ?? '',
                     'host' => $data['host'] ?? '',
                     'driver' => $data['driver'] ?? '',

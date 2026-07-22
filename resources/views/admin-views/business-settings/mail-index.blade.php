@@ -92,6 +92,7 @@
                                 <small>{{translate('*By Turning OFF mail configuration, all your mailing services will be off.')}}</small>
                             </div>
                         </form>
+                        @php($currentProvider = $data['provider'] ?? 'custom')
                         <form action="javascript:"
                             method="post" id="mail-config-form" enctype="multipart/form-data">
                             @csrf
@@ -100,8 +101,36 @@
                                 <div class="row g-3">
                                     <div class="col-sm-12">
                                         <div class="form-group mb-0">
+                                            <label class="form-label fw-bold">{{ translate('messages.provider') }}</label><br>
+                                            <div class="d-flex gap-3 flex-wrap mt-2">
+                                                <div class="form-check form-check-inline border rounded px-3 py-2 mail-provider-option {{ $currentProvider == 'custom' ? 'border-primary bg-light' : '' }}" style="cursor:pointer">
+                                                    <input class="form-check-input" type="radio" name="provider" id="provider-custom" value="custom" {{ $currentProvider == 'custom' ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="provider-custom">{{ translate('Custom SMTP') }}</label>
+                                                </div>
+                                                <div class="form-check form-check-inline border rounded px-3 py-2 mail-provider-option {{ $currentProvider == 'brevo' ? 'border-primary bg-light' : '' }}" style="cursor:pointer">
+                                                    <input class="form-check-input" type="radio" name="provider" id="provider-brevo" value="brevo" {{ $currentProvider == 'brevo' ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="provider-brevo">{{ translate('Brevo (Sendinblue)') }} <span class="text--primary ml-1" style="font-size:0.8em">FREE 300/day</span></label>
+                                                </div>
+                                                <div class="form-check form-check-inline border rounded px-3 py-2 mail-provider-option {{ $currentProvider == 'gmail' ? 'border-primary bg-light' : '' }}" style="cursor:pointer">
+                                                    <input class="form-check-input" type="radio" name="provider" id="provider-gmail" value="gmail" {{ $currentProvider == 'gmail' ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="provider-gmail">{{ translate('Gmail SMTP') }} <span class="text--primary ml-1" style="font-size:0.8em">FREE 500/day</span></label>
+                                                </div>
+                                            </div>
+                                            <small class="text-muted d-block mt-1" id="provider-help-text">
+                                                @if($currentProvider == 'brevo')
+                                                    {{ translate('Enter your Brevo SMTP key as the password. Get it from Brevo → SMTP & API → SMTP.') }}
+                                                @elseif($currentProvider == 'gmail')
+                                                    {{ translate('Enable 2FA on your Google account, then generate an App Password at myaccount.google.com/apppasswords.') }}
+                                                @else
+                                                    {{ translate('Enter your custom SMTP server details below.') }}
+                                                @endif
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-12">
+                                        <div class="form-group mb-0">
                                             <label for="name" class="form-label">{{ translate('messages.mailer_name') }}</label><br>
-                                            <input id="name" type="text" placeholder="{{ translate('messages.Ex:') }} Alex" class="form-control" name="name"
+                                            <input id="name" type="text" placeholder="{{ translate('messages.Ex:') }} Aduanefie" class="form-control" name="name"
                                                 value="{{ getEnvMode() != 'demo' ? $data['name'] ?? '' : '' }}" required>
                                         </div>
                                     </div>
@@ -116,7 +145,7 @@
                                         <div class="form-group mb-0">
                                             <label for="driver" class="form-label">{{ translate('messages.driver') }}</label><br>
                                             <input id="driver" type="text" class="form-control" name="driver" placeholder="{{translate('messages.Ex : smtp')}}"
-                                                value="{{ getEnvMode() != 'demo' ? $data['driver'] ?? '' : '' }}" required>
+                                                value="{{ getEnvMode() != 'demo' ? $data['driver'] ?? 'smtp' : 'smtp' }}" required>
                                         </div>
                                     </div>
                                     <div class="col-md-4">
@@ -337,6 +366,40 @@
         $('#mail-config-disable').on('change', function(){
             disableMailConf()
         })
+
+        const providerPresets = {
+            brevo: {
+                host: 'smtp-relay.brevo.com',
+                driver: 'smtp',
+                port: '587',
+                encryption: 'tls',
+                helpText: '{{ translate("Enter your Brevo SMTP key as the password. Get it from Brevo → SMTP & API → SMTP.") }}'
+            },
+            gmail: {
+                host: 'smtp.gmail.com',
+                driver: 'smtp',
+                port: '587',
+                encryption: 'tls',
+                helpText: '{{ translate("Enable 2FA on your Google account, then generate an App Password at myaccount.google.com/apppasswords.") }}'
+            },
+            custom: {
+                helpText: '{{ translate("Enter your custom SMTP server details below.") }}'
+            }
+        };
+
+        $(document).on('change', 'input[name="provider"]', function(){
+            var provider = $(this).val();
+            var preset = providerPresets[provider];
+            $('.mail-provider-option').removeClass('border-primary bg-light');
+            $(this).closest('.mail-provider-option').addClass('border-primary bg-light');
+            if (provider !== 'custom') {
+                $('#host').val(preset.host);
+                $('#driver').val(preset.driver);
+                $('#port').val(preset.port);
+                $('#encryption').val(preset.encryption);
+            }
+            $('#provider-help-text').text(preset.helpText);
+        });
 
         $('#mail-config-form').submit(function(){
             $.ajaxSetup({
