@@ -69,7 +69,7 @@ fi
 # -------------------------------------------
 if [ "${RAILWAY_RUN_AS}" != "worker" ] && [ "${RAILWAY_RUN_AS}" != "scheduler" ]; then
     echo "--- Ensuring module statuses..."
-    php artisan module:status 2>/dev/null || true
+    php artisan module:list 2>/dev/null || true
 fi
 
 # -------------------------------------------

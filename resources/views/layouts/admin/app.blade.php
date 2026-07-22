@@ -739,10 +739,11 @@ if (in_array(config('module.current_module_type'), config('module.module_type'))
                 appId: "{{isset($fcm_credentials['appId']) ? $fcm_credentials['appId'] : ''}}",
                 measurementId: "{{isset($fcm_credentials['measurementId']) ? $fcm_credentials['measurementId'] : ''}}"
             };
+            let messaging = null;
             if (firebaseConfig.projectId && firebaseConfig.apiKey) {
                 try {
                     firebase.initializeApp(firebaseConfig);
-                    const messaging = firebase.messaging();
+                    messaging = firebase.messaging();
 
             function startFCM() {
                 messaging
@@ -845,6 +846,7 @@ if (in_array(config('module.current_module_type'), config('module.module_type'))
             let admin_role_id = null;
 
             @php $order_notification_type = \App\CentralLogics\Helpers::get_business_settings('order_notification_type') ?? 'manual'; @endphp
+            if (messaging) {
             messaging.onMessage(function (payload) {
                 console.log(payload.data)
                 if (payload.data.order_id && payload.data.type == "order_request") {
@@ -900,6 +902,7 @@ if (in_array(config('module.current_module_type'), config('module.module_type'))
                     }
                 }
             });
+            }
 
             function safetyAlertNotification(data) {
                 let checkLaterButton = $('#checkLater');
