@@ -5072,6 +5072,9 @@ class Helpers
 
                 if(empty($zoneIds)){
                     $zone = Zone::where('status',1)->where('is_default',1)->first() ?? Zone::first();
+                    if(!$zone){
+                        throw new ZoneModuleException(translate('No zone is available'));
+                    }
                     $request->headers->set('zoneId', json_encode([$zone->id]));
                 } else {
                     $request->headers->set('zoneId', json_encode($zoneIds));
