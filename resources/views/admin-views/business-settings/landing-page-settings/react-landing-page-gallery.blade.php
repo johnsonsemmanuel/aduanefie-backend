@@ -449,7 +449,7 @@
                     <section class="common-section-view bg-white border rounded-10">
                         <div class="mb-4 text-center">
                             <h2 class="mb-lg-1 mb-1 fs-24">
-                                {!! Helpers::highlightWords($gallery_content_title?->value ?? 'See $6amMart$ in Action') !!}
+                                {!! Helpers::highlightWords($gallery_content_title?->value ?? 'See $Aduanefie$ in Action') !!}
                             </h2>
                             <p class="text-title fs-14 m-0">
                                 {{$gallery_content_sub_title?->value ?? 'Explore how customers use our services, vendors grow their business'}}

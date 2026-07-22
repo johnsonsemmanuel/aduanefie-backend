@@ -209,7 +209,7 @@ class AiChatController extends Controller
 
     /**
      * Resolve guest identifier from request body (POST) or query string (GET).
-     * Follows 6amMart system convention used in CartController, OrderController, etc.
+     * Follows Aduanefie system convention used in CartController, OrderController, etc.
      * Returns null when an authenticated user is present (user_id takes precedence).
      */
     private function resolveGuestId(Request $request, ?User $user): ?string

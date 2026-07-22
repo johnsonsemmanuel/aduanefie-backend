@@ -6,7 +6,7 @@ namespace Modules\Builder\Contracts;
  * Storefront footer "Subscribe to newsletter" submission.
  *
  * Persists the email into whatever list the host uses for newsletter
- * subscribers. 6amMart stores them in the shared `newsletters` table that
+ * subscribers. Aduanefie stores them in the shared `newsletters` table that
  * the admin landing (`NewsletterController::newsLetterSubscribe`) already
  * writes to, so admins see all subscribers in one place.
  *

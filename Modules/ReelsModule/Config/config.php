@@ -2,7 +2,7 @@
 
 return [
     'name' => 'ReelsModule',
-    'project' => '6ammart',
+    'project' => 'aduanefie',
     'version' => '1.0.0',
     'pagination' => 25,
 

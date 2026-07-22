@@ -3,21 +3,21 @@
 @import url("https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;600;700&display=swap");
 :root {
     /* --primary-clr: #24bac3; */
-    --primary-clr: #107980;
-    --primary-clr-rgb: 16, 121, 128;
-    --secondary-clr: #99a7ba;
-    --primary: #006161;
+    --primary-clr: #8b9f69;
+    --primary-clr-rgb: 139, 159, 105;
+    --secondary-clr: #67513a;
+    --primary: #67513a;
     --title-clr: var(--text-title);
-    --dark-clr: #005555;
-    --base-clr: #2aa26a;
-    --base-clr-2: #5affba;
+    --dark-clr: #5a4530;
+    --base-clr: #8b9f69;
+    --base-clr-2: #c5d1a8;
     --border-clr: #99a7ba45;
     --warning-clr: #ff7500;
     --danger-clr: #ff6d6d;
     --success-clr: #00aa6d;
     --info-clr: #0096ff;
-    --theameColor: #0661CB;
-    --theameColor-rgba: 6, 97, 203;;
+    --theameColor: #8b9f69;
+    --theameColor-rgba: 139, 159, 105;;
 
     /*new color add*/
     --cus-warning-light: #F0AF34;
@@ -52,7 +52,7 @@
   --bs-body-bg-rgb: 247, 248, 250;
   --bs-body-color: #656566;
   --section-bg: #f9fafc;
-  --panel-sidebar-primary: #073b74;
+    --panel-sidebar-primary: #4d3b28;
   --shadow-color-rgb: 0, 0, 0;
   --bs-purple-rgb: 152, 16, 250;
 

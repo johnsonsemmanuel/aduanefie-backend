@@ -83,7 +83,7 @@ active
                                 {{ translate('Admin Notification Channels') }}
                             </h3>
                             <p class="mb-0 fs-12">
-                                {{ translate('From here you setup who can see what types of notification from 6amMart') }}
+                                {{ translate('From here you setup who can see what types of notification from Aduanefie') }}
                             </p>
                         </div>
                         <form class="search-form ml-auto min--260">

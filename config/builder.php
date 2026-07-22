@@ -17,7 +17,7 @@
 
 return [
     'cms_dashboard_route' => env('BUILDER_CMS_DASHBOARD_ROUTE', 'vendor.dashboard'),
-    'default_platform_name'  => '6amMart',
+    'default_platform_name'  => 'Aduanefie',
 
     /*
      * Master switch for storefront wallet-family features: wallet payment,
@@ -44,7 +44,7 @@ return [
      * (customer registration, email-verification OTP, password reset, order
      * placement / verification, wallet & refund notifications, …). When false,
      * the `SuppressStorefrontMail` middleware cancels every mail sent during a
-     * storefront request (all 6amMart mailables are synchronous, so nothing
+     * storefront request (all Aduanefie mailables are synchronous, so nothing
      * escapes to a queue worker) — so no storefront email goes out.
      *
      * Scope is the storefront ONLY: admin, vendor panel, and mobile API mail
@@ -59,7 +59,7 @@ return [
      * the storefront + builder should render and enforce, so the same addon
      * adapts per project. Read via Modules\Builder\Contracts\CapabilityProvider
      * (host adapter may also DERIVE data-driven flags). Every value here is the
-     * 6amMart baseline = its current implicit behavior; other hosts override.
+     * Aduanefie baseline = its current implicit behavior; other hosts override.
      *
      * Read in PHP:  app(CapabilityProvider)->capabilities($scope)->enabled('location.map')
      * Gate a route: ->middleware(RequireCapability::class.':features.wallet')

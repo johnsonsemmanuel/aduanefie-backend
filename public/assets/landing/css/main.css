@@ -1,10 +1,10 @@
 @import url("https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap");
 :root {
-  --base-1: #00e77b;
-  --base-rgb: 0, 231, 123;
-  --base-2: #04f485;
-  --base-rgb-2: 4, 244, 133;
-  --primary-clr: #107980;
+  --base-1: #8b9f69;
+  --base-rgb: 139, 159, 105;
+  --base-2: #8b9f69;
+  --base-rgb-2: 139, 159, 105;
+  --primary-clr: #8b9f69;
   /* Test Color */
   /* --base-1: #c70000;
   --base-rgb: 255, 0, 0;

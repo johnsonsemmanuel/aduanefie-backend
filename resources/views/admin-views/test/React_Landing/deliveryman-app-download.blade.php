@@ -425,7 +425,7 @@
                                     Deliver More. <span class="text-base-clr">Earn</span> More.
                                 </h2>
                                 <p class="text-title fs-12 mb-xxl-4 mb-xl-3 mb-3">
-                                    Join 6amMart as a delivery partner and turn every ride into income. Work on your own schedule and get paid faster, every day
+                                    Join Aduanefie as a delivery partner and turn every ride into income. Work on your own schedule and get paid faster, every day
                                 </p>
                                 <ul class="list-checked d-flex flex-column gap-1 mb-xxl-4 mb-xl-3 mb-3">
                                     <li class="d-flex fs-14 align-items-center gap-2 text-title fw-medium">

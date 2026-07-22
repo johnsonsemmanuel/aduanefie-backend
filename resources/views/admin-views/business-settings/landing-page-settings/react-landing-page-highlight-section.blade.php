@@ -414,7 +414,7 @@
                                             {{$highlight_title?->value ?? 'Ride Anytime, Anywhere'}}
                                         </h2>
                                         <p class="fs-12 m-0 text-white">
-                                            {{$highlight_sub_title?->value ?? '6amMart makes it easy to rent vehicles quickly and affordably.'}}
+                                            {{$highlight_sub_title?->value ?? 'Aduanefie makes it easy to rent vehicles quickly and affordably.'}}
                                         </p>
                                     </div>
                                 </div>

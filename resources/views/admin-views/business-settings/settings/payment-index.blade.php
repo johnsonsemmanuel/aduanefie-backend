@@ -235,7 +235,7 @@
                         <div class="">
                             <h5 class="mb-3">{{ translate('Payment Options') }}</h5>
                             <p class="fs-12 mb-0">
-                                {{ translate('6ammart supports multiple payment methods to provide flexibility and convenience for customers while ensuring smooth transaction management for the platform and vendors.') }}
+                                {{ translate('Aduanefie supports multiple payment methods to provide flexibility and convenience for customers while ensuring smooth transaction management for the platform and vendors.') }}
                             </p>
                             <ul class="fs-12">
                                 <li><strong>{{ translate('Cash On Delivery') }}:</strong> {{ translate('Customers pay in cash when they receive their order.') }}</li>

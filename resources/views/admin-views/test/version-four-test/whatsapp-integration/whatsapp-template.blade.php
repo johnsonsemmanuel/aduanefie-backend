@@ -409,7 +409,7 @@
                                 <div class="d-flex align-items-center gap-10px">
                                     <img src="{{  asset('public/assets/admin/img/6m-logo.png') }}" alt="" class="w-40px h-40px rounded-circle object-cover">
                                     <div class="cont">
-                                        <h6 class="mb-0 lh-1 fs-14">{{ translate('6amMart') }}</h6>
+                                        <h6 class="mb-0 lh-1 fs-14">{{ translate('Aduanefie') }}</h6>
                                         <span class="fs-12">{{ translate('Business Account') }}</span>
                                     </div>
                                 </div>

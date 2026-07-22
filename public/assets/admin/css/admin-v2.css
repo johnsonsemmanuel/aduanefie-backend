@@ -1,5 +1,5 @@
 /* ============================================================
- * 6amMart admin v2 chrome — scoped under body.v2-chrome
+ * Aduanefie admin v2 chrome — scoped under body.v2-chrome
  * Phase 1: grocery module workspace only.
  * Translates the navigation prototype to live admin without
  * touching content area styling beyond positioning offsets.
@@ -15,14 +15,14 @@ body.v2-chrome {
     --v2-text-soft:#4f5a54;
     --v2-text-muted:#818c87;
     --v2-hover:#f0f3f1;
-    --v2-primary:#107980;
-    --v2-primary-deep:#006161;
-    --v2-primary-tint:#e3f1f2;
-    --v2-primary-tint-strong:#9cd0d3;
-    --v2-module:#107980;
-    --v2-module-deep:#006161;
-    --v2-module-tint:#e3f1f2;
-    --v2-module-tint-strong:#9cd0d3;
+    --v2-primary:#8b9f69;
+    --v2-primary-deep:#67513a;
+    --v2-primary-tint:#f0eadb;
+    --v2-primary-tint-strong:#d4c9a8;
+    --v2-module:#8b9f69;
+    --v2-module-deep:#67513a;
+    --v2-module-tint:#f0eadb;
+    --v2-module-tint-strong:#d4c9a8;
     --v2-accent:#ec1d5d;
     --v2-shadow-sm:0 1px 2px rgba(15,40,30,.04);
     --v2-shadow-md:0 6px 18px rgba(15,40,30,.08);

@@ -66,8 +66,8 @@ return [
     |--------------------------------------------------------------------------
     |
     | `host_domain` is the single hostname where the admin/vendor panel and
-    | all `routes/*.php` host endpoints answer — e.g. `admin.6ammart.com`
-    | or just `6ammart.com` if the host runs on the apex.
+    | all `routes/*.php` host endpoints answer — e.g. `admin.aduanefie.com`
+    | or just `aduanefie.com` if the host runs on the apex.
     |
     | Every host route group in `App\Providers\RouteServiceProvider` is
     | wrapped in `Route::domain(config('app.host_domain'))->group(...)`,
@@ -77,7 +77,7 @@ return [
     | nothing matches.
     |
     | `host_base_domain` is the parent zone where vendor sub-domain entries
-    | live (typically the bare apex, e.g. `6ammart.com`). Used only to
+    | live (typically the bare apex, e.g. `aduanefie.com`). Used only to
     | compute reserved sub-domain labels in the vendor's domain-setup UI —
     | when the host runs on a sub-domain of the base, that label is
     | reserved against vendor input.

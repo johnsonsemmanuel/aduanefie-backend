@@ -17,7 +17,7 @@
                 </svg>
             </div>
             <h2 id="bdpromo-title" class="bdpromo-title">{{ translate('Build Your Own Website With Website Builder') }}</h2>
-            <p class="bdpromo-subtitle">{{ translate('You can now grow your business with 6amMart Website Builder — design a stunning storefront, launch your own branded site, and boost your revenue.') }}</p>
+            <p class="bdpromo-subtitle">{{ translate('You can now grow your business with Aduanefie Website Builder — design a stunning storefront, launch your own branded site, and boost your revenue.') }}</p>
         </div>
 
         <div class="bdpromo-body">
@@ -57,11 +57,11 @@
                 <span class="bdpromo-rating-text">{{ translate('Trusted By 3,000+ Vendors') }}</span>
             </div>
 
-            <a href="https://store.6amtech.com/product/6ammart-vendor-website-builder/" target="_blank" rel="noopener noreferrer" class="bdpromo-cta">{{ translate('Get It Now!') }}</a>
+            <a href="https://store.6amtech.com/product/Aduanefie-vendor-website-builder/" target="_blank" rel="noopener noreferrer" class="bdpromo-cta">{{ translate('Get It Now!') }}</a>
 
             <p class="bdpromo-foot">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                {{ translate('This is an Add-on for 6amMart, purchase the add-on for your system.') }}
+                {{ translate('This is an Add-on for Aduanefie, purchase the add-on for your system.') }}
             </p>
         </div>
     </div>
@@ -70,7 +70,7 @@
 <style>
     /* Palette is driven by the host brand color: prefer a live host CSS var
        (admin-v2 chrome, or the admin style.css :root) and fall back to the
-       6amMart brand teal when neither stylesheet is loaded (Builder SPA root). */
+       Aduanefie brand teal when neither stylesheet is loaded (Builder SPA root). */
     .bdpromo-overlay{--bdpromo-primary:var(--v2-primary,var(--primary-clr,#107980));--bdpromo-primary-deep:var(--v2-primary-deep,var(--primary,#006161));position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(15,23,42,.55);}
     .bdpromo-overlay.bdpromo-show{display:flex;}
     .bdpromo-modal{width:100%;max-width:520px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.35);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;animation:bdpromo-in .25s ease;}

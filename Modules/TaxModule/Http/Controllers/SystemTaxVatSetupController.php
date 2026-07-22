@@ -52,7 +52,7 @@ class SystemTaxVatSetupController extends Controller
             ->where('tax_payer', $tax_payer)
             ->first();
 
-        if ($this->getProjectName() == '6ammart' && $systemTaxVat?->tax_payer == 'vendor') {
+        if ($this->getProjectName() == 'aduanefie' && $systemTaxVat?->tax_payer == 'vendor') {
             $systemTaxVatForPrescription = $this->systemTaxVat->with('additionalData')->when($this->getCountryType() !== 'single', function ($query) use($request) {
                 $query->where('country_code', $request->country_code);
             })
@@ -143,7 +143,7 @@ class SystemTaxVatSetupController extends Controller
         $systemTaxVat->is_active = !$systemTaxVat->is_active;
         $systemTaxVat->save();
 
-        if ($systemTaxVat?->tax_payer == 'vendor' && $this->getProjectName() == '6ammart') {
+        if ($systemTaxVat?->tax_payer == 'vendor' && $this->getProjectName() == 'aduanefie') {
 
             if ($request->prescription_system_id == null) {
                 $systemTaxVatForPrescription = $this->systemTaxVat->when($this->getCountryType() !== 'single', function ($query) use($request) {

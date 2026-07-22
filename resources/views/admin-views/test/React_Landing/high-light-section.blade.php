@@ -191,7 +191,7 @@
                                         Ride Anytime, Anywhere
                                     </h2>
                                     <p class="fs-12 m-0 text-white">
-                                        6amMart makes it easy to rent vehicles quickly and affordably.
+                                        Aduanefie makes it easy to rent vehicles quickly and affordably.
                                     </p>
                                 </div>
                             </div>

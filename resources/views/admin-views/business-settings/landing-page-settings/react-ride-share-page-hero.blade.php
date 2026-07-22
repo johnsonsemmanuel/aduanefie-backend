@@ -516,7 +516,7 @@
         }
 
         return [
-            'title' => $title?->value ?: 'Ride Anywhere, Anytime With $6amMart$',
+            'title' => $title?->value ?: 'Ride Anywhere, Anytime With $Aduanefie$',
             'sub_title' => $subTitle?->value ?: 'Experience the future of mobility. Book fast, affordable rides in just a few taps with our executive-level service and reliable driver network.',
             'image_url' => $imageUrl,
             'points' => $points,

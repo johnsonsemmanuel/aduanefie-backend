@@ -700,7 +700,7 @@
                                         </p>
                                     @else
                                         <p class="text-title fs-12 mb-xxl-4 mb-xl-3 mb-3">
-                                            {{$download_rider_app_sub_title?->value ?? 'Join 6amMart as a rider and turn every ride into income. Work on your own schedule and get paid faster, every day'}}
+                                            {{$download_rider_app_sub_title?->value ?? 'Join Aduanefie as a rider and turn every ride into income. Work on your own schedule and get paid faster, every day'}}
                                         </p>
                                         <ul class="list-checked d-flex flex-column gap-1 mb-xxl-4 mb-xl-3 mb-3">
                                             <li class="d-flex fs-14 align-items-center gap-2 text-title fw-medium">

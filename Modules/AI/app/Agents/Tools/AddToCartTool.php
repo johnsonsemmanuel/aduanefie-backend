@@ -110,7 +110,7 @@ class AddToCartTool implements Tool
         $isFood = $this->moduleType === 'food';
 
         // --- Variation gate ---
-        // 6amMart stores variations in TWO different shapes depending on module:
+        // Aduanefie stores variations in TWO different shapes depending on module:
         //   food  → food_variations: [{name, type, required, values:[{label, optionPrice}]}]
         //           cart row shape:  [{name, values:{label:[...]}}], price = base + Σ optionPrice
         //           (the customer MUST pick one option from EVERY required group)
@@ -165,7 +165,7 @@ class AddToCartTool implements Tool
         $moduleId = (int) $item->getAttribute('module_id');
 
         // Identity: authenticated user gets is_guest=false + user_id=integer
-        // Guest gets is_guest=true + user_id=guest_id string (matches 6amMart cart system)
+        // Guest gets is_guest=true + user_id=guest_id string (matches Aduanefie cart system)
         $isGuest    = $this->user === null;
         $cartUserId = $isGuest ? $this->guestId : $this->user->getKey();
 

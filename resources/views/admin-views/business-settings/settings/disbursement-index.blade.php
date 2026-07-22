@@ -475,7 +475,7 @@
 
         <?php
             $disbursementCronLine = '* * * * * cd ' . base_path() . ' && php artisan schedule:run >> /dev/null 2>&1';
-            $disbursementSchedulerSupervisor = "[program:6ammart-scheduler]\n"
+            $disbursementSchedulerSupervisor = "[program:Aduanefie-scheduler]\n"
                 . "process_name=%(program_name)s\n"
                 . "command=php " . base_path('artisan') . " schedule:work\n"
                 . "autostart=true\n"
