@@ -793,45 +793,6 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
                 Route::post('contact-search', 'ContactController@search')->name('contact-search');
             });
 
-            // delivery man routes
-            Route::group(['prefix' => 'delivery-man', 'as' => 'delivery-man.'], function () {
-                Route::get('get-deliverymen', [DeliveryManController::class, 'getDropdownList'])->name('get-deliverymen');
-                Route::get('store-filter/{id}', [DeliveryManController::class, 'getAccountData'])->name('store-filter');
-
-                Route::group(['middleware' => ['module:deliveryman']], function () {
-                    Route::get('add', [DeliveryManController::class, 'getAddView'])->name('add');
-                    Route::post('add', [DeliveryManController::class, 'add'])->name('store');
-                    Route::get('list', [DeliveryManController::class, 'index'])->name('list');
-                    Route::get('new', [DeliveryManController::class, 'getNewDeliveryManView'])->name('new');
-                    Route::get('deny', [DeliveryManController::class, 'getDeniedDeliveryManView'])->name('deny');
-                    Route::get('preview/{id}/{tab?}', [DeliveryManController::class, 'getPreview'])->name('preview');
-                    Route::get('status/{id}/{status}', [DeliveryManController::class, 'updateStatus'])->name('status');
-                    Route::get('earning/{id}/{status}', [DeliveryManController::class, 'updateEarning'])->name('earning');
-                    Route::get('application/{id}/{status}', [DeliveryManController::class, 'updateApplication'])->name('application');
-                    Route::get('edit/{id}', [DeliveryManController::class, 'getUpdateView'])->name('edit');
-                    Route::post('edit/{id}', [DeliveryManController::class, 'update'])->name('update');
-                    Route::delete('delete/{id}', [DeliveryManController::class, 'delete'])->name('delete');
-                    Route::post('search', [DeliveryManController::class, 'getSearchList'])->name('search');
-                    Route::post('active-search', [DeliveryManController::class, 'getActiveSearchList'])->name('active-search');
-                    Route::get('export', [DeliveryManController::class, 'exportList'])->name('export');
-                    Route::get('earning-export', [DeliveryManController::class, 'getEarningListExport'])->name('earning-export');
-                    Route::get('review-export', [DeliveryManController::class, 'getReviewExportList'])->name('review-export');
-                    Route::get('loyalty-point-export', [DeliveryManController::class, 'getLoyaltyPointExportList'])->name('loyalty-point-export');
-                    Route::get('referral-export', [DeliveryManController::class, 'getReferralEarnExportList'])->name('referral-export');
-                    Route::get('disbursement-export/{id}/{type}', [DeliveryManController::class, 'disbursement_export'])->name('disbursement-export');
-
-                    Route::group(['prefix' => 'reviews', 'as' => 'reviews.'], function () {
-                        Route::get('list', [DeliveryManController::class, 'getReviewListView'])->name('list');
-                        Route::post('search', [DeliveryManController::class, 'getReviewSearchList'])->name('search');
-                        Route::get('status/{id}/{status}', [DeliveryManController::class, 'updateReviewStatus'])->name('status');
-                        Route::get('export', [DeliveryManController::class, 'getAllReviewExportList'])->name('export');
-                    });
-
-                    Route::get('message-view/{conversation_id}/{user_id}', [DeliveryManController::class, 'getConversationView'])->name('message-view');
-                    Route::get('message-list-search', [DeliveryManController::class, 'getConversationList'])->name('message-list-search');
-                });
-            });
-
         });
         Route::group(['prefix' => 'transactions', 'as' => 'transactions.'], function () {
             Route::get('/', 'DashboardController@transaction_dashboard')->name('dashboard');
