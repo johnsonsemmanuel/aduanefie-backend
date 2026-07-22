@@ -24,7 +24,7 @@ fi
 # 2. Force production mode
 # -------------------------------------------
 export APP_ENV=production
-export APP_DEBUG=false
+export APP_DEBUG="${APP_DEBUG:-false}"
 
 # -------------------------------------------
 # 3. Clear all caches (clean slate)
