@@ -75,7 +75,7 @@
                                             <span class="text-dark">{{ translate('drag_&_drop_your_image') }}</span>
                                             <span class="text-lowercase">{{ translate('or') }}</span>
                                             <span type="button" class="text-primary font-semibold fs-12 text-underline">
-                                                <i class="fi fi-rr-cloud-upload-alt"></i>
+                                                <i class="tio-upload"></i>
                                                 {{ translate('Browse_Image') }}
                                             </span>
                                         </div>

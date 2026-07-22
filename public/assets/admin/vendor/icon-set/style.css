@@ -3451,3 +3451,13 @@
     height: 10px;
 }
 
+@keyframes tio-spin-anim {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.tio-spin {
+    display: inline-block;
+    animation: tio-spin-anim 1s linear infinite;
+}
+

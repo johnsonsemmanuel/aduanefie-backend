@@ -14,7 +14,7 @@
     $unread_messages   = \App\Models\Conversation::whereUser($logged_in_user->id ?? 0)->where('unread_message_count', '>', 0)->count();
 @endphp
 
-<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
 
 <header class="v2-topbar" role="banner">
     <a class="v2-brand" href="{{ route('vendor.dashboard') }}" title="{{ $store_data->name ?? 'Store' }}">

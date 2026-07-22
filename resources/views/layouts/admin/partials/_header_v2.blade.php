@@ -77,7 +77,7 @@
 @endphp
 
 {{-- Lucide icons (same CDN the prototype uses) --}}
-<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
 
 {{--
     Pre-apply the saved view mode (pinned ↔ compact) BEFORE the topbar /

@@ -207,7 +207,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+{{-- Font Awesome removed — icons replaced with TIO --}}
 
 <body>
 <div class="first">
@@ -427,12 +427,12 @@
                 <th class="content-position-y bg-light py-4">
                     <div class="d-flex justify-content-center gap-2">
                         <div class="mb-2">
-                            <i class="fa fa-phone"></i>
+                            <i class="tio-phone"></i>
                             {{translate('phone')}}
                             : {{ $company_phone }}
                         </div>
                         <div class="mb-2">
-                            <i class="fa fa-envelope" aria-hidden="true"></i>
+                            <i class="tio-email" aria-hidden="true"></i>
                             {{translate('email')}}
                             : {{$company_email}}
                         </div>
