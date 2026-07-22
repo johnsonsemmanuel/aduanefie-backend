@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Route;
-use Modules\RideShare\Entities\UserManagement\Rider;
+use Illuminate\Support\Facades\App as LaravelApp;
 
 class DashboardController extends Controller
 {
@@ -174,8 +174,11 @@ class DashboardController extends Controller
     }
 
     private function get_rider_data($params) {
-
-        $data['rider_images'] = Rider::when(is_numeric($params['zone_id']), function ($q) use ($params) {
+        if (!class_exists('Modules\RideShare\Entities\UserManagement\Rider')) {
+            return [];
+        }
+        $Rider = new \Modules\RideShare\Entities\UserManagement\Rider();
+        $data['rider_images'] = $Rider->newQuery()->when(is_numeric($params['zone_id']), function ($q) use ($params) {
                 return $q->where('zone_id', $params['zone_id']);
             })
             ->limit(2)
