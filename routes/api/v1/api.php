@@ -71,6 +71,10 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
         Route::post('social-register', 'SocialAuthController@social_register');
     });
 
+    Route::group(['prefix' => 'auth/marketer'], function () {
+        Route::post('register', 'MarketerController@register');
+    });
+
     //Store Subscription
     Route::group(['prefix' => 'vendor','namespace' => 'Vendor'], function () {
         Route::get('package-view', 'SubscriptionController@package_view');
@@ -449,6 +453,12 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
                 Route::get('active-offer', [ProCustomerController::class, 'activeOffer']);
             });
 
+            Route::group(['prefix' => 'saved-recipes'], function () {
+                Route::post('add', 'SavedRecipeController@add');
+                Route::get('/', 'SavedRecipeController@list');
+                Route::delete('remove/{id}', 'SavedRecipeController@remove');
+            });
+
         });
         Route::group(['prefix' => 'customer', 'middleware' => 'apiGuestCheck'], function () {
             Route::group(['prefix' => 'order'], function () {
@@ -511,6 +521,7 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             Route::post('reviews/submit', 'ItemController@submit_product_review')->middleware('auth:api');
             Route::get('common-conditions', 'ItemController@get_store_condition_products');
             Route::get('get-products', 'ItemController@get_products');
+            Route::get('farm-inputs', 'ItemController@get_farm_inputs');
         });
 
         Route::group(['prefix' => 'stores'], function () {
@@ -529,6 +540,8 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             Route::get('top-offer-near-me', 'StoreController@get_top_offer_near_me');
             Route::get('quick-delivery', 'StoreController@get_quick_delivery_stores');
             Route::get('exclusive-deals', 'StoreController@get_exclusive_deals');
+            Route::get('organic', 'StoreController@get_organic_stores');
+            Route::get('farm-updates', 'StoreController@get_farm_updates');
         });
         Route::get('get-combined-data', 'SearchController@get_combined_data');
         Route::get('trending-searches', 'SearchController@getTrendingSearches')->withoutMiddleware(['module-check']);
@@ -600,6 +613,39 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             Route::get('/', 'StoreCategoryController@getCategories');
             Route::get('store/{storeId}', 'StoreCategoryController@getByStore');
             Route::get('items', 'StoreCategoryController@getCategoriesWithItems');
+        });
+
+        Route::group(['prefix' => 'community-zones'], function () {
+            Route::get('/', 'CommunityZoneController@index');
+            Route::get('by-zone', 'CommunityZoneController@byZone');
+        });
+
+        Route::group(['prefix' => 'community-delivery'], function () {
+            Route::post('check', 'CommunityDeliveryController@check');
+        });
+
+        Route::group(['prefix' => 'community-agent', 'middleware' => 'auth:api'], function () {
+            Route::get('earnings', 'CommunityAgentController@earnings');
+        });
+
+        Route::group(['prefix' => 'recipes'], function () {
+            Route::get('/', 'RecipeController@index');
+            Route::get('details/{id}', 'RecipeController@details');
+            Route::get('ingredients/{id}', 'RecipeController@ingredients');
+        });
+
+        Route::group(['prefix' => 'customer', 'middleware' => 'auth:api'], function () {
+            Route::group(['prefix' => 'saved-recipes'], function () {
+                Route::get('/', 'SavedRecipeController@index');
+                Route::post('add', 'SavedRecipeController@store');
+                Route::delete('remove/{id}', 'SavedRecipeController@destroy');
+            });
+        });
+
+        Route::group(['prefix' => 'marketer', 'middleware' => 'auth:api'], function () {
+            Route::get('dashboard', 'MarketerController@dashboard');
+            Route::get('referrals', 'MarketerController@referrals');
+            Route::get('leaderboard', 'MarketerController@leaderboard');
         });
     });
     Route::group(['prefix' => 'offers'], function () {
