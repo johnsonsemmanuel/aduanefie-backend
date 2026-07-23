@@ -75,14 +75,16 @@
                             <div class="form-group">
                                 <label for="site_key" class="form-label">{{translate('messages.Site Key')}}</label><br>
                                 <input id="site_key" type="text" class="form-control" name="site_key"
-                                        value="{{getEnvMode()!='demo'?$config['site_key']??"":''}}">
+                                        value="{{getEnvMode()!='demo'?$config['site_key']??"":''}}"
+                                        placeholder="{{ translate('messages.Enter_site_key') }}">
                             </div>
                         </div>
                         <div class="col-sm-6">
                             <div class="form-group">
                                 <label for="site_key" class="form-label">{{translate('messages.Secret Key')}}</label><br>
                                 <input id="site_key" type="text" class="form-control" name="secret_key"
-                                        value="{{getEnvMode()!='demo'?$config['secret_key']??"":''}}">
+                                        value="{{getEnvMode()!='demo'?$config['secret_key']??"":''}}"
+                                        placeholder="{{ translate('messages.Enter_secret_key') }}">
                             </div>
                         </div>
                     </div>

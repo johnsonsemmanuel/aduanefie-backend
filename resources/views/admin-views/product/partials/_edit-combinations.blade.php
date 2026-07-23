@@ -27,12 +27,12 @@
                     <input type="number" name="price_{{ $combination['type'] }}"
                            value="{{$combination['price']}}" min="0"
                            step="{{ \App\CentralLogics\Helpers::getDecimalPlaces() }}" max="999999999999.999"
-                           class="form-control" required>
+                           class="form-control" required placeholder="0">
                 </td>
                 @if ($stock)
                     <td class="error-wrapper">
                         <input type="number" name="stock_{{ $combination['type'] }}" value="{{$combination['stock']??0}}" min="0"
-                                class="form-control update_qty" required>
+                                class="form-control update_qty" required placeholder="0">
                     </td>
                 @endif
 

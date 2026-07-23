@@ -242,7 +242,7 @@
                                         </label>
                                         <input type="number" step="0.01" min="1" max="999999999999.99"
                                             value="{{ old('discount') }}" name="discount" id="discount"
-                                            class="form-control" required>
+                                            class="form-control" required placeholder="{{ translate('messages.Enter_discount') }}">
                                     </div>
                                 </div>
                                 <div class="col-md-4 col-lg-3 col-sm-6">
@@ -252,7 +252,8 @@
                                             ({{ \App\CentralLogics\Helpers::currency_symbol() }})</label>
                                         <input type="number" step="0.01" min="0"
                                             value="{{ old('max_discount') ?? 0 }}" max="999999999999.99"
-                                            name="max_discount" id="max_discount" class="form-control" readonly>
+                                            name="max_discount" id="max_discount" class="form-control" readonly
+                                            placeholder="{{ translate('messages.Enter_max_discount') }}">
                                     </div>
                                 </div>
 

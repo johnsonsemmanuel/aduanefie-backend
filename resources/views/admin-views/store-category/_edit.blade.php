@@ -52,7 +52,7 @@
                 @else
                     <div class="form-group">
                         <label class="input-label">{{ translate('messages.Store_Category_Name') }}</label>
-                        <input type="text" name="name[]" class="form-control" value="{{ $category?->getRawOriginal('name') }}" maxlength="191">
+                        <input type="text" name="name[]" class="form-control" value="{{ $category?->getRawOriginal('name') }}" maxlength="191" placeholder="{{ translate('messages.Enter_category_name') }}">
                     </div>
                     <input type="hidden" name="lang[]" value="default">
                 @endif

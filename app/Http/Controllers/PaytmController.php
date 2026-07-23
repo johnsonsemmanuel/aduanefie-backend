@@ -32,28 +32,36 @@ class PaytmController extends Controller
         } elseif (!is_null($config) && $config->mode == 'test') {
             $this->config_values = json_decode($config->test_values);
         }
-        if (isset($config)) {
-
-            $PAYTM_STATUS_QUERY_NEW_URL = 'https://securestage.paytmpayments.com/theia/api/v1/showPaymentPage';
-            $PAYTM_TXN_URL = 'https://securestage.paytmpayments.com/theia/api/v1/initiateTransaction';
-            if ($config->mode == 'live') {
-                $PAYTM_STATUS_QUERY_NEW_URL = 'https://secure.paytmpayments.com/theia/api/v1/showPaymentPage';
-                $PAYTM_TXN_URL = 'https://secure.paytmpayments.com/theia/api/v1/initiateTransaction';
-            }
-
-            $config = array(
-                'PAYTM_ENVIRONMENT' => ($config->mode == 'test') ? 'TEST' : 'PROD',
-                'PAYTM_MERCHANT_KEY' => env('PAYTM_MERCHANT_KEY', $this->config_values->merchant_key),
-                'PAYTM_MERCHANT_MID' => env('PAYTM_MERCHANT_MID', $this->config_values->merchant_id),
-                'PAYTM_MERCHANT_WEBSITE' => env('PAYTM_MERCHANT_WEBSITE', $this->config_values->merchant_website_link),
-                'PAYTM_REFUND_URL' => env('PAYTM_REFUND_URL', $this->config_values->refund_url ?? ''),
-                'PAYTM_STATUS_QUERY_URL' => env('PAYTM_STATUS_QUERY_URL', $PAYTM_STATUS_QUERY_NEW_URL),
-                'PAYTM_STATUS_QUERY_NEW_URL' => env('PAYTM_STATUS_QUERY_NEW_URL', $PAYTM_STATUS_QUERY_NEW_URL),
-                'PAYTM_TXN_URL' => env('PAYTM_TXN_URL', $PAYTM_TXN_URL),
-            );
-
-            Config::set('paytm_config', $config);
+        if (!isset($this->config_values)) {
+            $this->config_values = null;
         }
+
+        if (!isset($config) || is_null($config)) {
+            $this->payment = $payment;
+            $this->user = $user;
+            return;
+        }
+
+        $PAYTM_STATUS_QUERY_NEW_URL = 'https://securestage.paytmpayments.com/theia/api/v1/showPaymentPage';
+        $PAYTM_TXN_URL = 'https://securestage.paytmpayments.com/theia/api/v1/initiateTransaction';
+        if ($config->mode == 'live') {
+            $PAYTM_STATUS_QUERY_NEW_URL = 'https://secure.paytmpayments.com/theia/api/v1/showPaymentPage';
+            $PAYTM_TXN_URL = 'https://secure.paytmpayments.com/theia/api/v1/initiateTransaction';
+        }
+
+        $config = array(
+            'PAYTM_ENVIRONMENT' => ($config->mode == 'test') ? 'TEST' : 'PROD',
+            'PAYTM_MERCHANT_KEY' => env('PAYTM_MERCHANT_KEY', $this->config_values->merchant_key ?? ''),
+            'PAYTM_MERCHANT_MID' => env('PAYTM_MERCHANT_MID', $this->config_values->merchant_id ?? ''),
+            'PAYTM_MERCHANT_WEBSITE' => env('PAYTM_MERCHANT_WEBSITE', $this->config_values->merchant_website_link ?? ''),
+            'PAYTM_REFUND_URL' => env('PAYTM_REFUND_URL', $this->config_values->refund_url ?? ''),
+            'PAYTM_STATUS_QUERY_URL' => env('PAYTM_STATUS_QUERY_URL', $PAYTM_STATUS_QUERY_NEW_URL),
+            'PAYTM_STATUS_QUERY_NEW_URL' => env('PAYTM_STATUS_QUERY_NEW_URL', $PAYTM_STATUS_QUERY_NEW_URL),
+            'PAYTM_TXN_URL' => env('PAYTM_TXN_URL', $PAYTM_TXN_URL),
+        );
+
+        Config::set('paytm_config', $config);
+
         $this->payment = $payment;
         $this->user = $user;
     }

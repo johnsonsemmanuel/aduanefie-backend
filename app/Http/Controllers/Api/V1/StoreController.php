@@ -9,6 +9,7 @@ use App\CentralLogics\CategoryLogic;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Item;
+use App\Models\FarmUpdate;
 use App\Traits\ItemFilter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -400,5 +401,81 @@ class StoreController extends Controller
 
         return response()->json($data, 200);
     }
+
+    public function get_organic_stores(Request $request)
+    {
+        Helpers::setZoneIds($request);
+
+        $type = $request->query('type', 'all');
+        $zone_id = $request->header('zoneId');
+        $longitude = $request->header('longitude');
+        $latitude = $request->header('latitude');
+        $limit = $request->query('limit', 25);
+        $offset = $request->query('offset', 1);
+
+        $storeIds = Item::where('organic', 1)
+            ->whereHas('store', function ($query) use ($zone_id, $type, $longitude, $latitude) {
+                $query->where('status', 1)
+                    ->when(config('module.current_module_data'), function ($q) {
+                        $q->where('module_id', config('module.current_module_data')['id']);
+                    })
+                    ->whereIn('zone_id', json_decode($zone_id, true));
+            })
+            ->pluck('store_id')
+            ->unique()
+            ->toArray();
+
+        $stores = Store::whereIn('id', $storeIds)
+            ->active();
+
+        $storeList = $stores->paginate($limit, ['*'], 'page', $offset);
+        $storeList->getCollection()->transform(function ($store) {
+            return Helpers::store_data_formatting($store, true);
+        });
+
+        return response()->json([
+            'total_size' => $storeList->total(),
+            'limit' => $limit,
+            'offset' => $offset,
+            'stores' => $storeList->items(),
+        ], 200);
+    }
+
+    public function get_farm_updates(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'store_id' => 'required_without:store_slug',
+            'store_slug' => 'required_without:store_id',
+            'limit' => 'nullable|integer|min:1',
+            'offset' => 'nullable|integer|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => Helpers::error_processor($validator)], 403);
+        }
+
+        $query = FarmUpdate::query()->with('store');
+
+        if (is_numeric($request->store_id)) {
+            $query->where('store_id', $request->store_id);
+        } elseif ($request->filled('store_slug')) {
+            $query->whereHas('store', function ($q) use ($request) {
+                $q->where('slug', $request->store_slug);
+            });
+        }
+
+        $limit = $request->get('limit', 10);
+        $offset = $request->get('offset', 1);
+        $updates = $query->orderBy('created_at', 'desc')
+            ->paginate($limit, ['*'], 'page', $offset);
+
+        return response()->json([
+            'total_size' => $updates->total(),
+            'limit' => $limit,
+            'offset' => $offset,
+            'farm_updates' => $updates->items(),
+        ], 200);
+    }
+}
 
 }

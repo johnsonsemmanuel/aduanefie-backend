@@ -232,7 +232,7 @@
                                 </label>
                                 <input type="number" id="discount" min="1" max="999999999999.99"
                                     step="0.01" value="{{ $coupon['discount'] }}" name="discount"
-                                    class="form-control" required>
+                                    class="form-control" required placeholder="{{ translate('messages.Enter_discount') }}">
                             </div>
                         </div>
                         <div class="col-md-4 col-lg-3 col-sm-6">
@@ -243,7 +243,8 @@
                                 <input type="number" min="0" max="999999999999.99" step="0.01"
                                     value="{{ $coupon['max_discount'] }}" name="max_discount" id="max_discount"
                                     class="form-control"
-                                    {{ $coupon['discount_type'] == 'amount' ? 'readonly="readonly"' : '' }}>
+                                    {{ $coupon['discount_type'] == 'amount' ? 'readonly="readonly"' : '' }}
+                                    placeholder="{{ translate('messages.Enter_max_discount') }}">
                             </div>
                         </div>
 

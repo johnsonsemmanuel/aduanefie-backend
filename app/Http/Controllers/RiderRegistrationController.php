@@ -18,7 +18,7 @@ use Modules\RideShare\Entities\UserManagement\RiderDetail;
 class RiderRegistrationController extends Controller
 {
     public function __construct(
-        protected DriverLevelServiceInterface $driverLevelService,
+        protected ?DriverLevelServiceInterface $driverLevelService = null,
     )
     {
     }

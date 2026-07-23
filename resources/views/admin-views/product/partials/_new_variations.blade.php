@@ -19,7 +19,7 @@
                 <label for="">{{ translate('name') }}</label>
                 <input required name="options[{{ $key }}][name]" class="form-control new_option_name"
                     type="text" data-count="{{ $key }}"
-                    value="{{ $item['name'] }}">
+                    value="{{ $item['name'] }}" placeholder="{{ translate('messages.Enter_name') }}">
             </div>
 
             <div class="col-xl-4 col-lg-6">
@@ -55,13 +55,13 @@
                         <label for="">{{ translate('Min') }}</label>
                         <input id="min_max1_{{ $key }}" {{ $item['type'] == 'single' ? 'readonly ' : 'required' }}
                             value="{{ ($item['min'] != 0) ? $item['min']:''  }}" name="options[{{ $key }}][min]"
-                            class="form-control" type="number" min="1">
+                            class="form-control" type="number" min="1" placeholder="1">
                     </div>
                     <div class="col-6 error-wrapper">
                         <label for="">{{ translate('Max') }}</label>
                         <input id="min_max2_{{ $key }}" {{ $item['type'] == 'single' ? 'readonly ' : 'required' }}
                             value="{{ ($item['max'] != 0) ? $item['max']:''  }}" name="options[{{ $key }}][max]"
-                            class="form-control" type="number" min="2">
+                            class="form-control" type="number" min="2" placeholder="2">
                     </div>
 
                 </div>
@@ -78,13 +78,14 @@
                                 <label for="">{{ translate('Option_name') }}</label>
                                 <input class="form-control" required type="text"
                                     name="options[{{ $key }}][values][{{ $key_value }}][label]"
-                                    value="{{ $value['label'] }}">
+                                    value="{{ $value['label'] }}" placeholder="{{ translate('messages.Enter_name') }}">
                             </div>
                             <div class="col-md-4 col-sm-6 error-wrapper">
                                 <label for="">{{ translate('Additional_price') }}</label>
                                 <input class="form-control" required type="number" min="0" step="{{ \App\CentralLogics\Helpers::getDecimalPlaces() }}" max="999999999999.999"
                                     name="options[{{ $key }}][values][{{ $key_value }}][optionPrice]"
-                                    value="{{ request()->product_gellary == 1 ? null : $value['optionPrice'] }}">
+                                    value="{{ request()->product_gellary == 1 ? null : $value['optionPrice'] }}"
+                                    placeholder="0.00">
                             </div>
                             <div class="col-sm-2 max-sm-absolute">
                                 <label class="d-none d-md-block">&nbsp;</label>

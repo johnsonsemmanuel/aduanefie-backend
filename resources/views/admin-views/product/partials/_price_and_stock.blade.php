@@ -132,7 +132,8 @@
                                         <label class="input-label"
                                             for="total_stock">{{ translate('messages.total_stock') }}</label>
                                         <input type="number" class="form-control" name="current_stock" min="0"
-                                            value="{{ isset($product) ? max((int) $product->stock, 0) : '' }}" id="quantity">
+                                            value="{{ isset($product) ? max((int) $product->stock, 0) : '' }}" id="quantity"
+                                            placeholder="{{ translate('messages.Enter_quantity') }}">
                                     </div>
                                 </div>
                             @endif
