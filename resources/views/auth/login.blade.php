@@ -36,7 +36,7 @@
                 @php($store_logo = \App\Models\BusinessSetting::where(['key' => 'logo'])->first())
                 <img class="onerror-image"  data-onerror-image="{{asset('/public/assets/admin/img/favicon.png')}}"
                 src="{{\App\CentralLogics\Helpers::get_full_url('business', $store_logo?->value?? '', $store_logo?->storage[0]?->value ?? 'public','favicon')}}"  alt="public/img">
-                <h2 class="title">{{translate('Your')}} <span class="d-block">{{translate('All Service')}}</span> <strong class="text--039D55">{{translate('in one field')}}....</strong></h2>
+                <h2 class="title">{{translate('Africa\'s Biggest')}} <span class="d-block">{{translate('Marketplace')}}</span> <strong class="text--039D55">{{translate('Manage everything')}}....</strong></h2>
             </div>
         </div>
         <div class="auth-wrapper-right">
