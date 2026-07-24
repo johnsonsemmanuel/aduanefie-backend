@@ -2,7 +2,7 @@
 
 return [
     'module_type'=>[
-        'grocery', 'food', 'pharmacy', 'ecommerce','parcel','rental','ride-share'
+        'grocery', 'food', 'pharmacy', 'ecommerce','parcel','rental','ride-share','farm_inputs'
     ],
 
     'grocery'=>[
@@ -183,5 +183,30 @@ return [
         'generic_name'=>false,
         'description'=>'',
         'is_rental'=>true,
+    ],
+    'farm_inputs'=>[
+        'order_status'=>['accepted'=>false],
+        'order_place_to_schedule_interval'=>false,
+        'add_on'=>false,
+        'stock'=>true,
+        'veg_non_veg'=>false,
+        'unit'=>true,
+        'order_attachment'=>false,
+        'always_open'=>true,
+        'all_zone_service'=>false,
+        'item_available_time'=>false,
+        'show_restaurant_text'=>false,
+        'is_parcel'=>false,
+        'organic'=>true,
+        'cutlery'=>false,
+        'common_condition'=>false,
+        'nutrition'=>false,
+        'allergy'=>false,
+        'basic'=>false,
+        'halal'=>false,
+        'brand'=>true,
+        'generic_name'=>false,
+        'description'=>'Farm inputs module — seeds, fertilizers, tools, small equipment.',
+        'is_rental'=>false,
     ],
 ];

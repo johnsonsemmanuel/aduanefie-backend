@@ -346,10 +346,6 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
             Route::post('switch-to-cod/{order}', 'OrderController@switch_to_cod')->name('switch_to_cod');
 
             Route::get('offline/payment/list/{status}', 'OrderController@offline_verification_list')->name('offline_verification_list');
-            Route::get('parcel-cancelation-reasons', 'OrderController@parcelCancellationReason')->name('parcelCancellationReason');
-            Route::put('cancel-parcel', 'OrderController@CancelParcel')->name('CancelParcel');
-            Route::put('parcel-refund', 'OrderController@parcelRefund')->name('parcelRefund');
-            Route::get('parcel-return', 'OrderController@parcelReturn')->name('parcelReturn');
 
         });
         // Refund

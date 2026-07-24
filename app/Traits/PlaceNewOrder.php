@@ -615,7 +615,23 @@ trait PlaceNewOrder
 
                 if (count($product_data) > 0) {
                     foreach ($product_data as $item) {
-                        $data= Item::find($item['item']['id']);
+                        $data = Item::where('id', $item['item']['id'])->lockForUpdate()->first();
+                        if (!$data) {
+                            DB::rollBack();
+                            return response()->json([
+                                'errors' => [
+                                    ['code' => 'item', 'message' => translate('messages.item_not_found')]
+                                ]
+                            ], 404);
+                        }
+                        if ($data->stock < $item['quantity']) {
+                            DB::rollBack();
+                            return response()->json([
+                                'errors' => [
+                                    ['code' => 'stock', 'message' => translate('messages.item_stock_insufficient')]
+                                ]
+                            ], 403);
+                        }
                         ProductLogic::update_stock($data, $item['quantity'], $item['variant'])->save();
                         ProductLogic::update_flash_stock($item['item'], $item['quantity'])?->save();
                     }

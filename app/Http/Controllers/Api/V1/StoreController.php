@@ -136,10 +136,16 @@ class StoreController extends Controller
         return response()->json($stores, 200);
     }
 
-    public function get_popular_store_items($id)
+    public function get_popular_store_items(Request $request, $id)
     {
+        Helpers::setZoneIds($request);
+        $zone_ids = $request->header('zoneId') ? json_decode($request->header('zoneId'), true) : null;
+
         $items = Item::
-        when(is_numeric($id),function ($qurey) use($id){
+        when($zone_ids, function ($query) use ($zone_ids) {
+            $query->whereIn('store_id', \App\Models\Store::whereIn('zone_id', $zone_ids)->pluck('id'));
+        })
+        ->when(is_numeric($id),function ($qurey) use($id){
             $qurey->where('store_id', $id);
         })
         ->when(!is_numeric($id), function ($query) use ($id) {
@@ -155,11 +161,19 @@ class StoreController extends Controller
 
     public function get_details(Request $request,$id)
     {
+        Helpers::setZoneIds($request);
+        $zone_ids = $request->header('zoneId') ? json_decode($request->header('zoneId'), true) : null;
+
         $longitude= $request->header('longitude');
         $latitude= $request->header('latitude');
         $store = StoreLogic::get_store_details($id,$longitude,$latitude);
         if($store)
         {
+            if ($zone_ids && !in_array($store->zone_id, $zone_ids)) {
+                return response()->json([
+                    'errors' => ['code' => 'store-001', 'message' => translate('messages.store_not_found_in_your_zone')]
+                ], 404);
+            }
             if(auth('api')->check()){
                 Helpers::visitor_log(model: 'store', user_id: auth('api')->id(), visitor_log_id: $store->id, order_count: false);
                 PersonalizationService::recordStoreAction(auth('api')->id(), $store->id, 'store_view');
@@ -476,6 +490,4 @@ class StoreController extends Controller
             'farm_updates' => $updates->items(),
         ], 200);
     }
-}
-
 }

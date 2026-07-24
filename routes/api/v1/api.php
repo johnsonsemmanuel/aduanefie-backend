@@ -122,7 +122,6 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             Route::get('order', 'DeliverymanController@get_order');
             Route::put('send-order-otp', 'DeliverymanController@send_order_otp');
             Route::put('update-fcm-token', 'DeliverymanController@update_fcm_token');
-            Route::post('parcel-return', 'DeliverymanController@parcelReturn');
             //Remove account
             Route::delete('remove-account', 'DeliverymanController@remove_account');
 
@@ -367,7 +366,6 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
     Route::get('item/get-allergy-name-list', 'ItemController@getAllergyNameList');
     Route::get('item/get-nutrition-name-list', 'ItemController@getNutritionNameList');
 
-    Route::get('customer/order/parcel-instructions', 'OrderController@parcel_instructions');
     Route::get('customer/order/last', 'OrderController@get_last_orders');
     Route::get('most-tips', 'OrderController@most_tips');
     Route::get('stores/details/{id}', 'StoreController@get_details');
@@ -478,7 +476,6 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
                 Route::put('offline-payment', 'OrderController@offline_payment');
                 Route::put('offline-payment-update', 'OrderController@update_offline_payment_info');
                 Route::post('get-surge-price', 'OrderController@getSurgePriceAmount');
-                Route::post('parcel-return', 'OrderController@parcelReturn');
                 Route::post('wallet-payment', 'OrderController@walletPayment');
                 Route::get('payment-failed', 'CustomerController@orderPaymentFailed');
 
@@ -506,7 +503,6 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             Route::get('recently-viewed', 'ItemController@get_recently_viewed_products');
             Route::get('organic', 'ItemController@get_organic_products');
             Route::get('discounted', 'ItemController@get_discounted_products');
-            Route::get('set-menu', 'ItemController@get_set_menus');
             Route::get('search', 'ItemController@get_searched_products');
             Route::get('search-suggestion', 'ItemController@get_searched_products_suggestion');
             Route::get('details/{id}', 'ItemController@get_product');

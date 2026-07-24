@@ -1288,10 +1288,16 @@ class ProductLogic
 
             foreach ($variations as $key => $value) {
                 if ($value['type'] == $variant) {
+                    if (($value['stock'] ?? 0) < $quantity) {
+                        throw new \Exception('Variation stock insufficient for: ' . ($value['type'] ?? 'unknown'));
+                    }
                     $variations[$key]['stock'] -= $quantity;
                 }
             }
             $item['variations']= json_encode($variations);
+        }
+        if ($item->stock < $quantity) {
+            throw new \Exception('Item stock insufficient for item id: ' . $item->id);
         }
         $item->stock -= $quantity;
         return $item;
@@ -1302,13 +1308,16 @@ class ProductLogic
         $item = FlashSaleItem::Active()->whereHas('flashSale', function ($query) {
             $query->Active()->Running();
         })
-        ->where(['item_id' => $item->id])->first();
+        ->where(['item_id' => $item->id])->lockForUpdate()->first();
         if($item){
 
             if ($decreaseStock) {
                 $item->sold = max(0, $item->sold - $quantity);
                 $item->available_stock = $item->stock + $item->sold;
             } else {
+                if ($item->available_stock < $quantity) {
+                    throw new \Exception('Flash sale stock insufficient for item id: ' . $item->item_id);
+                }
                 $item->sold += $quantity;
                 $item->available_stock = max(0, $item->stock - $item->sold);
             }

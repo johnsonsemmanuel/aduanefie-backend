@@ -12701,4 +12701,5 @@ Smartly or Earn. ',
   'Brevo (Sendinblue)' => 'Brevo (Sendinblue)',
   'Gmail SMTP' => 'Gmail SMTP',
   'messages.provider' => 'Provider',
+  'store_not_found_in_your_zone' => 'Store not found in your zone',
 );

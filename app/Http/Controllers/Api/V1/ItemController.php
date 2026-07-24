@@ -134,13 +134,10 @@ class ItemController extends Controller
 
 
         if ($product_search_default_status != '1'){
-            if(config('module.current_module_data')['module_type']  !== 'food'){
-                if($product_search_sort_by_unavailable == 'remove'){
-                    $query = $query->where('stock', '>', 0);
-                }elseif($product_search_sort_by_unavailable == 'last'){
-                    $query = $query->orderByRaw('CASE WHEN stock = 0 THEN 1 ELSE 0 END');
-                }
-
+            if($product_search_sort_by_unavailable == 'remove'){
+                $query = $query->where('stock', '>', 0);
+            }elseif($product_search_sort_by_unavailable == 'last'){
+                $query = $query->orderByRaw('CASE WHEN stock = 0 THEN 1 ELSE 0 END');
             }
 
             if($product_search_sort_by_temp_closed == 'remove'){
@@ -185,8 +182,6 @@ class ItemController extends Controller
             'category.parent' => 'name',
             'category' => 'name',
             'generic' => 'generic_name',
-            'ecommerce_item_details.brand' => 'name',
-            'pharmacy_item_details.common_condition' => 'name',
         ])
         ->applyRating($request)
         ->applyFilters($additional_data)
@@ -437,10 +432,16 @@ class ItemController extends Controller
     public function get_product(Request $request, $id)
     {
         try {
+            Helpers::setZoneIds($request);
+            $zone_ids = $request->header('zoneId') ? json_decode($request->header('zoneId'), true) : null;
+
             if ($request['campaign'] == 1) {
                 $item = ItemCampaign::active()
                 ->when(config('module.current_module_data'), function ($query) {
                         $query->module(config('module.current_module_data')['id']);
+                    })
+                    ->when($zone_ids, function ($query) use ($zone_ids) {
+                        $query->whereIn('store_id', \App\Models\Store::whereIn('zone_id', $zone_ids)->pluck('id'));
                     })
                     ->when(is_numeric($id), function ($qurey) use ($id) {
                         $qurey->where('id', $id);
@@ -450,7 +451,7 @@ class ItemController extends Controller
                     })
                     ->first();
             } else {
-                $item = Item::withCount('whislists')->with(['tags', 'nutritions', 'allergies', 'reviews', 'reviews.customer'])->active()
+                $item = Item::withCount('whislists')->with(['tags', 'nutritions', 'allergies', 'reviews', 'reviews.customer'])->active($zone_ids)
                     ->when(config('module.current_module_data'), function ($query) {
                         $query->module(config('module.current_module_data')['id']);
                     })
@@ -546,18 +547,6 @@ class ItemController extends Controller
         $items = ProductLogic::recommended_items($zone_id, $request->store_id,$request['limit'], $request['offset'], $type, $filter, $request->query('store_category_id'), auth('api')->id());
         $items['items'] = Helpers::product_data_formatting($items['items'], true, false, app()->getLocale());
         return response()->json($items, 200);
-    }
-
-    public function get_set_menus()
-    {
-        try {
-            $items = Helpers::product_data_formatting(Item::active()->with(['rating'])->where(['set_menu' => 1, 'status' => 1])->get(), true, false, app()->getLocale());
-            return response()->json($items, 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'errors' => ['code' => 'product-001', 'message' => 'Set menu not found!']
-            ], 404);
-        }
     }
 
     public function get_product_reviews(Request $request, $item_id)
@@ -775,8 +764,6 @@ class ItemController extends Controller
                 'category.parent' => 'name',
                 'category' => 'name',
                 'generic' => 'generic_name',
-                'ecommerce_item_details.brand' => 'name',
-                'pharmacy_item_details.common_condition' => 'name',
             ];
             $q->applyRelationShipSearch(relationships:$relationships ,searchParameter:$key);
         })
@@ -821,8 +808,6 @@ class ItemController extends Controller
                 'items.nutritions' => 'nutrition',
                 'items.allergies' => 'allergy',
                 'items.generic' => 'generic_name',
-                'items.ecommerce_item_details.brand' => 'name',
-                'items.pharmacy_item_details.common_condition' => 'name'
             ];
             $q->applyRelationShipSearch(relationships:$relationships ,searchParameter:$key);
         })
@@ -930,14 +915,6 @@ class ItemController extends Controller
 
         ->when($request->store_category_id, function ($query) use ($request) {
             $query->where('store_category_id', $request->store_category_id);
-        })
-
-        ->whereHas('pharmacy_item_details', function ($q) {
-            $q->whereNotNull('common_condition_id');
-        })
-
-        ->whereHas('ecommerce_item_details', function ($q) {
-            $q->whereNotNull('brand_id');
         })
 
         ->active()

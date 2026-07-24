@@ -405,13 +405,6 @@ class SearchController extends Controller
                     return $q->whereIn('id', $category_ids)->orWhereIn('parent_id', $category_ids);
                 });
             })
-            ->when(isset($brand_ids) && (count($brand_ids) > 0), function ($query) use ($brand_ids) {
-                $query->whereHas('ecommerce_item_details', function ($q) use ($brand_ids) {
-                    return $q->whereHas('brand', function ($q) use ($brand_ids) {
-                        return $q->whereIn('id', $brand_ids);
-                    });
-                });
-            })
             ->when($request->store_id, function ($query) use ($request) {
                 return $query->where('store_id', $request->store_id);
             })
@@ -436,8 +429,6 @@ class SearchController extends Controller
                 'nutritions' => 'nutrition',
                 'allergies' => 'allergy',
                 'generic' => 'generic_name',
-                'ecommerce_item_details.brand' => 'name',
-                'pharmacy_item_details.common_condition' => 'name',
             ])
             ->when($filter && in_array('available_now', $filter), function ($query) {
                 $query->where(function ($q) {

@@ -29,7 +29,7 @@ use App\CentralLogics\ProductLogic;
 use App\Http\Controllers\Controller;
 use App\Models\OfflinePaymentMethod;
 use Illuminate\Support\Facades\Mail;
-use App\Models\ParcelDeliveryInstruction;
+
 use App\Models\Review;
 use App\Traits\HandlesCartValidation;
 use App\Traits\PlaceNewOrder;
@@ -57,7 +57,7 @@ class OrderController extends Controller
             $request['contact_number'] = '+' . $request['contact_number'];
         }
 
-        $order = Order::with(['store', 'store.store_sub', 'delivery_man.rating', 'parcel_category', 'refund', 'payments','parcelCancellation','reviews','orderProDiscount'])->withCount('details')
+        $order = Order::with(['store', 'store.store_sub', 'delivery_man.rating', 'refund', 'payments','reviews','orderProDiscount'])->withCount('details')
             ->where('id', $request['order_id'])
             ->when($request->user, function ($query) use ($user_id) {
                 return $query->where('user_id', $user_id)->where('is_guest', 0);
@@ -132,7 +132,6 @@ class OrderController extends Controller
         $paginator = Order::with([
                 'store',
                 'delivery_man.rating',
-                'parcel_category',
                 'refund:order_id,admin_note,customer_note',
                 'details:id,order_id,item_id,quantity,item_campaign_id',
                 'details.item:id,name,image,store_id',
@@ -290,7 +289,7 @@ class OrderController extends Controller
         }
         $user_id = $request->user ? $request->user->id : $request['guest_id'];
 
-        $paginator = Order::with(['store', 'delivery_man.rating', 'parcel_category', 'orderProDiscount'])
+        $paginator = Order::with(['store', 'delivery_man.rating', 'orderProDiscount'])
             ->when(isset($request->user), function ($query) {
                 $query->where('is_guest', 0);
             })
@@ -329,7 +328,7 @@ class OrderController extends Controller
         }
         $user_id = $request?->user?->id;
 
-        $order = Order::with('details', 'offline_payments', 'parcel_category','parcelCancellation','orderProDiscount')
+        $order = Order::with('details', 'offline_payments', 'orderProDiscount')
             ->when(isset($request->user), function ($query) {
                 $query->where('is_guest', 0);
             })
@@ -354,17 +353,6 @@ class OrderController extends Controller
                 $details[0][$pro_key] = $pro_value;
             }
             return response()->json($details, 200);
-        } else if ($order->order_type == 'parcel' || $order->prescription_order == 1) {
-            $order->delivery_address = json_decode($order->delivery_address, true);
-            if ($order->prescription_order && $order->order_attachment) {
-                $order->order_attachment = is_array($order->order_attachment)? $order->order_attachment : json_decode($order->order_attachment, true);
-            }
-            $order = gettype($order) == 'object' ? $order->toArray() : $order;
-            $order['saver_delivery_time'] = $saver_delivery_time;
-            $order = array_merge($order, $pro_data);
-            unset($order['order_pro_discount']);
-            unset($order['orderProDiscount']);
-            return response()->json(($order), 200);
         }
 
         return response()->json([
@@ -443,17 +431,6 @@ class OrderController extends Controller
                     ['code' => 'order', 'message' => translate('messages.not_found')]
                 ]
             ], 403);
-        } elseif ($order->order_type == 'parcel') {
-            $cancel_parcel_order = OrderLogic::cancelParcelOrder($order, 'customer', $request);
-            if (data_get($cancel_parcel_order, 'status_code') != 200) {
-                return response()->json([
-                    'errors' => [
-                        ['code' => data_get($cancel_parcel_order, 'code'), 'message' => data_get($cancel_parcel_order, 'message')]
-                    ]
-                ], data_get($cancel_parcel_order, 'status_code'));
-            } else {
-                return response()->json(['message' => data_get($cancel_parcel_order, 'message')], 200);
-            }
         } else if ($order->order_status == 'pending' || $order->order_status == 'failed' || $order->order_status == 'canceled') {
                 $hasStock = config('module.' . $order->module->module_type)['stock'];
             $hasFlashDiscount = $order->flash_admin_discount_amount > 0 && $order->flash_store_discount_amount > 0;
@@ -669,22 +646,6 @@ class OrderController extends Controller
         return response()->json($data, 200);
     }
 
-    public function parcel_instructions(Request $request)
-    {
-        $limit = $request->query('limit', 25);
-        $offset = $request->query('offset', 1);
-
-        $instructions = ParcelDeliveryInstruction::where('status', 1)->paginate($limit, ['*'], 'page', $offset);
-
-        $data = [
-            'total_size' => $instructions->total(),
-            'limit' => $limit,
-            'offset' => $offset,
-            'data' => $instructions->items()
-        ];
-        return response()->json($data, 200);
-    }
-
     public function most_tips()
     {
         $data = Order::whereNot('dm_tips', 0)->get()->mode('dm_tips');
@@ -877,7 +838,7 @@ class OrderController extends Controller
         $validator = Validator::make($request->all(), [
             'limit'       => 'nullable|integer|min:1|max:100',
             'offset'      => 'nullable|integer|min:1',
-            'module_type' => 'nullable|string|in:grocery,pharmacy',
+            'module_type' => 'nullable|string|in:grocery',
         ]);
 
         if ($validator->fails()) {
@@ -1364,40 +1325,6 @@ class OrderController extends Controller
         return $this->getSurgePrice($request->zone_id, $request->module_id, $request->date_time);
     }
 
-
-    public function parcelReturn(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'order_id' => 'required',
-            'order_status' => 'required|in:returned',
-            'return_otp' => 'required|numeric',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => Helpers::error_processor($validator)], 403);
-        }
-
-        $order = Order::where(['id' => $request->order_id])->with('parcelCancellation')->first();
-
-
-        $validationCheck =  OrderLogic::makeValidationForParcelReturn($request,$order);
-        if (data_get($validationCheck, 'status_code') === 403) {
-
-            return response()->json([
-                'errors' => [
-                    ['code' => data_get($validationCheck, 'code'), 'message' => data_get($validationCheck, 'message')]
-                ]
-            ], data_get($validationCheck, 'status_code'));
-        }
-
-        if( in_array($order->parcelCancellation->cancel_by ,['deliveryman', 'admin_for_deliveryman']  )){
-            OrderLogic::deliveryManCancelParcelTransaction($order,'customer');
-        } else{
-            OrderLogic::create_transaction_parcel_cancel($order, $order->payment_status == 'paid' ? 'admin' : 'deliveryman' );
-        }
-
-        return response()->json(['message' => translate('messages.Parcel_returned_successfully')], 200);
-    }
 
     public function walletPayment(Request $request){
         $validator = Validator::make($request->all(), [
