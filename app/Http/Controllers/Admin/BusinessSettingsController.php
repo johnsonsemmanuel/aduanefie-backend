@@ -260,6 +260,7 @@ class BusinessSettingsController extends Controller
             'dm_referal_amount',
             'dm_referal_bonus',
             'toggle_dm_registration',
+            'community_delivery_fee',
         ];
 
 

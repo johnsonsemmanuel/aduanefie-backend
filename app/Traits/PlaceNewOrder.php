@@ -168,6 +168,7 @@ trait PlaceNewOrder
 
                 $communityAgent = \App\Models\DeliveryMan::communityAgent()->active()->available()
                     ->where('zone_id', $zone->id)
+                    ->lockForUpdate()
                     ->inRandomOrder()
                     ->first();
             }
@@ -593,11 +594,12 @@ trait PlaceNewOrder
             if ($isCommunityDelivery && $communityAgent) {
                 $order->delivery_man_id = $communityAgent->id;
                 $order->is_community_delivery = 1;
-                $marketer = \App\Models\Marketer::where('user_id', $communityAgent->user_id)->first();
-                if ($marketer) {
-                    $order->community_agent_id = $marketer->id;
-                }
+                $order->community_agent_id = $communityAgent->id;
                 $order->save();
+
+                $communityAgent->current_orders = $communityAgent->current_orders + 1;
+                $communityAgent->assigned_order_count = $communityAgent->assigned_order_count + 1;
+                $communityAgent->save();
             } elseif ($isCommunityDelivery) {
                 $order->is_community_delivery = 1;
                 $order->save();
@@ -708,11 +710,12 @@ trait PlaceNewOrder
             if ($isCommunityDelivery && $communityAgent) {
                 $order->delivery_man_id = $communityAgent->id;
                 $order->is_community_delivery = 1;
-                $marketer = \App\Models\Marketer::where('user_id', $communityAgent->user_id)->first();
-                if ($marketer) {
-                    $order->community_agent_id = $marketer->id;
-                }
+                $order->community_agent_id = $communityAgent->id;
                 $order->save();
+
+                $communityAgent->current_orders = $communityAgent->current_orders + 1;
+                $communityAgent->assigned_order_count = $communityAgent->assigned_order_count + 1;
+                $communityAgent->save();
             } elseif ($isCommunityDelivery) {
                 $order->is_community_delivery = 1;
                 $order->save();

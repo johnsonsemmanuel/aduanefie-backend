@@ -188,7 +188,7 @@ class Order extends Model
 
     public function communityAgent()
     {
-        return $this->belongsTo(Marketer::class, 'community_agent_id');
+        return $this->belongsTo(DeliveryMan::class, 'community_agent_id');
     }
 
     public function customer()

@@ -97,6 +97,23 @@
                                         </div>
                                     </div>
                                     <div class="col-sm-6 col-lg-4">
+                                        @php($community_delivery_fee = Helpers::get_business_settings('community_delivery_fee'))
+                                        <div class="form-group mb-0">
+                                            <label class="form-label text-capitalize"
+                                                for="community_delivery_fee">
+                                                <div class="d-flex align-items-center">
+                                                    <span class="line--limit-1 flex-grow pr-1">{{ translate('Community Delivery Fee') }}</span>
+                                                    <span class="form-label-secondary" data-toggle="tooltip" data-placement="right" data-original-title="{{ translate('messages.Default_delivery_fee_for_community_agent_deliveries.') }}">
+                                                        <i class="tio-info text-light-gray"></i>
+                                                    </span>
+                                                </div>
+                                            </label>
+                                            <input type="number" step="0.01" name="community_delivery_fee" class="form-control"
+                                                id="community_delivery_fee" min="0"
+                                                value="{{ $community_delivery_fee ?? 5.00 }}">
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 col-lg-4">
                                         @php($canceled_by_deliveryman = Helpers::get_business_settings('canceled_by_deliveryman'))
                                         <div class="form-group mb-0">
                                             <label class="input-label text-capitalize d-flex align-items-center"><span

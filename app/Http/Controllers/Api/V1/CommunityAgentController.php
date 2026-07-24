@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Models\Marketer;
-use App\Models\MarketerEarning;
+use App\Models\DeliveryMan;
+use App\Models\CommunityAgentEarning;
 use App\CentralLogics\Helpers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -13,7 +13,7 @@ class CommunityAgentController extends Controller
     public function earnings(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'agent_id' => 'required|integer|exists:marketers,id',
+            'agent_id' => 'required|integer|exists:delivery_men,id',
             'offset' => 'nullable|integer|min:0',
             'limit' => 'nullable|integer|min:1|max:100',
         ]);
@@ -25,7 +25,7 @@ class CommunityAgentController extends Controller
         $offset = $request->input('offset', 0);
         $limit = $request->input('limit', 10);
 
-        $query = MarketerEarning::where('marketer_id', $request->agent_id)
+        $query = CommunityAgentEarning::where('delivery_man_id', $request->agent_id)
             ->where('status', 1)
             ->latest();
 
