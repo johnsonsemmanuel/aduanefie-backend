@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Models\Item;
 use App\Models\Equipment;
 use App\Models\EquipmentBooking;
+use App\Models\EquipmentExtraCharge;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
@@ -94,5 +95,36 @@ class EquipmentBookingController extends Controller
         $booking->save();
 
         return back()->with('success', 'Booking cancelled.');
+    }
+
+    public function markReturned(Request $request, $id)
+    {
+        $request->validate([
+            'late_fee' => 'nullable|numeric|min:0',
+            'late_fee_description' => 'nullable|string|max:255',
+        ]);
+
+        $booking = EquipmentBooking::findOrFail($id);
+
+        if (!in_array($booking->status, ['active', 'overdue'])) {
+            return back()->with('error', 'Only active or overdue bookings can be marked returned.');
+        }
+
+        DB::transaction(function () use ($booking, $request) {
+            $booking->status = 'completed';
+            $booking->save();
+
+            $lateFee = $request->input('late_fee', 0);
+            if ($lateFee > 0) {
+                EquipmentExtraCharge::create([
+                    'booking_id' => $booking->id,
+                    'charge_type' => 'late_fee',
+                    'amount' => $lateFee,
+                    'description' => $request->input('late_fee_description', 'Late return fee'),
+                ]);
+            }
+        });
+
+        return back()->with('success', 'Equipment returned. Booking completed.');
     }
 }
