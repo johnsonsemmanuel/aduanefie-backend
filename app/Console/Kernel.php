@@ -26,6 +26,11 @@ class Kernel extends ConsoleKernel
     {
         // $schedule->command('inspire')->hourly();
         // Personalization schedule moved to Modules/AI/app/Providers/AIServiceProvider.php
+
+        $schedule->command('community-agent:release-stuck')
+            ->everyFifteenMinutes()
+            ->withoutOverlapping()
+            ->appendOutputTo(storage_path('logs/community-agent-release.log'));
     }
 
     /**
