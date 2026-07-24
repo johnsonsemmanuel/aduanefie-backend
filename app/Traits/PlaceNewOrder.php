@@ -155,6 +155,23 @@ trait PlaceNewOrder
             $resolved_delivery_type = data_get($deliveryChargeData, 'delivery_type', 'standard');
             $resolved_delivery_type_charge = (float) data_get($deliveryChargeData, 'delivery_type_charge', 0);
 
+            // Community delivery: override charge and find an available agent
+            $communityAgent = null;
+            $isCommunityDelivery = false;
+            if (($request->delivery_type ?? '') === 'community_delivery') {
+                $communityDeliveryFee = (float) (BusinessSetting::where('key', 'community_delivery_fee')->first()?->value ?? 5.00);
+                $delivery_charge = $communityDeliveryFee;
+                $original_delivery_charge = $communityDeliveryFee;
+                $resolved_delivery_type = 'standard';
+                $resolved_delivery_type_charge = 0;
+                $isCommunityDelivery = true;
+
+                $communityAgent = \App\Models\DeliveryMan::communityAgent()->active()->available()
+                    ->where('zone_id', $zone->id)
+                    ->inRandomOrder()
+                    ->first();
+            }
+
             $address = [
                 'contact_person_name' => $request->contact_person_name ? $request->contact_person_name : ($request->user ? $request->user->f_name . ' ' . $request->user->l_name : ''),
                 'contact_person_number' => $request->contact_person_number ? $request->contact_person_number : ($request->user ? $request->user->phone : ''),
@@ -572,6 +589,20 @@ trait PlaceNewOrder
 
             $order->save();
 
+            // Assign community agent if applicable
+            if ($isCommunityDelivery && $communityAgent) {
+                $order->delivery_man_id = $communityAgent->id;
+                $order->is_community_delivery = 1;
+                $marketer = \App\Models\Marketer::where('user_id', $communityAgent->user_id)->first();
+                if ($marketer) {
+                    $order->community_agent_id = $marketer->id;
+                }
+                $order->save();
+            } elseif ($isCommunityDelivery) {
+                $order->is_community_delivery = 1;
+                $order->save();
+            }
+
             if ($order->user_id && ($pro_offer['status'] ?? false)) {
                 $amountSaved = match ($pro_offer['benefit']['type']) {
                     'discount'     => (float) ($proDiscount ?? 0),
@@ -671,7 +702,21 @@ trait PlaceNewOrder
                     $p_amount = min($request->user->wallet_balance, $order->order_amount);
                     $unpaid_amount = $order->order_amount - $p_amount;
                     $order->partially_paid_amount = $p_amount;
-                    $order->save();
+            $order->save();
+
+            // Assign community agent if applicable
+            if ($isCommunityDelivery && $communityAgent) {
+                $order->delivery_man_id = $communityAgent->id;
+                $order->is_community_delivery = 1;
+                $marketer = \App\Models\Marketer::where('user_id', $communityAgent->user_id)->first();
+                if ($marketer) {
+                    $order->community_agent_id = $marketer->id;
+                }
+                $order->save();
+            } elseif ($isCommunityDelivery) {
+                $order->is_community_delivery = 1;
+                $order->save();
+            }
                     CustomerLogic::create_wallet_transaction($order->user_id, $p_amount, 'partial_payment', $order->id);
                     OrderLogic::create_order_payment(order_id: $order->id, amount: $p_amount, payment_status: 'paid', payment_method: 'wallet');
                     OrderLogic::create_order_payment(order_id: $order->id, amount: $unpaid_amount, payment_status: 'unpaid', payment_method: $request->payment_method);

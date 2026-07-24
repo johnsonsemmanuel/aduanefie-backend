@@ -25,6 +25,8 @@ class Order extends Model
         'flash_store_discount_amount' => 'float',
         'delivery_address_id' => 'integer',
         'delivery_man_id' => 'integer',
+        'community_agent_id' => 'integer',
+        'is_community_delivery' => 'boolean',
         'delivery_charge' => 'float',
         'delivery_type_charge' => 'float',
         'additional_charge' => 'float',
@@ -182,6 +184,11 @@ class Order extends Model
     public function delivery_man()
     {
         return $this->belongsTo(DeliveryMan::class, 'delivery_man_id');
+    }
+
+    public function communityAgent()
+    {
+        return $this->belongsTo(Marketer::class, 'community_agent_id');
     }
 
     public function customer()

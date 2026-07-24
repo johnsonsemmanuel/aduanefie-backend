@@ -337,7 +337,19 @@ class OrderLogic
                 // $vendorWallet->total_earning = $vendorWallet->total_earning+($order_amount + $order->total_tax_amount - $comission_on_store_amount);
                 $vendorWallet->total_earning = $vendorWallet->total_earning + $store_amount;
             }
-            if ($order->delivery_man && ($type == 'parcel' || ($order->store && ! $order->store->sub_self_delivery))) {
+            if ($order->is_community_delivery && $order->communityAgent) {
+                // Community agent earnings: full delivery charge goes to the agent
+                \App\Models\MarketerEarning::create([
+                    'marketer_id' => $order->community_agent_id,
+                    'amount'      => $dm_commission + $dm_tips,
+                    'type'        => 'delivery',
+                    'order_id'    => $order->id,
+                    'note'        => "Community delivery for order #{$order->id}",
+                    'status'      => 1,
+                ]);
+                \App\Models\Marketer::where('id', $order->community_agent_id)
+                    ->increment('total_earnings', $dm_commission + $dm_tips);
+            } elseif ($order->delivery_man && ($type == 'parcel' || ($order->store && ! $order->store->sub_self_delivery))) {
                 $dmWallet = DeliveryManWallet::firstOrNew(
                     ['delivery_man_id' => $order->delivery_man_id]
                 );

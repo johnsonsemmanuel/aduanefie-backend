@@ -392,6 +392,13 @@ class DeliveryMan extends Authenticatable
         return $query->withoutGlobalScope('delivery_only')->where('is_ride', 1);
     }
 
+    public function scopeCommunityAgent($query)
+    {
+        return $query->withoutGlobalScope('delivery_only')
+            ->where('is_delivery', 0)
+            ->where('is_ride', 0);
+    }
+
     protected static function booted()
     {
         static::addGlobalScope('storage', function ($builder) {
