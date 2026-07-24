@@ -51,14 +51,14 @@ class DeliveryManLoginController extends Controller
                 ], 401);
             }
 
-            if($request->has('type'))
-            {
-                $type = $request->type;
-            }else{
-                $type = 'is_delivery';
-            }
-
-            $delivery_man =  DeliveryMan::withoutGlobalScope('delivery_only')->where(['phone' => $request['phone'], $type => 1])->first();
+            $delivery_man = DeliveryMan::withoutGlobalScope('delivery_only')
+                ->where('phone', $request['phone'])
+                ->where(function ($q) {
+                    $q->where('is_delivery', 1)
+                      ->orWhere(function ($q2) {
+                          $q2->where('is_delivery', 0)->where('is_ride', 0);
+                      });
+                })->first();
             if(!$delivery_man){
                 $errors = [];
                 array_push($errors, ['code' => 'auth-001', 'message' => translate('Incorrect_credential,_please_try_again')]);
@@ -69,7 +69,7 @@ class DeliveryManLoginController extends Controller
             $delivery_man->auth_token = $token;
             $delivery_man->save();
 
-            if($type == 'is_delivery'){
+            if($delivery_man->is_ride != 1){
                 $topic = 'restaurant_dm_'.$delivery_man?->store_id;
                 if(isset($delivery_man->zone)){
                     if($delivery_man->vehicle_id){

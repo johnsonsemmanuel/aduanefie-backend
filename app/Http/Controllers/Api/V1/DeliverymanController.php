@@ -29,6 +29,7 @@ use App\Models\BusinessSetting;
 use App\Models\DataSetting;
 use App\Models\DeliveryHistory;
 use App\Models\DeliveryMan;
+use App\Models\CommunityAgentEarning;
 use App\Models\DeliverymanLoyaltyPointHistory;
 use App\Models\DeliverymanReferralHistory;
 use App\Models\DeliveryManWallet;
@@ -112,9 +113,25 @@ class DeliverymanController extends Controller
             $this_month_return_fee= (float) $fees->month;
 
 
-        $dm['todays_earning'] = (float) ($dm->todays_earning()->sum('original_delivery_charge') + $dm->todays_earning()->sum('dm_tips') + $todays_return_fee);
-        $dm['this_week_earning'] = (float) ($dm->this_week_earning()->sum('original_delivery_charge') + $dm->this_week_earning()->sum('dm_tips') + $this_week_return_fee);
-        $dm['this_month_earning'] = (float) ($dm->this_month_earning()->sum('original_delivery_charge') + $dm->this_month_earning()->sum('dm_tips')) + $this_month_return_fee;
+        $isCommunityAgent = $dm->is_delivery == 0 && $dm->is_ride == 0;
+
+        if ($isCommunityAgent) {
+            $agentEarnings = CommunityAgentEarning::where('delivery_man_id', $dm->id)->where('status', 1);
+
+            $dm['todays_earning'] = (float) (clone $agentEarnings)->whereDate('created_at', now())->sum('amount') + $todays_return_fee;
+            $dm['this_week_earning'] = (float) (clone $agentEarnings)->whereBetween('created_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()])->sum('amount') + $this_week_return_fee;
+            $dm['this_month_earning'] = (float) (clone $agentEarnings)->whereMonth('created_at', date('m'))->whereYear('created_at', date('Y'))->sum('amount') + $this_month_return_fee;
+
+            $dm['total_delivery_income'] = (float) $agentEarnings->sum('amount');
+            $dm['total_delivery_tips'] = 0;
+        } else {
+            $dm['todays_earning'] = (float) ($dm->todays_earning()->sum('original_delivery_charge') + $dm->todays_earning()->sum('dm_tips') + $todays_return_fee);
+            $dm['this_week_earning'] = (float) ($dm->this_week_earning()->sum('original_delivery_charge') + $dm->this_week_earning()->sum('dm_tips') + $this_week_return_fee);
+            $dm['this_month_earning'] = (float) ($dm->this_month_earning()->sum('original_delivery_charge') + $dm->this_month_earning()->sum('dm_tips')) + $this_month_return_fee;
+
+            $dm['total_delivery_income'] = (float) ($dm->order_transaction()->sum('original_delivery_charge'));
+            $dm['total_delivery_tips'] = (float) ($dm->order_transaction()->sum('dm_tips'));
+        }
 
         $dm['cash_in_hands'] = $dm->wallet ? $dm->wallet->collected_cash : 0;
         $dm['balance'] = $dm->wallet ? $dm->wallet->total_earning - ($dm->wallet->total_withdrawn + $dm?->wallet?->pending_withdraw) : 0;
@@ -123,8 +140,6 @@ class DeliverymanController extends Controller
         $dm['pending_withdraw'] = (float) ($dm?->wallet?->pending_withdraw ?? 0);
         $dm['withdraw_able_balance'] = (float) ($dm['balance'] - $dm?->wallet?->collected_cash > 0 ? abs($dm['balance'] - $dm?->wallet?->collected_cash) : 0);
         $dm['Payable_Balance'] = (float) ($dm?->wallet?->collected_cash ?? 0);
-        $dm['total_delivery_income'] =(float)($dm->order_transaction()->sum('original_delivery_charge'));
-        $dm['total_delivery_tips'] =(float)($dm->order_transaction()->sum('dm_tips'));
 
         $over_flow_balance = $dm['balance'] - $dm?->wallet?->collected_cash;
 
