@@ -344,6 +344,13 @@ Route::group(['namespace' => 'Vendor', 'as' => 'vendor.'], function () {
                 Route::get('vendor-tax-report', 'VendorTaxReportController@vendorTax')->name('vendorTax');
                 Route::get('vendor-tax-export', 'VendorTaxReportController@vendorTaxExport')->name('vendorTaxExport');
             });
+
+            Route::group(['prefix' => 'equipment-bookings', 'as' => 'equipment-bookings.'], function () {
+                Route::get('/', 'EquipmentBookingController@index')->name('index');
+                Route::get('/{id}', 'EquipmentBookingController@show')->name('show');
+                Route::post('/{id}/confirm', 'EquipmentBookingController@confirm')->name('confirm');
+                Route::post('/{id}/cancel', 'EquipmentBookingController@cancel')->name('cancel');
+            });
         });
     });
 });

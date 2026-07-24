@@ -987,6 +987,13 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
                 Route::get('terms-and-conditions', 'ProCustomerController@termsSetup')->name('terms-and-conditions');
                 Route::post('terms-and-conditions/update', 'ProCustomerController@termsUpdate')->name('terms-and-conditions.update');
             });
+
+            Route::group(['prefix' => 'equipment-bookings', 'as' => 'equipment-bookings.'], function () {
+                Route::get('/', 'EquipmentBookingController@index')->name('index');
+                Route::get('/{id}', 'EquipmentBookingController@show')->name('show');
+                Route::post('/{id}/confirm', 'EquipmentBookingController@confirm')->name('confirm');
+                Route::post('/{id}/cancel', 'EquipmentBookingController@cancel')->name('cancel');
+            });
         });
     });
 });
