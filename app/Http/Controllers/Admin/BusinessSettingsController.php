@@ -6901,6 +6901,7 @@ class BusinessSettingsController extends Controller
             $item->veg = $data->veg;
 
             $item->organic = $data->organic;
+            $item->is_in_season = $data->is_in_season ?? 1;
             $item->stock = $data->stock;
             $item->is_approved = 1;
 

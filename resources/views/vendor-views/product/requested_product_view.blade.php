@@ -166,10 +166,14 @@
                                         , 20, '...') }}</strong>
                                 </span>
 
-                                @if ($product->module->module_type == 'grocery')
+                                @if (in_array($product->module->module_type, ['grocery', 'farm_inputs']))
                                 <span class="d-block mb-1">
                                     <span>{{ translate('messages.Is_Organic') }} : </span>
                                     <strong> {{  $product->organic == 1 ?  translate('messages.yes') : translate('messages.no') }}</strong>
+                                </span>
+                                <span class="d-block mb-1">
+                                    <span>{{ translate('messages.Is_In_Season') }} : </span>
+                                    <strong> {{  $product->is_in_season == 1 ?  translate('messages.yes') : translate('messages.no') }}</strong>
                                 </span>
                                 @endif
                                 @if ($product->module->module_type == 'food')

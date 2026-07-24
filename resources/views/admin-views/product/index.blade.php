@@ -295,8 +295,10 @@
                     }
                     if (module_data.organic) {
                         $('#organic').show();
+                        $('#in_season').show();
                     } else {
                         $('#organic').hide();
+                        $('#in_season').hide();
                     }
                     if (module_data.basic) {
                         $('#basic').show();

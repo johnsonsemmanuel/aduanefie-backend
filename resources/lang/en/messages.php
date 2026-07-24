@@ -975,6 +975,8 @@
   'Maximum_Purchase_Quantity_Limit' => 'Maximum Purchase Quantity Limit',
   'If_this_limit_is_exceeded,_customers_can_not_buy_the_item_in_a_single_purchase.' => 'If this limit is exceeded  customers can not buy the item in a single purchase.',
   'is_organic' => 'Is organic',
+  'is_in_season' => 'In Season',
+  'Is_In_Season' => 'Is In Season',
   'available_time_starts' => 'Available time starts',
   'available_time_ends' => 'Available time ends',
   'Admin_shares_the_same_percentage/amount_on_discount_as_he_takes_commissions_from_stores' => 'Admin shares the same percentage/amount on discount as he takes commissions from stores',

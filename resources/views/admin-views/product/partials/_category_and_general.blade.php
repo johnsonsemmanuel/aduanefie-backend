@@ -396,7 +396,7 @@
                                 </div>
                                 
                             @endif
-                            @if (Config::get('module.current_module_type') == 'grocery')
+                            @if (in_array(Config::get('module.current_module_type'), ['grocery', 'farm_inputs']))
                                 <div class="col-sm-6 col-lg-4 error-wrapper" id="organic">
                                     <div class="form-check mb-sm-2 pb-sm-1">
                                         <input class="form-check-input" name="organic" type="checkbox" value="1"
@@ -404,6 +404,16 @@
                                             {{ isset($product) && $product->organic == 1 ? 'checked' : '' }}>
                                         <label class="form-check-label" for="is_organic">
                                             {{ translate('messages.is_organic') }}
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6 col-lg-4 error-wrapper" id="in_season">
+                                    <div class="form-check mb-sm-2 pb-sm-1">
+                                        <input class="form-check-input" name="is_in_season" type="checkbox" value="1"
+                                            id="is_in_season"
+                                            {{ !isset($product) || $product->is_in_season == 1 ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="is_in_season">
+                                            {{ translate('messages.is_in_season') }}
                                         </label>
                                     </div>
                                 </div>

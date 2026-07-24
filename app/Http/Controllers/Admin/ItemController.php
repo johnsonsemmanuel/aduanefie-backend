@@ -359,8 +359,9 @@ class ItemController extends Controller
         $item->veg = $request->veg ?? 0;
         $item->module_id = Config::get('module.current_module_id');
         $module_type = Config::get('module.current_module_type');
-        if ($module_type == 'grocery') {
+        if (in_array($module_type, ['grocery', 'farm_inputs'])) {
             $item->organic = $request->organic ?? 0;
+            $item->is_in_season = $request->is_in_season ?? 1;
         }
         $item->stock = $request->current_stock ?? 0;
         $item->images = $images;
@@ -718,6 +719,7 @@ class ItemController extends Controller
         $item->stock = $request->current_stock ?? 0;
         $item->is_halal = $request->is_halal ?? 0;
         $item->organic = $request->organic ?? 0;
+        $item->is_in_season = $request->is_in_season ?? 1;
         $item->veg = $request->veg ?? 0;
         $item->images = $images;
         if (Helpers::get_mail_status('product_approval') && $request?->temp_product) {
@@ -2220,6 +2222,7 @@ class ItemController extends Controller
         $item->veg = $data->veg;
 
         $item->organic = $data->organic;
+        $item->is_in_season = $data->is_in_season ?? 1;
         $item->is_halal = $data->is_halal;
         $item->stock = $data->stock;
         $item->is_approved = 1;

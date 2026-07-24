@@ -28,6 +28,11 @@
                                                     class="badge badge-warning font-weight-normal px-2 fs-10 rounded-pill text-white">
                                                     {{ translate('messages.Halal') }}</div>
                                             @endif
+                                            @if ($item->is_in_season == 1)
+                                                <div
+                                                    class="badge badge-info font-weight-normal px-2 fs-10 rounded-pill">
+                                                    {{ translate('messages.In_Season') }}</div>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>
@@ -61,7 +66,7 @@
                                             <strong
                                                 class="fw-medium title-clr">{{ Str::limit($item?->category?->name ?? translate('messages.uncategorize'), 20, '...') }}</strong>
                                         </span>
-                                        @if ($item->module->module_type == 'grocery')
+                                        @if (in_array($item->module->module_type, ['grocery', 'farm_inputs']))
                                             <span class="d-flex mb-2 gap-1 fs-12">
                                                 <div
                                                     class="w-100px max-w-100px text-nowrap line--limit-1 text-title fs-12">
@@ -69,6 +74,14 @@
                                                 <span class="title-clr">:</span>
                                                 <strong class="fw-medium title-clr">
                                                     {{ $item->organic == 1 ? translate('messages.yes') : translate('messages.no') }}</strong>
+                                            </span>
+                                            <span class="d-flex mb-2 gap-1 fs-12">
+                                                <div
+                                                    class="w-100px max-w-100px text-nowrap line--limit-1 text-title fs-12">
+                                                    {{ translate('messages.Is_In_Season') }}</div>
+                                                <span class="title-clr">:</span>
+                                                <strong class="fw-medium title-clr">
+                                                    {{ $item->is_in_season == 1 ? translate('messages.yes') : translate('messages.no') }}</strong>
                                             </span>
                                         @endif
                                         @if ($item->module->module_type == 'food')
