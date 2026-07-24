@@ -993,6 +993,7 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
                 Route::get('/{id}', 'EquipmentBookingController@show')->name('show');
                 Route::post('/{id}/confirm', 'EquipmentBookingController@confirm')->name('confirm');
                 Route::post('/{id}/cancel', 'EquipmentBookingController@cancel')->name('cancel');
+                Route::post('/{id}/mark-active', 'EquipmentBookingController@markActive')->name('mark-active');
                 Route::post('/{id}/mark-returned', 'EquipmentBookingController@markReturned')->name('mark-returned');
             });
         });

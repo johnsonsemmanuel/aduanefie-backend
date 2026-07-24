@@ -97,6 +97,20 @@ class EquipmentBookingController extends Controller
         return back()->with('success', 'Booking cancelled.');
     }
 
+    public function markActive($id)
+    {
+        $booking = EquipmentBooking::findOrFail($id);
+
+        if ($booking->status !== 'confirmed') {
+            return back()->with('error', 'Only confirmed bookings can be marked active (picked up).');
+        }
+
+        $booking->status = 'active';
+        $booking->save();
+
+        return back()->with('success', 'Booking activated. Equipment picked up.');
+    }
+
     public function markReturned(Request $request, $id)
     {
         $request->validate([
