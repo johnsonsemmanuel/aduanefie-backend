@@ -18,7 +18,6 @@ class EquipmentBookingController extends Controller
             'start_date'    => 'required|date|after:now',
             'end_date'      => 'required|date|after:start_date',
             'duration_type' => 'required|in:hourly,daily,weekly,monthly',
-            'duration_value' => 'required|integer|min:1',
         ]);
 
         Helpers::setZoneIds($request);
@@ -63,7 +62,58 @@ class EquipmentBookingController extends Controller
 
         $start = \Carbon\Carbon::parse($validated['start_date']);
         $end = \Carbon\Carbon::parse($validated['end_date']);
-        $durationHours = $end->diffInHours($start);
+
+        $durationValue = null;
+        $durationHours = null;
+
+        switch ($validated['duration_type']) {
+            case 'hourly':
+                $totalMinutes = (int) round($start->diffInMinutes($end));
+                if ($totalMinutes % 60 !== 0) {
+                    return response()->json([
+                        'message' => 'Hourly bookings must be in whole hours.'
+                    ], 422);
+                }
+                $durationValue = intdiv($totalMinutes, 60);
+                $durationHours = $durationValue;
+                break;
+
+            case 'daily':
+                $durationValue = (int) floor($start->diffInDays($end));
+                if ($start->copy()->addDays($durationValue)->ne($end)) {
+                    return response()->json([
+                        'message' => 'Daily bookings must span whole days.'
+                    ], 422);
+                }
+                $durationHours = $durationValue * 24;
+                break;
+
+            case 'weekly':
+                $durationValue = (int) floor($start->diffInWeeks($end));
+                if ($start->copy()->addWeeks($durationValue)->ne($end)) {
+                    return response()->json([
+                        'message' => 'Weekly bookings must span whole weeks.'
+                    ], 422);
+                }
+                $durationHours = $durationValue * 168;
+                break;
+
+            case 'monthly':
+                $durationValue = (int) floor($start->diffInMonths($end));
+                if ($start->copy()->addMonths($durationValue)->ne($end)) {
+                    return response()->json([
+                        'message' => 'Monthly bookings must span whole months.'
+                    ], 422);
+                }
+                $durationHours = $durationValue * 730;
+                break;
+        }
+
+        if ($durationValue === null || $durationValue < 1) {
+            return response()->json([
+                'message' => 'Invalid rental duration for the selected date range.'
+            ], 422);
+        }
 
         if ($equipment->min_rental_duration && $durationHours < $equipment->min_rental_duration) {
             return response()->json([
@@ -77,7 +127,7 @@ class EquipmentBookingController extends Controller
             ], 422);
         }
 
-        $totalAmount = $rate * $validated['duration_value'];
+        $totalAmount = $rate * $durationValue;
         $securityDeposit = $equipment->security_deposit;
 
         $booking = EquipmentBooking::create([
@@ -87,7 +137,7 @@ class EquipmentBookingController extends Controller
             'start_date'       => $validated['start_date'],
             'end_date'         => $validated['end_date'],
             'duration_type'    => $validated['duration_type'],
-            'duration_value'   => $validated['duration_value'],
+            'duration_value'   => $durationValue,
             'total_amount'     => $totalAmount,
             'security_deposit' => $securityDeposit,
             'operator_included' => $equipment->operator_included,
