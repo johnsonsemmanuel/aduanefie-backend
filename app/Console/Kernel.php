@@ -31,11 +31,6 @@ class Kernel extends ConsoleKernel
             ->everyFifteenMinutes()
             ->withoutOverlapping()
             ->appendOutputTo(storage_path('logs/community-agent-release.log'));
-
-        $schedule->command('equipment:check-overdue')
-            ->everyFifteenMinutes()
-            ->withoutOverlapping()
-            ->appendOutputTo(storage_path('logs/equipment-overdue-check.log'));
     }
 
     /**

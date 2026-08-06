@@ -108,11 +108,12 @@ class Item extends Model
     }
 
 
-    public function scopeActive($query , $zone_ids = null ,$module_id = null)
+    public function scopeActive($query , $zone_ids = null ,$module_id = null, $include_equipment = false)
     {
         return $query
         ->where('status', 1)->where('is_approved', 1)
-            ->whereHas('store', function ($query) use ($zone_ids) {
+        ->when(!$include_equipment, fn ($q) => $q->whereDoesntHave('equipment'))
+        ->whereHas('store', function ($query) use ($zone_ids) {
                 $query->where('status', 1)
                     ->where(function ($query) {
                         $query->where('store_business_model', 'commission')

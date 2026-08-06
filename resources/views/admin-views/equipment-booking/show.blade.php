@@ -110,7 +110,7 @@
                                 <img src="{{ $booking->item->image_full_url }}" alt="equipment" class="rounded" width="80" height="80">
                                 <div>
                                     <div class="font-weight-semibold">{{ $booking->item->name }}</div>
-                                    <div class="text-muted">{{ translate('Code') }}: {{ $booking->item->code }}</div>
+                                    <div class="text-muted">{{ translate('Code') }}: #{{ $booking->item_id }}</div>
                                 </div>
                             </div>
                         @endif

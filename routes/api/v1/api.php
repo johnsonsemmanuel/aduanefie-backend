@@ -653,6 +653,7 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             Route::post('/', 'EquipmentBookingController@store');
             Route::get('/', 'EquipmentBookingController@index');
             Route::get('{id}', 'EquipmentBookingController@show');
+            Route::post('{id}/cancel', 'EquipmentBookingController@cancel');
             Route::post('{id}/condition-report', 'EquipmentBookingController@submitConditionReport');
         });
     });

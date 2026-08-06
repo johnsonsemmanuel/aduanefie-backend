@@ -82,6 +82,8 @@ class EquipmentBookingController extends Controller
             $booking->save();
         });
 
+        \App\Services\EquipmentBookingNotifier::notify($booking, 'confirmed');
+
         return back()->with('success', 'Booking confirmed.');
     }
 
@@ -96,6 +98,8 @@ class EquipmentBookingController extends Controller
         $booking->status = 'cancelled';
         $booking->save();
 
+        \App\Services\EquipmentBookingNotifier::notify($booking, 'cancelled');
+
         return back()->with('success', 'Booking cancelled.');
     }
 
@@ -109,6 +113,8 @@ class EquipmentBookingController extends Controller
 
         $booking->status = 'active';
         $booking->save();
+
+        \App\Services\EquipmentBookingNotifier::notify($booking, 'active');
 
         return back()->with('success', 'Booking activated. Equipment picked up.');
     }
@@ -140,6 +146,8 @@ class EquipmentBookingController extends Controller
                 ]);
             }
         });
+
+        \App\Services\EquipmentBookingNotifier::notify($booking, 'completed');
 
         return back()->with('success', 'Equipment returned. Booking completed.');
     }

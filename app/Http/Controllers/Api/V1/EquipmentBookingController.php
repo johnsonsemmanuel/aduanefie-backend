@@ -129,6 +129,18 @@ class EquipmentBookingController extends Controller
             ], 422);
         }
 
+        $overlappingCount = EquipmentBooking::where('item_id', $item->id)
+            ->whereIn('status', ['confirmed', 'active', 'overdue'])
+            ->where('start_date', '<', $end)
+            ->where('end_date', '>', $start)
+            ->count();
+
+        if ($overlappingCount >= $item->stock) {
+            return response()->json([
+                'message' => 'This equipment is fully booked for the selected period.'
+            ], 422);
+        }
+
         $totalAmount = $rate * $durationValue;
         $securityDeposit = $equipment->security_deposit;
 
@@ -136,8 +148,8 @@ class EquipmentBookingController extends Controller
             'item_id'          => $item->id,
             'customer_id'      => auth('api')->id(),
             'store_id'         => $item->store_id,
-            'start_date'       => $validated['start_date'],
-            'end_date'         => $validated['end_date'],
+            'start_date'       => $start->toDateTimeString(),
+            'end_date'         => $end->toDateTimeString(),
             'duration_type'    => $validated['duration_type'],
             'duration_value'   => $durationValue,
             'total_amount'     => $totalAmount,
@@ -147,6 +159,8 @@ class EquipmentBookingController extends Controller
             'status'           => 'pending',
             'notes'            => $request->input('notes'),
         ]);
+
+        \App\Services\EquipmentBookingNotifier::notify($booking, 'created');
 
         return response()->json([
             'message' => 'Booking request submitted.',
@@ -178,6 +192,27 @@ class EquipmentBookingController extends Controller
         return response()->json(['data' => $booking]);
     }
 
+    public function cancel($id)
+    {
+        $booking = EquipmentBooking::where('customer_id', auth('api')->id())->findOrFail($id);
+
+        if (!in_array($booking->status, ['pending', 'confirmed'])) {
+            return response()->json([
+                'message' => 'Only pending or confirmed bookings can be cancelled.'
+            ], 422);
+        }
+
+        $booking->status = 'cancelled';
+        $booking->save();
+
+        \App\Services\EquipmentBookingNotifier::notify($booking, 'cancelled', 'customer');
+
+        return response()->json([
+            'message' => 'Booking cancelled.',
+            'data'    => $booking,
+        ], 200);
+    }
+
     public function browse(Request $request)
     {
         Helpers::setZoneIds($request);
@@ -187,14 +222,14 @@ class EquipmentBookingController extends Controller
         $limit = $request->query('limit', 10);
         $offset = $request->query('offset', 1);
 
-        $query = Item::active($zones)
+        $query = Item::active($zones, null, null, true)
             ->whereHas('equipment', function ($q) use ($request) {
                 $q->where('status', 'available')
                     ->when($request->filled('min_price'), function ($q) use ($request) {
-                        $q->where('daily_rate', '>=', $request->min_price);
+                        $q->whereRaw('COALESCE(daily_rate, hourly_rate) >= ?', [(float) $request->min_price]);
                     })
                     ->when($request->filled('max_price'), function ($q) use ($request) {
-                        $q->where('daily_rate', '<=', $request->max_price);
+                        $q->whereRaw('COALESCE(daily_rate, hourly_rate) <= ?', [(float) $request->max_price]);
                     });
             })
             ->when(config('module.current_module_data'), function ($q) {
@@ -247,7 +282,7 @@ class EquipmentBookingController extends Controller
         Helpers::setZoneIds($request);
         $zones = json_decode($request->header('zoneId'), true);
 
-        $item = Item::active($zones)
+        $item = Item::active($zones, null, null, true)
             ->with(['equipment', 'translations', 'store'])
             ->when(config('module.current_module_data'), function ($q) {
                 $q->whereHas('store', function ($store) {

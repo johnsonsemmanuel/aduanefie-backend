@@ -378,6 +378,17 @@ trait PlaceNewOrder
                         ], 403);
                     }
 
+                    $cartItemIds = collect($carts)->pluck('item_id')->filter()->unique();
+                    if ($cartItemIds->isNotEmpty()
+                        && \App\Models\Equipment::whereIn('item_id', $cartItemIds)->exists()) {
+                        DB::rollBack();
+                        return response()->json([
+                            'errors' => [
+                                ['code' => 'rental_only', 'message' => translate('messages.rental_only_item')]
+                            ]
+                        ], 403);
+                    }
+
                     $order_details = $this->makeOrderDetails($carts, $request, $order, $store);
 
                     if (data_get($order_details, 'status_code') === 403) {

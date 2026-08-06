@@ -47,6 +47,12 @@ class ScheduleServiceProvider extends ServiceProvider
                 ->runInBackground()
                 ->withoutOverlapping()
                 ->appendOutputTo(storage_path('logs/schedule.log'));
+
+            $schedule->command('equipment:check-overdue')
+                ->everyFifteenMinutes()
+                ->runInBackground()
+                ->withoutOverlapping()
+                ->appendOutputTo(storage_path('logs/schedule.log'));
         });
     }
 

@@ -34,6 +34,16 @@ trait HandlesCartValidation
 
         $itemName = $item->name ?? null;
 
+        if ($item instanceof Item && $item->equipment()->exists()) {
+            return $this->cartValidationResult(
+                status: 'failed',
+                itemId: $itemId,
+                itemName: $itemName,
+                code: 'rental_only',
+                message: trim(($itemName ?: translate('messages.item')) . ' ' . translate('messages.is_for_rental_only')),
+            );
+        }
+
         if ((int) ($item->status ?? 0) !== 1) {
             return $this->cartValidationResult(
                 status: 'failed',

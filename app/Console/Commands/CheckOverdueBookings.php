@@ -43,6 +43,8 @@ class CheckOverdueBookings extends Command
                 $booking->status = 'overdue';
                 $booking->save();
 
+                \App\Services\EquipmentBookingNotifier::notify($booking, 'overdue');
+
                 Log::warning('equipment_booking_overdue', [
                     'booking_id' => $booking->id,
                     'item_id' => $booking->item_id,

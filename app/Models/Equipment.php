@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
+use App\Models\EquipmentBooking;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Equipment extends Model
 {
@@ -44,8 +45,8 @@ class Equipment extends Model
         return $this->belongsTo(Item::class);
     }
 
-    public function bookings(): HasMany
+    public function bookings(): HasManyThrough
     {
-        return $this->hasMany(EquipmentBooking::class, 'item_id', 'item_id');
+        return $this->hasManyThrough(EquipmentBooking::class, Item::class, 'id', 'item_id', 'item_id', 'id');
     }
 }

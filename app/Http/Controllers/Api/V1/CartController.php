@@ -110,6 +110,12 @@ class CartController extends Controller
             ], 403);
         }
 
+        if ($this->isRentalItem($item)) {
+            return response()->json([
+                'errors' => [['code' => 'cart_item', 'message' => translate('messages.rental_only_item')]],
+            ], 403);
+        }
+
         if ($stockError = $this->outOfStockError($item, $request->variation, (int) $request->quantity)) {
             return response()->json(['errors' => [$stockError]], 403);
         }
@@ -185,6 +191,12 @@ class CartController extends Controller
             if (!$item) {
                 return response()->json([
                     'errors' => [['code' => 'cart_item', 'message' => translate('messages.item_not_found')]],
+                ], 403);
+            }
+
+            if ($this->isRentalItem($item)) {
+                return response()->json([
+                    'errors' => [['code' => 'cart_item', 'message' => translate('messages.rental_only_item')]],
                 ], 403);
             }
 
@@ -407,6 +419,15 @@ class CartController extends Controller
     private function resolveItem(string $model, int $itemId): Item|ItemCampaign|null
     {
         return $model === 'Item' ? Item::find($itemId) : ItemCampaign::find($itemId);
+    }
+
+    private function isRentalItem($item): bool
+    {
+        if (!$item instanceof Item) {
+            return false;
+        }
+
+        return $item->equipment()->exists();
     }
 
     private function outOfStockError($item, $variation, int $quantity): ?array
