@@ -352,6 +352,7 @@ Route::group(['namespace' => 'Vendor', 'as' => 'vendor.'], function () {
                 Route::post('/{id}/cancel', 'EquipmentBookingController@cancel')->name('cancel');
                 Route::post('/{id}/mark-active', 'EquipmentBookingController@markActive')->name('mark-active');
                 Route::post('/{id}/mark-returned', 'EquipmentBookingController@markReturned')->name('mark-returned');
+                Route::post('/{id}/condition-report', 'EquipmentBookingController@submitConditionReport')->name('condition-report');
             });
 
             Route::group(['prefix' => 'equipment', 'as' => 'equipment.'], function () {

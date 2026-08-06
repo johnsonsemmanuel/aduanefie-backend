@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Models\Item;
 use App\Models\Equipment;
 use App\Models\EquipmentBooking;
+use App\Models\EquipmentConditionReport;
 use App\Models\EquipmentExtraCharge;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\Controller;
 
 class EquipmentBookingController extends Controller
@@ -140,5 +142,52 @@ class EquipmentBookingController extends Controller
         });
 
         return back()->with('success', 'Equipment returned. Booking completed.');
+    }
+
+    public function submitConditionReport(Request $request, $id)
+    {
+        $request->validate([
+            'report_type'      => 'required|in:pre_rental,post_rental',
+            'condition_rating' => 'required|integer|between:1,5',
+            'notes'            => 'nullable|string|max:1000',
+            'images'           => 'nullable|array|max:5',
+            'images.*'         => 'image|mimes:jpeg,png,jpg,webp|max:4096',
+        ]);
+
+        $booking = EquipmentBooking::findOrFail($id);
+
+        if (EquipmentConditionReport::where('booking_id', $booking->id)
+            ->where('report_type', $request->report_type)->exists()) {
+            return back()->with('error', 'A condition report for this stage already exists.');
+        }
+
+        if ($request->report_type === 'pre_rental' && !in_array($booking->status, ['confirmed', 'active'])) {
+            return back()->with('error', 'Pre-rental report can only be submitted for a confirmed or active booking.');
+        }
+
+        if ($request->report_type === 'post_rental' && !in_array($booking->status, ['active', 'overdue', 'completed'])) {
+            return back()->with('error', 'Post-rental report can only be submitted for an active, overdue or completed booking.');
+        }
+
+        $imagePaths = [];
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $image) {
+                if ($image && $image->isValid()) {
+                    $imagePaths[] = Storage::disk('public')->put('equipment/condition-reports', $image);
+                }
+            }
+        }
+
+        EquipmentConditionReport::create([
+            'booking_id'       => $booking->id,
+            'report_type'      => $request->report_type,
+            'reported_by'      => 'provider',
+            'condition_rating' => $request->condition_rating,
+            'notes'            => $request->notes,
+            'images'           => $imagePaths ?: null,
+            'created_at'       => now(),
+        ]);
+
+        return back()->with('success', 'Condition report submitted.');
     }
 }

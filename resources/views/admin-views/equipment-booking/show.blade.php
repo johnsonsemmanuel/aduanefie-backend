@@ -214,6 +214,15 @@
                                     @if ($report->notes)
                                         <p class="mb-0 small">{{ $report->notes }}</p>
                                     @endif
+                                    @if (is_array($report->images) && count($report->images) > 0)
+                                        <div class="d-flex flex-wrap gap-2 mt-2">
+                                            @foreach ($report->images as $image)
+                                                <a href="{{ asset('storage/' . $image) }}" target="_blank">
+                                                    <img src="{{ asset('storage/' . $image) }}" alt="condition" class="rounded" width="56" height="56" style="object-fit: cover;">
+                                                </a>
+                                            @endforeach
+                                        </div>
+                                    @endif
                                 </div>
                             @endforeach
                         </div>
@@ -243,6 +252,47 @@
                     </div>
                 </div>
             @endif
+
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title m-0">{{ translate('Submit Condition Report') }}</h5>
+                    </div>
+                    <div class="card-body">
+                        <form action="{{ route('admin.equipment-bookings.condition-report', $booking->id) }}" method="post" enctype="multipart/form-data" class="row g-3 align-items-end">
+                            @csrf
+                            <div class="col-sm-6 col-md-2">
+                                <label class="form-label">{{ translate('Stage') }}</label>
+                                <select name="report_type" class="form-control" required>
+                                    <option value="pre_rental">{{ translate('Pre-Rental (Pickup)') }}</option>
+                                    <option value="post_rental">{{ translate('Post-Rental (Return)') }}</option>
+                                </select>
+                            </div>
+                            <div class="col-sm-6 col-md-2">
+                                <label class="form-label">{{ translate('Condition (1-5)') }}</label>
+                                <select name="condition_rating" class="form-control" required>
+                                    @for ($i = 1; $i <= 5; $i++)
+                                        <option value="{{ $i }}">{{ $i }} / 5</option>
+                                    @endfor
+                                </select>
+                            </div>
+                            <div class="col-sm-6 col-md-4">
+                                <label class="form-label">{{ translate('Notes') }}</label>
+                                <input type="text" name="notes" maxlength="1000" class="form-control" placeholder="{{ translate('Optional') }}">
+                            </div>
+                            <div class="col-sm-6 col-md-2">
+                                <label class="form-label">{{ translate('Photos') }}</label>
+                                <input type="file" name="images[]" accept="image/*" multiple class="form-control">
+                            </div>
+                            <div class="col-sm-6 col-md-2">
+                                <button type="submit" class="btn btn--primary btn-block">
+                                    <i class="tio-save"></i> {{ translate('Submit') }}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
 
             <div class="col-12">
                 <div class="card">
