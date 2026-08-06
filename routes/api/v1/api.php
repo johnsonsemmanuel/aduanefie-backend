@@ -644,10 +644,16 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             Route::get('leaderboard', 'MarketerController@leaderboard');
         });
 
+        Route::group(['prefix' => 'equipment'], function () {
+            Route::get('/', 'EquipmentBookingController@browse');
+            Route::get('{id}', 'EquipmentBookingController@showEquipment');
+        });
+
         Route::group(['prefix' => 'equipment-bookings', 'middleware' => 'auth:api'], function () {
             Route::post('/', 'EquipmentBookingController@store');
             Route::get('/', 'EquipmentBookingController@index');
             Route::get('{id}', 'EquipmentBookingController@show');
+            Route::post('{id}/condition-report', 'EquipmentBookingController@submitConditionReport');
         });
     });
     Route::group(['prefix' => 'offers'], function () {
