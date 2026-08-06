@@ -643,6 +643,12 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             Route::get('referrals', 'MarketerController@referrals');
             Route::get('leaderboard', 'MarketerController@leaderboard');
         });
+
+        Route::group(['prefix' => 'equipment-bookings', 'middleware' => 'auth:api'], function () {
+            Route::post('/', 'EquipmentBookingController@store');
+            Route::get('/', 'EquipmentBookingController@index');
+            Route::get('{id}', 'EquipmentBookingController@show');
+        });
     });
     Route::group(['prefix' => 'offers'], function () {
         Route::get('items', 'ItemController@getOfferItems');

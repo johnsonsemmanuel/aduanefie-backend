@@ -271,6 +271,11 @@ class Item extends Model
         return $this->belongsTo(Store::class);
     }
 
+    public function equipment()
+    {
+        return $this->hasOne(Equipment::class, 'item_id');
+    }
+
     public function category()
     {
         return $this->belongsTo(Category::class, 'category_id');
