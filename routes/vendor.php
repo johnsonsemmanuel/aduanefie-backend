@@ -345,25 +345,26 @@ Route::group(['namespace' => 'Vendor', 'as' => 'vendor.'], function () {
                 Route::get('vendor-tax-export', 'VendorTaxReportController@vendorTaxExport')->name('vendorTaxExport');
             });
 
-            Route::group(['prefix' => 'equipment-bookings', 'as' => 'equipment-bookings.'], function () {
-                Route::get('/', 'EquipmentBookingController@index')->name('index');
-                Route::get('/{id}', 'EquipmentBookingController@show')->name('show');
-                Route::post('/{id}/confirm', 'EquipmentBookingController@confirm')->name('confirm');
-                Route::post('/{id}/cancel', 'EquipmentBookingController@cancel')->name('cancel');
-                Route::post('/{id}/mark-active', 'EquipmentBookingController@markActive')->name('mark-active');
-                Route::post('/{id}/mark-returned', 'EquipmentBookingController@markReturned')->name('mark-returned');
-                Route::post('/{id}/condition-report', 'EquipmentBookingController@submitConditionReport')->name('condition-report');
-            });
+        });
 
-            Route::group(['prefix' => 'equipment', 'as' => 'equipment.'], function () {
-                Route::get('/', 'EquipmentController@index')->name('index');
-                Route::get('add-new', 'EquipmentController@create')->name('create');
-                Route::post('store', 'EquipmentController@store')->name('store');
-                Route::get('edit/{id}', 'EquipmentController@edit')->name('edit');
-                Route::post('update/{id}', 'EquipmentController@update')->name('update');
-                Route::delete('delete/{id}', 'EquipmentController@destroy')->name('destroy');
-                Route::get('status/{id}/{status}', 'EquipmentController@status')->name('status');
-            });
+        Route::group(['prefix' => 'equipment-bookings', 'as' => 'equipment-bookings.', 'middleware' => ['module:item', 'subscription:item']], function () {
+            Route::get('/', 'EquipmentBookingController@index')->name('index');
+            Route::get('/{id}', 'EquipmentBookingController@show')->name('show');
+            Route::post('/{id}/confirm', 'EquipmentBookingController@confirm')->name('confirm');
+            Route::post('/{id}/cancel', 'EquipmentBookingController@cancel')->name('cancel');
+            Route::post('/{id}/mark-active', 'EquipmentBookingController@markActive')->name('mark-active');
+            Route::post('/{id}/mark-returned', 'EquipmentBookingController@markReturned')->name('mark-returned');
+            Route::post('/{id}/condition-report', 'EquipmentBookingController@submitConditionReport')->name('condition-report');
+        });
+
+        Route::group(['prefix' => 'equipment', 'as' => 'equipment.', 'middleware' => ['module:item', 'subscription:item']], function () {
+            Route::get('/', 'EquipmentController@index')->name('index');
+            Route::get('add-new', 'EquipmentController@create')->name('create');
+            Route::post('store', 'EquipmentController@store')->name('store');
+            Route::get('edit/{id}', 'EquipmentController@edit')->name('edit');
+            Route::post('update/{id}', 'EquipmentController@update')->name('update');
+            Route::delete('delete/{id}', 'EquipmentController@destroy')->name('destroy');
+            Route::get('status/{id}/{status}', 'EquipmentController@status')->name('status');
         });
     });
 });

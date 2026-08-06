@@ -115,6 +115,11 @@ class EquipmentController extends Controller
     {
         $this->validateEquipment($request);
 
+        if (!Helpers::get_store_data()->item_section) {
+            Toastr::warning(translate('messages.permission_denied'));
+            return back();
+        }
+
         $storeId = Helpers::get_store_id();
         $equipment = Equipment::with('item')
             ->whereHas('item', fn ($q) => $q->where('store_id', $storeId))
@@ -186,7 +191,7 @@ class EquipmentController extends Controller
             ->whereHas('item', fn ($q) => $q->where('store_id', $storeId))
             ->findOrFail($id);
 
-        if (!in_array($status, ['available', 'maintenance'])) {
+        if (!in_array($status, ['available', 'maintenance', 'retired'])) {
             Toastr::warning(translate('Invalid status.'));
             return back();
         }
@@ -227,7 +232,7 @@ class EquipmentController extends Controller
             'condition_notes' => 'nullable|string|max:2000',
             'operator_included' => 'nullable|boolean',
             'operator_fee' => 'nullable|numeric|min:0',
-            'status' => 'required|in:available,maintenance',
+            'status' => 'required|in:available,maintenance,retired',
         ]);
     }
 

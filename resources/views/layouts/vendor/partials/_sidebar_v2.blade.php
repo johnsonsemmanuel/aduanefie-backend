@@ -296,6 +296,7 @@
                 </div>
                 @endif
 
+                @if($can_item)
                 <div class="v2-group">
                     <button type="button" class="v2-group-header" data-group-toggle="ct-eq">
                         <span>{{ translate('Equipment Rental') }}</span>
@@ -312,6 +313,7 @@
                         </a>
                     </div>
                 </div>
+                @endif
 
                 @if($can_addon)
                 <div class="v2-group">

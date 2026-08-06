@@ -26,7 +26,7 @@ class CheckOverdueBookings extends Command
             return self::SUCCESS;
         }
 
-        $this->info("Found {$overdueBookings->quantity} overdue booking(s).");
+        $this->info("Found {$overdueBookings->count()} overdue booking(s).");
         $this->newLine();
 
         $flipped = 0;
@@ -63,7 +63,7 @@ class CheckOverdueBookings extends Command
         }
 
         $this->newLine();
-        $this->info("Done. Flipped {$flipped} of {$overdueBookings->quantity} booking(s).");
+        $this->info("Done. Flipped {$flipped} of {$overdueBookings->count()} booking(s).");
 
         return self::SUCCESS;
     }

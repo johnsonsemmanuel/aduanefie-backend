@@ -253,6 +253,7 @@
                     <select name="status" id="status" class="form-control" required>
                         <option value="available" {{ ($equipment?->status ?? 'available') === 'available' ? 'selected' : '' }}>{{ translate('Available') }}</option>
                         <option value="maintenance" {{ $equipment?->status === 'maintenance' ? 'selected' : '' }}>{{ translate('Under Maintenance') }}</option>
+                        <option value="retired" {{ $equipment?->status === 'retired' ? 'selected' : '' }}>{{ translate('Retired') }}</option>
                     </select>
                 </div>
             </div>

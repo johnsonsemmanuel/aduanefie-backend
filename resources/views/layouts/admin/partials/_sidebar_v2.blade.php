@@ -473,6 +473,7 @@
                 </div>
                 @endif
 
+                @if(Helpers::module_permission_check('item'))
                 <div class="v2-group">
                     <button type="button" class="v2-group-header" data-group-toggle="cat-equipment">
                         <span>{{ translate('Equipment Rental') }}</span>
@@ -489,6 +490,7 @@
                         </a>
                     </div>
                 </div>
+                @endif
                 @endif {{-- /if(!$is_parcel) wrapping Setup + Addons + Items groups --}}
             </div>
         </div>
