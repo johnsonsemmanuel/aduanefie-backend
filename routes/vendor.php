@@ -353,6 +353,16 @@ Route::group(['namespace' => 'Vendor', 'as' => 'vendor.'], function () {
                 Route::post('/{id}/mark-active', 'EquipmentBookingController@markActive')->name('mark-active');
                 Route::post('/{id}/mark-returned', 'EquipmentBookingController@markReturned')->name('mark-returned');
             });
+
+            Route::group(['prefix' => 'equipment', 'as' => 'equipment.'], function () {
+                Route::get('/', 'EquipmentController@index')->name('index');
+                Route::get('add-new', 'EquipmentController@create')->name('create');
+                Route::post('store', 'EquipmentController@store')->name('store');
+                Route::get('edit/{id}', 'EquipmentController@edit')->name('edit');
+                Route::post('update/{id}', 'EquipmentController@update')->name('update');
+                Route::delete('delete/{id}', 'EquipmentController@destroy')->name('destroy');
+                Route::get('status/{id}/{status}', 'EquipmentController@status')->name('status');
+            });
         });
     });
 });

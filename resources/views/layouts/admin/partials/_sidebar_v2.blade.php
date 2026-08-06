@@ -472,6 +472,23 @@
                     </div>
                 </div>
                 @endif
+
+                <div class="v2-group">
+                    <button type="button" class="v2-group-header" data-group-toggle="cat-equipment">
+                        <span>{{ translate('Equipment Rental') }}</span>
+                        <i data-lucide="chevron-down" class="v2-chev"></i>
+                    </button>
+                    <div class="v2-group-items">
+                        <a class="v2-nav-item {{ ($is('admin/equipment') || $is('admin/equipment/add-new') || $is('admin/equipment/edit/*')) ? 'is-active' : '' }}" href="{{ route('admin.equipment.index') }}" data-id="eq-list">
+                            <span class="v2-dot v2-dot--blue"></span><span class="v2-label">{{ translate('Equipment') }}</span>
+                            <button type="button" class="v2-pin" data-pin="eq-list" title="{{ translate('Pin') }}">@include('layouts.admin.partials._v2_pin_icon')</button>
+                        </a>
+                        <a class="v2-nav-item {{ ($is('admin/equipment-bookings') || $is('admin/equipment-bookings/*')) ? 'is-active' : '' }}" href="{{ route('admin.equipment-bookings.index') }}" data-id="eq-bookings">
+                            <span class="v2-dot v2-dot--green"></span><span class="v2-label">{{ translate('Bookings') }}</span>
+                            <button type="button" class="v2-pin" data-pin="eq-bookings" title="{{ translate('Pin') }}">@include('layouts.admin.partials._v2_pin_icon')</button>
+                        </a>
+                    </div>
+                </div>
                 @endif {{-- /if(!$is_parcel) wrapping Setup + Addons + Items groups --}}
             </div>
         </div>

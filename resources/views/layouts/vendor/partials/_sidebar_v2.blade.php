@@ -296,6 +296,23 @@
                 </div>
                 @endif
 
+                <div class="v2-group">
+                    <button type="button" class="v2-group-header" data-group-toggle="ct-eq">
+                        <span>{{ translate('Equipment Rental') }}</span>
+                        <i data-lucide="chevron-down" class="v2-chev"></i>
+                    </button>
+                    <div class="v2-group-items">
+                        <a class="v2-nav-item {{ ($is('vendor-panel/equipment') || $is('vendor-panel/equipment/add-new') || $is('vendor-panel/equipment/edit/*')) ? 'is-active' : '' }}" href="{{ route('vendor.equipment.index') }}" data-id="eq-list">
+                            <span class="v2-dot v2-dot--blue"></span><span class="v2-label">{{ translate('Equipment') }}</span>
+                            <button type="button" class="v2-pin" data-pin="eq-list" title="{{ translate('Pin') }}">@include('layouts.admin.partials._v2_pin_icon')</button>
+                        </a>
+                        <a class="v2-nav-item {{ ($is('vendor-panel/equipment-bookings') || $is('vendor-panel/equipment-bookings/*')) ? 'is-active' : '' }}" href="{{ route('vendor.equipment-bookings.index') }}" data-id="eq-bookings">
+                            <span class="v2-dot v2-dot--green"></span><span class="v2-label">{{ translate('Bookings') }}</span>
+                            <button type="button" class="v2-pin" data-pin="eq-bookings" title="{{ translate('Pin') }}">@include('layouts.admin.partials._v2_pin_icon')</button>
+                        </a>
+                    </div>
+                </div>
+
                 @if($can_addon)
                 <div class="v2-group">
                     <button type="button" class="v2-group-header" data-group-toggle="ct-add"><span>{{ translate('messages.addons') }}</span><i data-lucide="chevron-down" class="v2-chev"></i></button>
