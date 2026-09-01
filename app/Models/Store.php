@@ -143,6 +143,14 @@ class Store extends Model
         'tin',
         'tin_expire_date',
         'tin_certificate_image',
+        'store_type',
+        'farm_name',
+        'growing_area_sqm',
+        'primary_crops',
+        'farming_method',
+        'farm_photos',
+        'ghana_card_number',
+        'ghana_card_image',
     ];
 
     /**

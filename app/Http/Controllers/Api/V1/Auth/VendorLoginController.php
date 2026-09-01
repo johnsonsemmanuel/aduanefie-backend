@@ -149,6 +149,14 @@ class VendorLoginController extends Controller
             'module_id' => 'required',
             'logo' => 'required|image|max:2048|mimes:'.IMAGE_FORMAT_FOR_VALIDATION,
             'cover_photo' => 'nullable|image|max:2048|mimes:'.IMAGE_FORMAT_FOR_VALIDATION,
+            'store_type' => 'nullable|string|in:default,farm',
+            'farm_name' => 'nullable|required_if:store_type,farm|max:255',
+            'growing_area_sqm' => 'nullable|required_if:store_type,farm|integer|min:1',
+            'primary_crops' => 'nullable|required_if:store_type,farm|array',
+            'farming_method' => 'nullable|required_if:store_type,farm|string|in:organic,mixed,conventional',
+            'farm_photos.*' => 'nullable|image|max:2048|mimes:'.IMAGE_FORMAT_FOR_VALIDATION,
+            'ghana_card_number' => 'nullable|required_if:store_type,farm|string|max:255',
+            'ghana_card_image' => 'nullable|required_if:store_type,farm|image|max:2048|mimes:'.IMAGE_FORMAT_FOR_VALIDATION,
         ],[
             'password.required' => translate('The password is required'),
             'password.min_length' => translate('The password must be at least :min characters long'),
@@ -215,6 +223,14 @@ class VendorLoginController extends Controller
         $store->status = 0;
         $store->store_business_model = 'none';
         $store->pickup_zone_id = $request['pickup_zone_id'] ?? json_encode([]);
+        $store->store_type = $request->store_type ?? 'default';
+        $store->farm_name = $request->farm_name;
+        $store->growing_area_sqm = $request->growing_area_sqm;
+        $store->primary_crops = $request->primary_crops ? json_encode($request->primary_crops) : null;
+        $store->farming_method = $request->farming_method;
+        $store->farm_photos = $request->farm_photos ? json_encode($request->farm_photos) : null;
+        $store->ghana_card_number = $request->ghana_card_number;
+        $store->ghana_card_image = $request->ghana_card_image ? Helpers::upload('store/', 'png', $request->file('ghana_card_image')) : null;
         $store->save();
         // $store->module->increment('stores_count');
         if(config('module.'.$store->module->module_type)['always_open'])
