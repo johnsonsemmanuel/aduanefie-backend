@@ -111,6 +111,26 @@ case "${RAILWAY_RUN_AS}" in
         echo ""
         echo "--- Starting web server on port ${PORT:-8080}..."
 
+        # Run the queue worker and scheduler in the same container so queued
+        # jobs (mail, notifications) and scheduled tasks (order auto-cancel,
+        # overdue equipment checks) are processed even without dedicated
+        # worker/scheduler services. Disable with WEB_ROLE_WORKER=0 /
+        # WEB_ROLE_SCHEDULER=0 if dedicated services are added later.
+        if [ "${WEB_ROLE_WORKER:-1}" = "1" ]; then
+            echo "--- Starting queue worker (in web container)..."
+            nohup php artisan queue:work \
+                --sleep=3 --tries=3 --max-jobs=500 \
+                --max-time=3600 --timeout=180 --memory=1024 \
+                >> storage/logs/worker.log 2>&1 &
+            echo "  worker pid $!"
+        fi
+        if [ "${WEB_ROLE_SCHEDULER:-1}" = "1" ]; then
+            echo "--- Starting scheduler (in web container)..."
+            nohup php artisan schedule:work \
+                >> storage/logs/scheduler.log 2>&1 &
+            echo "  scheduler pid $!"
+        fi
+
         # Inject Railway PORT into nginx config
         sed -i "s/__PORT__/${PORT:-8080}/g" /etc/nginx/nginx.conf
 
