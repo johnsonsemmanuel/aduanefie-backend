@@ -524,7 +524,7 @@
                                     </span>
                                 </label>
                             </div>
-                            <input id="web_app_url" type="text" placeholder="{{translate('Ex: https://Aduanefie-web.6amtech.com/')}}" class="form-control h--45px" name="web_app_url" value="{{ $fixed_link['web_app_url'] ?? ''}}">
+                            <input id="web_app_url" type="text" placeholder="{{translate('Ex: https://www.aduanefie.com/')}}" class="form-control h--45px" name="web_app_url" value="{{ $fixed_link['web_app_url'] ?? ''}}">
                         </div>
                     </div>
                 </div>

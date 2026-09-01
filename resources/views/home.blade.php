@@ -1,6 +1,6 @@
 @extends('layouts.landing.app')
 @php($business_name = \App\CentralLogics\Helpers::get_business_settings('business_name'))
-@section('title', translate('messages.landing_page') . ' | ' . $business_name != 'null' ? $business_name : 'Sixam Mart')
+@section('title', translate('messages.landing_page') . ' | ' . $business_name != 'null' ? $business_name : 'Aduanefie')
 @section('content')
 
     <!-- Hero -->
@@ -179,7 +179,7 @@
                     @if(!empty($landing_data['seller_card_image']))
                         <div class="earn-card-icon"><img src="{{ $landing_data['seller_card_image'] }}" alt="" style="width:44px;height:44px;object-fit:contain"></div>
                     @else
-                        <div class="earn-card-icon">&#x1F3EA;</div>
+                        <div class="earn-card-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1-5h16l1 5"/><path d="M3 9a2 2 0 002 2 2 2 0 004 0 2 2 0 004 0 2 2 0 004 0 2 2 0 002-2"/><path d="M4 11v8a1 1 0 001 1h14a1 1 0 001-1v-8"/><path d="M9 20v-5h6v5"/></svg></div>
                     @endif
                     <h3>{!! \App\CentralLogics\Helpers::highlight($landing_data['seller_card_title'] ?? translate('messages.Become a best') . ' $' . translate('messages.Seller') . '$') !!}</h3>
                     <p>{!! \App\CentralLogics\Helpers::highlight($landing_data['seller_card_subtitle'] ?? translate('Grow your business with us. Reach thousands of customers and manage orders effortlessly.')) !!}</p>
@@ -204,7 +204,7 @@
                     @if(!empty($landing_data['dm_card_image']))
                         <div class="earn-card-icon"><img src="{{ $landing_data['dm_card_image'] }}" alt="" style="width:44px;height:44px;object-fit:contain"></div>
                     @else
-                        <div class="earn-card-icon">&#x1F6F5;</div>
+                        <div class="earn-card-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
                     @endif
                     <h3>{!! \App\CentralLogics\Helpers::highlight($landing_data['dm_card_title'] ?? translate('messages.Become a smart') . ' $' . translate('messages.Deliveryman') . '$') !!}</h3>
                     <p>{!! \App\CentralLogics\Helpers::highlight($landing_data['dm_card_subtitle'] ?? translate('Deliver on your own schedule. Earn competitive pay with flexible hours and easy-to-use tools.')) !!}</p>
@@ -231,7 +231,7 @@
                     @if(!empty($landing_data['rider_card_image']))
                         <div class="earn-card-icon"><img src="{{ $landing_data['rider_card_image'] }}" alt="" style="width:44px;height:44px;object-fit:contain"></div>
                     @else
-                        <div class="earn-card-icon">&#x1F697;</div>
+                        <div class="earn-card-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h-2v-6l2-3h4l2-3h7l3 5v4h-2"/><path d="M15 17H9"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg></div>
                     @endif
                     <h3>{!! \App\CentralLogics\Helpers::highlight($landing_data['rider_card_title'] ?? translate('messages.Become a smart') . ' $' . translate('messages.Rider') . '$') !!}</h3>
                     <p>{!! \App\CentralLogics\Helpers::highlight($landing_data['rider_card_subtitle'] ?? translate('Drive and earn on your own terms. Flexible rides, great pay, and easy-to-use tools.')) !!}</p>

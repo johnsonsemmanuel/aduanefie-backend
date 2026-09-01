@@ -116,7 +116,7 @@
                                         </span>
                                     </label>
                                     <input type="text"
-                                        placeholder="{{ translate('messages.Ex: https://Aduanefie-web.6amtech.com/') }}"
+                                        placeholder="{{ translate('messages.Ex: https://www.aduanefie.com/') }}"
                                         class="form-control h--45px" id="redirect_url" name="redirect_url" value="{{ $redirect_url }}">
                                 </div>
                                 <div class="fs-12 px-3 py-2 rounded bg-info bg-opacity-10">
