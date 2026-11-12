@@ -31,7 +31,9 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
         bcmath \
         intl \
         opcache \
-        exif
+        exif \
+    && pecl install redis \
+    && docker-php-ext-enable redis
 
 # Copy Nginx, PHP-FPM & OPcache configuration
 COPY docker-nginx.conf /etc/nginx/conf.d/default.conf
