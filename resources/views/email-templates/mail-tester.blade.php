@@ -88,7 +88,7 @@
         }
 
         a {
-            color: #1a82e2;
+            color: var(--primary-clr, #67513A);
         }
 
         img {
@@ -100,7 +100,7 @@
         }
     </style>
 </head>
-<body style="background-color: #e9ecef;">
+<body style="background-color: #FAF8F5;">
 <!-- end preheader -->
 <div class="card">
     <div class="card-header">

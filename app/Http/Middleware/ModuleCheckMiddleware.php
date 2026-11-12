@@ -28,9 +28,14 @@ class ModuleCheckMiddleware
             }
         }
 
-        // Check header request and determine localizaton
+        // Check header request and determine localization
         if(!$request->hasHeader('moduleId'))
         {
+            $defaultModule = Module::active()->orderBy('id')->first();
+            if ($defaultModule) {
+                Config::set('module.current_module_data', $defaultModule);
+                return $next($request);
+            }
             $errors = [];
             array_push($errors, ['code' => 'moduleId', 'message' => translate('messages.module_id_required')]);
             return response()->json([

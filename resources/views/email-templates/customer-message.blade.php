@@ -94,7 +94,7 @@ $company_links = json_decode(BusinessSetting::where('key','landing_page_links')-
             </tr>
         </tbody>
     </table>
-    <div style="background-color: rgb(248, 248, 248); width: 90%;margin:auto;margin-top:30px;">
+    <div style="background-color: #FAF8F5; width: 90%;margin:auto;margin-top:30px;">
         <div style="padding:20px;">
             <p>{!! $body ?? '' !!}</p>
             </p>

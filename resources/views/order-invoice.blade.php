@@ -18,13 +18,13 @@
             font-family: 'Roboto', sans-serif;
             font-size: 13px;
             line-height: 21px;
-            color: #737883;
-            background: #f7fbff;
+            color: var(--primary-clr, #67513A);
+            background: #FAF8F5;
             padding: 0;
             display: flex;align-items: center;justify-content: center;
         }
         h1,h2,h3,h4,h5,h6 {
-            color: #334257;
+            color: var(--primary-clr, #67513A);
             margin: 0;
         }
         * {
@@ -32,7 +32,7 @@
         }
 
         :root {
-            --base: #006161
+            --base: var(--primary-clr, #67513A)
         }
 
         .main-table {
@@ -69,11 +69,11 @@
             margin-bottom: 25px;
         }
         hr {
-            border-color : rgba(0, 170, 109, 0.3);
+            border-color : rgba(103, 81, 58, 0.3);
             margin: 16px 0
         }
         .border-top {
-            border-top: 1px solid rgba(0, 170, 109, 0.3);
+            border-top: 1px solid rgba(103, 81, 58, 0.3);
             padding: 15px 0 10px;
             display: block;
         }
@@ -88,7 +88,7 @@
 }
 .privacy a {
     text-decoration: none;
-    color: #334257;
+    color: var(--primary-clr, #67513A);
     position: relative;
     margin-left: auto;
     margin-right: auto;
@@ -97,7 +97,7 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #334257;
+    background: var(--primary-clr, #67513A);
     display: inline-block;
     margin: 0 7px;
 }
@@ -116,7 +116,7 @@
             text-align: center;
         }
         .text-base {
-            color: #006161;
+            color: var(--primary-clr, #67513A);
             font-weight: 700
         }
         .font-medium {
@@ -129,7 +129,7 @@
             text-decoration: none;
         }
         .bg-section {
-            background: #E3F5F1;
+            background: #F0F7EE;
         }
         .p-10 {
             padding: 10px;
@@ -158,7 +158,7 @@
             text-align: right;
         }
         .bg-section-2 {
-            background: #F8F9FB;
+            background: #F0F7EE;
         }
         .p-1 {
             padding: 5px;

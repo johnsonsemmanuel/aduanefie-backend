@@ -25,6 +25,7 @@ namespace App\Http\Controllers;
     use Illuminate\Support\Facades\Cookie;
     use Modules\Gateways\Traits\SmsGateway;
     use Illuminate\Validation\Rules\Password;
+    use App\Models\Cart;
 
 class LoginController extends Controller
 {
@@ -149,6 +150,17 @@ class LoginController extends Controller
     }
 
 
+    /**
+     * Check a password without starting a session.
+     *
+     * Uses the same guard/provider the real login below uses, so a password
+     * accepted here is exactly the password `login_attemp()` will accept.
+     */
+    private function credentialsAreValid(string $guard, $user, string $password): bool
+    {
+        return auth($guard)->getProvider()->validateCredentials($user, ['password' => $password]);
+    }
+
     public function submit(Request $request)
     {
         $request->validate([
@@ -173,6 +185,15 @@ class LoginController extends Controller
         }
         elseif ($request->role == 'vendor') {
             $vendor = Vendor::where('email', $request->email)->first();
+
+            // Verify the password before any account-state gate. The gates
+            // below must never tell an unauthenticated caller whether an
+            // email exists or what state its store is in.
+            if (!$vendor || !$this->credentialsAreValid('vendor', $vendor, $request->password)) {
+                return redirect()->back()->withInput($request->only('email', 'remember'))
+                    ->withErrors(['Credentials does not match.']);
+            }
+
             if ($vendor) {
                 if($vendor?->stores[0]?->module?->module_type == 'rental'){
                     if(!addon_published_status('Rental')){
@@ -199,6 +220,13 @@ class LoginController extends Controller
             }
         } elseif ($request->role == 'vendor_employee') {
             $employee = VendorEmployee::where('email', $request->email)->first();
+
+            // Same ordering rule as the owner branch above.
+            if (!$employee || !$this->credentialsAreValid('vendor_employee', $employee, $request->password)) {
+                return redirect()->back()->withInput($request->only('email', 'remember'))
+                    ->withErrors(['Credentials does not match.']);
+            }
+
                 if($employee?->store?->module?->module_type == 'rental'){
                     if(!addon_published_status('Rental')){
                         return redirect()->back()->withInput($request->only('email', 'remember'))
@@ -217,6 +245,34 @@ class LoginController extends Controller
             return redirect()->route(
                 $data === 'admin_mfa_setup' ? 'admin.mfa.setup' : 'admin.mfa.challenge'
             );
+        }
+
+        // Migrate guest cart items to authenticated user
+        if ($request->role !== 'admin' && $request->has('guest_id')) {
+            $guestId = $request->guest_id;
+            $authUserId = auth($request->role)->id();
+            if ($guestId && $authUserId) {
+                $guestCarts = Cart::where('guest_id', $guestId)->where('is_guest', 1)->get();
+                foreach ($guestCarts as $guestCart) {
+                    $existing = Cart::where('item_id', $guestCart->item_id)
+                        ->where('item_type', $guestCart->item_type)
+                        ->where('variation', $guestCart->variation)
+                        ->where('user_id', $authUserId)
+                        ->where('is_guest', 0)
+                        ->where('module_id', $guestCart->module_id)
+                        ->first();
+
+                    if ($existing) {
+                        $existing->quantity = $existing->quantity + $guestCart->quantity;
+                        $existing->save();
+                        $guestCart->delete();
+                    } else {
+                        $guestCart->user_id = $authUserId;
+                        $guestCart->is_guest = 0;
+                        $guestCart->save();
+                    }
+                }
+            }
         }
 
         // There is deliberately no '$data == admin' branch here: both admin

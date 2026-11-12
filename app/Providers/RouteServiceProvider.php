@@ -111,6 +111,12 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute(10)->by($this->loginThrottleKey($request));
         });
 
+        // Canonical store login. Same budget as the legacy shared entry so the
+        // new front door cannot become the cheaper way to spray credentials.
+        RateLimiter::for('store-login', function (Request $request) {
+            return Limit::perMinute(10)->by($this->loginThrottleKey($request));
+        });
+
         // Marketer portal login is email based, like the admin one, and gets
         // the same tight limit. The portal is a door into admin accounts, so it
         // must not be easier to brute-force than /admin-login.

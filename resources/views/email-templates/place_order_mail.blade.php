@@ -91,7 +91,7 @@
     </style>
 </head>
 
-<body style="background-color: #ececec;margin:0;padding:0">
+<body style="background-color: #FAF8F5;margin:0;padding:0">
     <?php
     use App\Models\BusinessSetting;
     $company_phone = BusinessSetting::where('key', 'phone')->first()->value;
@@ -102,7 +102,7 @@
     $company_mobile_logo = $logo;
     $company_links = json_decode(BusinessSetting::where('key', 'landing_page_links')->first()->value, true);
     ?>
-    <div style="width:650px;margin:auto; background-color:#ececec;height:50px;">
+    <div style="width:650px;margin:auto; background-color:#FAF8F5;height:50px;">
     </div>
     <div style="width:650px;margin:auto; background-color:white;margin-top:100px;
             padding-top:40px;padding-bottom:40px;border-radius: 3px;">
@@ -193,7 +193,7 @@
         $extra_discount = 0;
         $total_addon_price = 0;
         ?>
-        <div style="background-color: rgb(248, 248, 248); width: 90%;margin:auto;margin-top:30px;">
+        <div style="background-color: #FAF8F5; width: 90%;margin:auto;margin-top:30px;">
             <div style="padding:20px;">
                 <table style="width: 100%; ">
                     <tbody style="">

@@ -195,3 +195,61 @@ div.scroll-down {
         min-width: 564px;
     }
 }
+
+/* ===== Theme Color Overrides for Third-Party Frameworks ===== */
+/* Override sb-admin-2.min.css primary blue (#4e73df) → our earth primary (#67513A) */
+.btn-primary {
+    background-color: var(--primary-clr, #67513A) !important;
+    border-color: var(--primary-clr, #67513A) !important;
+}
+.btn-primary:hover {
+    background-color: #5A6E36 !important;
+    border-color: #5A6E36 !important;
+}
+.text-primary {
+    color: var(--primary-clr, #67513A) !important;
+}
+.bg-primary {
+    background-color: var(--primary-clr, #67513A) !important;
+}
+.border-primary {
+    border-color: var(--primary-clr, #67513A) !important;
+}
+.navbar-nav .nav-link.active {
+    color: var(--primary-clr, #67513A) !important;
+}
+
+/* Override sb-admin-2.min.css text-primary, sidebar text, etc. */
+.text-primary {
+    color: var(--primary-clr, #67513A) !important;
+}
+.sidebar .nav-item .nav-link {
+    color: var(--primary-clr, #67513A) !important;
+}
+
+/* Override theme.minc619.css teal (#00868f) → our earth primary */
+.text-teal, .text-teal-dark {
+    color: var(--primary-clr, #67513A) !important;
+}
+.bg-teal, .bg-teal-dark, .btn-teal {
+    background-color: var(--primary-clr, #67513A) !important;
+    border-color: var(--primary-clr, #67513A) !important;
+}
+.btn-teal:hover {
+    background-color: #5A6E36 !important;
+}
+
+/* Consistent focus rings using theme color */
+.form-control:focus {
+    border-color: var(--primary-clr, #67513A) !important;
+    box-shadow: 0 0 0 0.2rem rgba(103, 81, 58, 0.25) !important;
+}
+.btn-outline-primary {
+    border-color: var(--primary-clr, #67513A) !important;
+    color: var(--primary-clr, #67513A) !important;
+}
+.btn-outline-primary:hover {
+    background-color: var(--primary-clr, #67513A) !important;
+    border-color: var(--primary-clr, #67513A) !important;
+    color: #fff !important;
+}

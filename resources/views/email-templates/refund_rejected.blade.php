@@ -144,7 +144,7 @@
     </table>
     @php($order = \App\Models\Order::find($id))
 
-    <div style="background-color: rgb(248, 248, 248); width: 90%;margin:auto;margin-top:30px;">
+    <div style="background-color: #FAF8F5; width: 90%;margin:auto;margin-top:30px;">
         <div style="padding:20px;">
             <h5 >{{translate('messages.Admin Note')}}</h5>
             <p>{{$order->refund->admin_note}}</p>
@@ -204,7 +204,7 @@
         $extra_discount=0;
         $total_addon_price = 0;
     ?>
-    <div style="background-color: rgb(248, 248, 248); width: 90%;margin:auto;margin-top:30px;">
+    <div style="background-color: #FAF8F5; width: 90%;margin:auto;margin-top:30px;">
         <div style="padding:20px;">
             <table style="width: 100%; ">
                 <tbody style="">

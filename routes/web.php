@@ -1,20 +1,14 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\PaytmController;
-use App\Http\Controllers\LiqPayController;
 use App\Http\Controllers\PaymobController;
 use App\Http\Controllers\PaytabsController;
 use App\Http\Controllers\FirebaseController;
 use App\Http\Controllers\PaystackController;
-use App\Http\Controllers\RazorPayController;
 use App\Http\Controllers\SenangPayController;
-use App\Http\Controllers\MercadoPagoController;
-use App\Http\Controllers\BkashPaymentController;
 use App\Http\Controllers\FlutterwaveV3Controller;
 use App\Http\Controllers\PaypalPaymentController;
 use App\Http\Controllers\StripePaymentController;
-use App\Http\Controllers\SslCommerzPaymentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -78,6 +72,18 @@ Route::middleware(\App\Http\Middleware\RiderAuthenticated::class)->prefix('rider
     Route::get('earnings', 'RiderDashboardController@earnings')->name('rider.earnings');
 });
 
+// Canonical store-management front door on admin.aduanefie.com. The legacy
+// /login/store and /login/store-employee entries below stay as aliases so old
+// bookmarks, the mobile app and DataSetting.store_login_url keep working.
+Route::get('store-login', 'StoreAuthController@showLogin')->name('store.login');
+Route::post('store-login', 'StoreAuthController@login')
+    ->name('store.login.submit')
+    ->middleware('throttle:store-login');
+Route::get('store-login/employee', 'StoreAuthController@showEmployeeLogin')->name('store.employee.login');
+Route::post('store-login/employee', 'StoreAuthController@loginEmployee')
+    ->name('store.employee.login.submit')
+    ->middleware('throttle:store-login');
+
 Route::get('login/{tab}', 'LoginController@login')->name('login');
 Route::post('external-login-from-drivemond', 'LoginController@externalLoginFromDrivemond');
 Route::post('login_submit', 'LoginController@submit')->name('login_post')->middleware(['actch', 'throttle:web-login']);
@@ -115,34 +121,12 @@ $is_published = $full_data['is_published'] == 1 ? 1 : 0;
 if (!$is_published) {
     Route::group(['prefix' => 'payment'], function () {
 
-        //SSLCOMMERZ
-        Route::group(['prefix' => 'sslcommerz', 'as' => 'sslcommerz.'], function () {
-            Route::get('pay', [SslCommerzPaymentController::class, 'index'])->name('pay');
-            Route::post('success', [SslCommerzPaymentController::class, 'success'])
-                ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
-            Route::post('failed', [SslCommerzPaymentController::class, 'failed'])
-                ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
-            Route::post('canceled', [SslCommerzPaymentController::class, 'canceled'])
-                ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
-        });
-
         //STRIPE
         Route::group(['prefix' => 'stripe', 'as' => 'stripe.'], function () {
             Route::get('pay', [StripePaymentController::class, 'index'])->name('pay');
             Route::get('token', [StripePaymentController::class, 'payment_process_3d'])->name('token');
             Route::get('success', [StripePaymentController::class, 'success'])->name('success');
             Route::get('canceled', [StripePaymentController::class, 'canceled'])
-                ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
-        });
-
-        //RAZOR-PAY
-        Route::group(['prefix' => 'razor-pay', 'as' => 'razor-pay.'], function () {
-            Route::get('pay', [RazorPayController::class, 'index']);
-            Route::post('payment', [RazorPayController::class, 'payment'])->name('payment')
-                ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
-            Route::post('callback', [RazorPayController::class, 'callback'])->name('callback')
-                ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
-            Route::any('cancel', [RazorPayController::class, 'cancel'])->name('cancel')
                 ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
         });
 
@@ -161,13 +145,6 @@ if (!$is_published) {
             Route::any('callback', [SenangPayController::class, 'return_senang_pay']);
         });
 
-        //PAYTM
-        Route::group(['prefix' => 'paytm', 'as' => 'paytm.'], function () {
-            Route::get('pay', [PaytmController::class, 'payment']);
-            Route::any('response', [PaytmController::class, 'callback'])->name('response')
-            ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
-        });
-
         //FLUTTERWAVE
         Route::group(['prefix' => 'flutterwave-v3', 'as' => 'flutterwave-v3.'], function () {
             Route::get('pay', [FlutterwaveV3Controller::class, 'initialize'])->name('pay');
@@ -179,33 +156,6 @@ if (!$is_published) {
             Route::get('pay', [PaystackController::class, 'index'])->name('pay');
             Route::post('payment', [PaystackController::class, 'redirectToGateway'])->name('payment');
             Route::get('callback', [PaystackController::class, 'handleGatewayCallback'])->name('callback');
-        });
-
-        //BKASH
-
-        Route::group(['prefix' => 'bkash', 'as' => 'bkash.'], function () {
-            // Payment Routes for bKash
-            Route::get('make-payment', [BkashPaymentController::class, 'make_tokenize_payment'])->name('make-payment');
-            Route::any('callback', [BkashPaymentController::class, 'callback'])->name('callback');
-
-            // Refund Routes for bKash
-            // Route::get('refund', 'BkashRefundController@index')->name('bkash-refund');
-            // Route::post('refund', 'BkashRefundController@refund')->name('bkash-refund');
-        });
-
-        //Liqpay
-        Route::group(['prefix' => 'liqpay', 'as' => 'liqpay.'], function () {
-            Route::get('payment', [LiqPayController::class, 'payment'])->name('payment');
-            Route::any('callback', [LiqPayController::class, 'callback'])->name('callback');
-        });
-
-        //MERCADOPAGO
-
-        Route::group(['prefix' => 'mercadopago', 'as' => 'mercadopago.'], function () {
-            Route::get('pay', [MercadoPagoController::class, 'index'])->name('index');
-            Route::any('make-payment', [MercadoPagoController::class, 'make_payment'])->name('make_payment')->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
-            Route::get('success', [MercadoPagoController::class, 'success'])->name('success');
-            Route::get('failed', [MercadoPagoController::class, 'failed'])->name('failed');
         });
 
         //PAYMOB
@@ -248,92 +198,4 @@ Route::group(['prefix' => 'vendor', 'as' => 'restaurant.'], function () {
 Route::group(['prefix' => 'deliveryman', 'as' => 'deliveryman.'], function () {
     Route::get('apply', 'DeliveryManController@create')->name('create');
     Route::post('apply', 'DeliveryManController@store')->name('store');
-});
-
-//Trade Requests (RFQ) - Customer
-Route::group(['prefix' => 'trade-requests', 'as' => 'trade-requests.'], function () {
-    Route::post('/', 'TradeRequestController@store')->name('store');
-    Route::get('/', 'TradeRequestController@index')->name('index');
-    Route::post('quotes/{quote}/accept', 'TradeRequestController@acceptQuote')->name('quotes.accept');
-    Route::post('quotes/{quote}/reject', 'TradeRequestController@rejectQuote')->name('quotes.reject');
-    Route::post('documents/upload', 'TradeRequestController@uploadDocument')->name('documents.upload');
-    Route::get('documents/{tradeRequestId}', 'TradeRequestController@documents')->name('documents.list');
-});
-
-//Trade Finance / Escrow
-Route::group(['prefix' => 'trade-contracts', 'as' => 'trade-contracts.', 'middleware' => 'throttle:30,1'], function () {
-    Route::post('{tradeRequest}/create', 'TradeFinanceController@createContract')->name('create');
-    Route::post('{contract}/deposit', 'TradeFinanceController@deposit')->name('deposit');
-    Route::post('{contract}/confirm-delivery', 'TradeFinanceController@confirmDelivery')->name('confirm-delivery');
-    Route::post('{contract}/verify-documents', 'TradeFinanceController@verifyDocuments')->name('verify-documents');
-    Route::post('{contract}/release', 'TradeFinanceController@releaseFunds')->name('release');
-    Route::post('{contract}/refund', 'TradeFinanceController@refund')->name('refund');
-    Route::get('{contract}/summary', 'TradeFinanceController@summary')->name('summary');
-    Route::get('{contract}', 'TradeFinanceController@view')->name('view');
-});
-
-//Trade Finance / Escrow - Export
-Route::group(['prefix' => 'trade-contracts/export', 'as' => 'trade-contracts.export.', 'middleware' => 'throttle:60,1'], function () {
-    Route::get('contracts/{type}', 'TradeFinanceController@exportContracts')->name('contracts');
-    Route::get('invoice/{contractId}/{type}', 'TradeFinanceController@exportInvoice')->name('invoice');
-});
-
-//Trade Blocs - Regional Hubs
-Route::group(['prefix' => 'trade-bloc', 'as' => 'trade-bloc.', 'middleware' => 'throttle:60,1'], function () {
-    Route::get('/', 'TradeBlocController@index')->name('index');
-    Route::get('{slug}', 'TradeBlocController@hub')->name('hub');
-    Route::get('reports/corridors', 'TradeBlocController@reportCorridors')->name('reports.corridors');
-    Route::get('reports/commodities', 'TradeBlocController@reportCommodities')->name('reports.commodities');
-    Route::get('reports/countries', 'TradeBlocController@reportCountries')->name('reports.countries');
-});
-
-//Trade Assurance
-Route::group(['prefix' => 'trade-assurance', 'as' => 'trade-assurance.', 'middleware' => 'throttle:30,1'], function () {
-    Route::post('{contract}/request', 'TradeAssuranceController@request')->name('request');
-    Route::post('{assurance}/inspect', 'TradeAssuranceController@recordInspection')->name('inspect');
-    Route::get('{contract}/status', 'TradeAssuranceController@status')->name('status');
-});
-
-//Bulk Trade Tools
-Route::group(['prefix' => 'bulk-trade', 'as' => 'bulk-trade.', 'middleware' => 'throttle:60,1'], function () {
-    Route::get('items/{itemId}/tiers', 'BulkTradeController@itemTiers')->name('items.tiers');
-    Route::post('items/{itemId}/calculate-price', 'BulkTradeController@calculateBulkPrice')->name('items.calculate-price');
-    Route::post('standing-orders', 'BulkTradeController@createStandingOrder')->name('standing-orders.create');
-    Route::get('standing-orders', 'BulkTradeController@listStandingOrders')->name('standing-orders.list');
-    Route::post('standing-orders/{orderId}/cancel', 'BulkTradeController@cancelStandingOrder')->name('standing-orders.cancel');
-    Route::get('standing-orders/due', 'BulkTradeController@dueStandingOrders')->name('standing-orders.due');
-});
-
-//Market - Customer-facing B2B marketplace
-Route::group(['prefix' => 'market', 'as' => 'market.', 'middleware' => 'throttle:60,1'], function () {
-    Route::get('/', 'MarketController@index')->name('index');
-    Route::get('{id}', 'MarketController@show')->name('show');
-    Route::post('request-quote', 'MarketController@requestQuote')->name('request-quote');
-    Route::get('my-requests', 'MarketController@myRequests')->name('my-requests');
-    Route::get('quotes/{tradeRequestId}', 'MarketController@quotes')->name('quotes');
-    Route::post('quotes/{quoteId}/accept', 'MarketController@acceptQuote')->name('quotes.accept');
-});
-
-//Buyer Sourcing Service
-Route::group(['prefix' => 'sourcing', 'as' => 'sourcing.', 'middleware' => 'throttle:30,1'], function () {
-    Route::post('/', 'BuyerSourcingController@create')->name('create');
-    Route::get('/', 'BuyerSourcingController@index')->name('index');
-    Route::get('{sourcingRequest}/match-sellers', 'BuyerSourcingController@matchSellers')->name('match-sellers');
-    Route::get('my-requests', 'BuyerSourcingController@myRequests')->name('my-requests');
-});
-
-//Seller Dashboard
-Route::group(['prefix' => 'seller', 'as' => 'seller.', 'middleware' => 'throttle:60,1'], function () {
-    Route::get('/dashboard', 'SellerDashboardController@index')->name('dashboard');
-    Route::post('/rfq/{rfqId}/respond', 'SellerDashboardController@respondToRfq')->name('rfq.respond');
-    Route::post('/upgrade-gold', 'SellerDashboardController@upgradeGoldSupplier')->name('upgrade-gold');
-});
-
-//API Integrations
-Route::group(['prefix' => 'api/integrations', 'as' => 'api.integrations.', 'middleware' => 'throttle:100,1'], function () {
-    Route::post('freight/webhook', 'IntegrationController@freightWebhook')->name('freight-webhook');
-    Route::post('customs/submit', 'IntegrationController@customsSubmit')->name('customs-submit');
-    Route::post('bank/payout', 'IntegrationController@bankPayout')->name('bank-payout');
-    Route::post('payment/webhook/{gateway}', 'IntegrationController@paymentWebhook')->name('payment-webhook');
-    Route::get('gateways', 'IntegrationController@supportedGateways')->name('gateways');
 });

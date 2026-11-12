@@ -83,8 +83,8 @@ class SearchController extends Controller
             })
             ->whereHas('store', function ($query) use ($zone_id) {
                 $query->when(config('module.current_module_data'), function ($query) {
-                    $query->where('module_id', config('module.current_module_data')['id'])->whereHas('zone.modules', function ($query) {
-                        $query->where('modules.id', config('module.current_module_data')['id']);
+                    $query->where('module_id', optional(config('module.current_module_data'))['id'])->whereHas('zone.modules', function ($query) {
+                        $query->where('modules.id', optional(config('module.current_module_data'))['id']);
                     });
                 })->whereIn('zone_id', json_decode($zone_id, true));
             })
@@ -138,7 +138,7 @@ class SearchController extends Controller
         }])
             ->where(['position' => 0, 'status' => 1])
             ->when(config('module.current_module_data'), function ($query) {
-                $query->module(config('module.current_module_data')['id']);
+                $query->module(optional(config('module.current_module_data'))['id']);
             })
             ->whereIn('id', $item_categories)
             ->orderBy('priority', 'desc')->get();

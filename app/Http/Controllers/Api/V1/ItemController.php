@@ -58,6 +58,120 @@ class ItemController extends Controller
         return response()->json($items, 200);
     }
 
+    public function get_store_categories_items(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'store_id' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => Helpers::error_processor($validator)], 403);
+        }
+
+        $storeParam = $request->query('store_id');
+        $store = is_numeric($storeParam)
+            ? Store::find($storeParam)
+            : Store::where('slug', $storeParam)->first();
+
+        if (!$store) {
+            return response()->json([
+                'total_size' => 0,
+                'limit' => (int) $request->query('limit', 25),
+                'offset' => (int) $request->query('offset', 1),
+                'products' => [],
+                'categories' => [],
+            ], 200);
+        }
+
+        $zone_id = $request->header('zoneId') ?: json_encode([(int) $store->zone_id]);
+        $limit = (int) $request->query('limit', 25);
+        $offset = (int) $request->query('offset', 1);
+        $category_id = $request->query('category_id', 0);
+        $type = $request->query('type', 'all');
+        $min = $request->query('min_price');
+        $max = $request->query('max_price');
+        $search = trim((string) $request->query('search', ''));
+        $ratingCount = $request->query('rating_count');
+        $sortBy = $request->query('sort_by');
+        $filterBy = $request->query('filter_by');
+        $filterRaw = $request->query('filter');
+        $filter = is_string($filterRaw) ? (json_decode($filterRaw, true) ?: []) : (is_array($filterRaw) ? $filterRaw : []);
+
+        $categoryIds = $category_id != 0 ? array_filter(explode(',', (string) $category_id)) : [];
+
+        $baseQuery = Item::query()
+            ->where('store_id', $store->id)
+            ->active()
+            ->type($type)
+            ->when(count($categoryIds) > 0, function ($q) use ($categoryIds) {
+                $q->whereHas('category', function ($cq) use ($categoryIds) {
+                    $cq->whereIn('id', $categoryIds)->orWhereIn('parent_id', $categoryIds);
+                });
+            })
+            ->when($min !== null && $max !== null && $max > 0, function ($q) use ($min, $max) {
+                $q->whereBetween('price', [$min, $max]);
+            })
+            ->when($ratingCount, function ($q) use ($ratingCount) {
+                $q->where('avg_rating', '>=', (float) $ratingCount);
+            })
+            ->when($filterBy === 'halal', function ($q) {
+                $q->where('is_halal', 1);
+            })
+            ->when(in_array('discounted', $filter, true), function ($q) {
+                $q->where('discount', '>', 0);
+            })
+            ->when($search !== '', function ($q) use ($search) {
+                $keys = explode(' ', $search);
+                $q->where(function ($sq) use ($keys) {
+                    foreach ($keys as $key) {
+                        if ($key !== '') {
+                            $sq->orWhere('name', 'ilike', '%' . $key . '%');
+                        }
+                    }
+                });
+            });
+
+        if ($sortBy === 'price_high_low' || in_array('high', $filter, true)) {
+            $baseQuery->orderByDesc('price');
+        } elseif ($sortBy === 'price_low_high' || in_array('low', $filter, true)) {
+            $baseQuery->orderBy('price');
+        } elseif (in_array('top_rated', $filter, true)) {
+            $baseQuery->orderByDesc('avg_rating');
+        } elseif (in_array('popular', $filter, true)) {
+            $baseQuery->orderByDesc('order_count');
+        } else {
+            $baseQuery->latest();
+        }
+
+        $itemCategories = Item::query()
+            ->where('store_id', $store->id)
+            ->active()
+            ->pluck('category_id')
+            ->unique()
+            ->filter()
+            ->values()
+            ->toArray();
+
+        $categories = Category::withCount(['products', 'childes'])
+            ->with(['childes' => function ($query) {
+                $query->withCount(['products', 'childes']);
+            }])
+            ->where(['position' => 0, 'status' => 1])
+            ->whereIn('id', $itemCategories)
+            ->orderBy('priority', 'desc')
+            ->get();
+
+        $paginator = $baseQuery->paginate($limit, ['*'], 'page', $offset);
+
+        return response()->json([
+            'total_size' => $paginator->total(),
+            'limit' => $limit,
+            'offset' => $offset,
+            'products' => Helpers::product_data_formatting($paginator->items(), true, false, app()->getLocale()),
+            'categories' => $categories,
+        ], 200);
+    }
+
     public function get_simple_items(Request $request)
     {
         $items = Item::where('module_id', 20)

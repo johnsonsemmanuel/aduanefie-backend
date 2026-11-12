@@ -392,7 +392,13 @@ class OrderController extends Controller
                 }
             }
 
-            $module_wise_delivery_charge = $store->zone->modules()->where('modules.id', $request->header('moduleId'))->first();
+            $moduleId = $request->header('moduleId');
+            if (!$moduleId) {
+                $defaultModule = \App\Models\Module::active()->orderBy('id')->first();
+                $moduleId = $defaultModule ? $defaultModule->id : null;
+            }
+
+            $module_wise_delivery_charge = $store->zone->modules()->where('modules.id', $moduleId)->first();
             if ($module_wise_delivery_charge) {
                 $per_km_shipping_charge = $module_wise_delivery_charge->pivot->per_km_shipping_charge;
                 $minimum_shipping_charge = $module_wise_delivery_charge->pivot->minimum_shipping_charge;
@@ -595,7 +601,13 @@ class OrderController extends Controller
         $order->extra_packaging_amount =  (!empty($extra_packaging_data) && $request?->extra_packaging_amount > 0 && $store && ($extra_packaging_data[$store->module->module_type]=='1') && ($store?->storeConfig?->extra_packaging_status == '1'))?$store?->storeConfig?->extra_packaging_amount:0;
 
 
-        $carts = Cart::where('user_id', $order->user_id)->where('is_guest',$order->is_guest)->where('module_id',$request->header('moduleId'))
+        $moduleId = $request->header('moduleId');
+        if (!$moduleId) {
+            $defaultModule = \App\Models\Module::active()->orderBy('id')->first();
+            $moduleId = $defaultModule ? $defaultModule->id : null;
+        }
+
+        $carts = Cart::where('user_id', $order->user_id)->where('is_guest',$order->is_guest)->where('module_id',$moduleId)
         ->when(isset($request->is_buy_now) && $request->is_buy_now == 1 && $request->cart_id, function ($query) use ($request) {
             return $query->where('id',$request->cart_id);
         })

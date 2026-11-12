@@ -445,7 +445,7 @@
             controlDiv.appendChild(controlUI);
             // Set CSS for the control interior.
             const controlText = document.createElement("div");
-            controlText.style.color = "rgb(25,25,25)";
+            controlText.style.color = "var(--primary-clr, #67513A)";
             controlText.style.fontFamily = "Roboto,Arial,sans-serif";
             controlText.style.fontSize = "10px";
             controlText.style.lineHeight = "16px";

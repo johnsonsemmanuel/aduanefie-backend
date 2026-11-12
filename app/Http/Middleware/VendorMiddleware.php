@@ -21,7 +21,7 @@ class VendorMiddleware
             if(!auth('vendor')->user()->status)
             {
                 auth()->guard('vendor')->logout();
-                return redirect()->route('home');
+                return redirect()->route('store.login');
                 // return redirect()->route('vendor.auth.login');
             }
             return $next($request);
@@ -30,18 +30,18 @@ class VendorMiddleware
             if(Auth::guard('vendor_employee')->user()->is_logged_in == 0)
             {
                 auth()->guard('vendor_employee')->logout();
-                return redirect()->route('home');
+                return redirect()->route('store.login');
                 // return redirect()->route('vendor.auth.login');
             }
             if(!auth('vendor_employee')->user()->store->status)
             {
                 auth()->guard('vendor_employee')->logout();
-                return redirect()->route('home');
+                return redirect()->route('store.login');
                 // return redirect()->route('vendor.auth.login');
             }
             return $next($request);
         }
-        return redirect()->route('home');
+        return redirect()->route('store.login');
         // return redirect()->route('vendor.auth.login');
     }
 }

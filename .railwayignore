@@ -1,6 +1,12 @@
 # Exclude Composer vendor (installed during Docker build) & local bloat
 /vendor/
 /node_modules/
+/composer.phar
+/docs/
+/tests/
+/public/assets/installation/
+/public/assets/admin/img/instructions_old.gif
+/public/assets/admin/css/images/auth-bg.png
 /public/hot
 /public/storage
 /oldstuff/

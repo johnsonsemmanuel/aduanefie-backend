@@ -116,7 +116,7 @@
         }
         .fz-11 {
             font-size: 14px;
-            color:rgb(105, 101, 101)
+            color: var(--primary-clr, #67513A)
         }
         .fz-17 {
             font-size: 19px;
@@ -268,7 +268,7 @@
                     <tr>
                         <td colspan="4" style="padding: 10px">
 
-                            <table class="table __subscribe-table table-borderless mt-3" style="color: rgb(105, 101, 101)">
+                            <table class="table __subscribe-table table-borderless mt-3" style="color: var(--primary-clr, #67513A)">
                                 <thead>
                                     <tr>
                                         <th>

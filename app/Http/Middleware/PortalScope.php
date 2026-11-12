@@ -29,6 +29,27 @@ class PortalScope
         $portals = config('portals.portals', []);
         $portal = $portals[$portalKey] ?? [];
 
+        // A retired host has no routes of its own: every read is sent to the
+        // host that now owns the surface. This runs before StartSession so the
+        // redirect does not mint a cookie for a host that is going away. Writes
+        // are refused rather than redirected, so a stale form cannot silently
+        // become a GET.
+        if (!empty($portal['redirect_to'])) {
+            if ($request->isMethod('GET') || $request->isMethod('HEAD')) {
+                $path = trim($request->path(), '/');
+                $target = rtrim($portal['redirect_to'], '/')
+                    . ($path === '' ? ($portal['redirect_path'] ?? '/') : '/' . $path);
+
+                if ($request->getQueryString()) {
+                    $target .= '?' . $request->getQueryString();
+                }
+
+                return redirect()->away($target, 301);
+            }
+
+            abort(404);
+        }
+
         // One cookie name per host, host-only domain. Never let a session cookie
         // be shared across subdomains: an admin session must not be readable by
         // the storefront host.

@@ -7,11 +7,11 @@
     <title>@yield('title', 'Marketer Portal') · Aduanefie</title>
     <style>
         :root {
-            --ink: #0f1c2e;
-            --muted: #5b6b7f;
-            --line: #dde3ea;
-            --bg: #f4f6f9;
-            --brand: #0b6e4f;
+            --ink: var(--primary-clr, #67513A);
+            --muted: #8B9F69;
+            --line: #E0D6BD;
+            --bg: #FAF8F5;
+            --brand: var(--primary-clr, #67513A);
             --danger: #b3261e;
             --warn: #8a5a00;
         }
@@ -50,7 +50,7 @@
         .badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; border: 1px solid var(--line); background: #f8fafc; }
         .badge.pending { color: var(--warn); border-color: #f0d9a8; background: #fdf6e6; }
         .badge.eligible { color: var(--brand); border-color: #b9e0d1; background: #eaf6f1; }
-        .badge.in_payout { color: #1d4ed8; border-color: #c7d7fb; background: #eef3ff; }
+        .badge.in_payout { color: var(--primary-clr, #67513A); border-color: #c7d7fb; background: #eef3ff; }
         .badge.paid { color: #166534; border-color: #c7e6cf; background: #eefaf1; }
         .badge.void, .badge.rejected { color: var(--danger); border-color: #f2c9c6; background: #fdf1f0; }
         .badge.requested, .badge.approved { color: var(--warn); border-color: #f0d9a8; background: #fdf6e6; }

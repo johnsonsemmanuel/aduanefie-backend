@@ -60,6 +60,16 @@
             flex-direction: column;
         }
 
+        /* Store logins have no second factor, so the track is one full step. */
+        .slide-container.single-step .slide-track {
+            width: 100%;
+        }
+
+        .slide-container.single-step .slide-step {
+            flex: 0 0 100%;
+            width: 100%;
+        }
+
         .slide-step-header {
             margin-bottom: 24px;
         }
@@ -156,11 +166,13 @@
             </label>
 
             <div class="auth-wrapper-form">
-                <div class="slide-container {{ $mfaRequired ? 'mfa-active' : '' }}">
+                <div class="slide-container {{ $mfaRequired ? 'mfa-active' : '' }} {{ $isAdmin ? '' : 'single-step' }}">
+                    @if($isAdmin)
                     <div class="step-indicator">
                         <div class="step-dot"></div>
                         <div class="step-dot"></div>
                     </div>
+                    @endif
 
                     <div class="slide-track">
             <!-- Step 1: Credentials -->
@@ -228,6 +240,16 @@
                     </div>
                 </form>
 
+                @if($isVendor)
+                <div class="mt-4 text-center">
+                    @if($role === 'vendor')
+                        <a href="{{ route('store.employee.login') }}" class="text-muted small">{{ translate('Store employee login') }}</a>
+                    @else
+                        <a href="{{ route('store.login') }}" class="text-muted small">{{ translate('Store owner login') }}</a>
+                    @endif
+                </div>
+                @endif
+
                 @if(env('APP_MODE') == 'demo')
                 <div class="auto-fill-data-copy mt-4">
                     <div class="d-flex flex-wrap align-items-center justify-content-between">
@@ -248,6 +270,7 @@
                 @endif
             </div>
 
+            @if($isAdmin)
             <!-- Step 2: Two-Factor Authentication (slides in on same page) -->
             <div class="slide-step">
                 <div class="slide-step-header">
@@ -299,6 +322,7 @@
                     </p>
                 </div>
             </div>
+            @endif
         </div>
     </div>
             </div>

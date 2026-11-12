@@ -1299,11 +1299,6 @@ class Helpers
         return $symbol . ' ' . number_format($converted, config('round_up_to_digit', 2));
     }
 
-    public static function estimateCustomsDuty(float $valueUsd, string $hsCode, string $destinationCountry): array
-    {
-        return CustomsDuty::calculateDuties($valueUsd, $destinationCountry, $hsCode);
-    }
-
     public static function format_duty_estimate(array $duty): string
     {
         return '$' . number_format($duty['total_usd'], 2) . ' USD (Duty: ' . $duty['duty_rate'] . '%, VAT: ' . $duty['vat_rate'] . '%)';
