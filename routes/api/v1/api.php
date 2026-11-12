@@ -495,8 +495,13 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
         // happy-hour data yet; returning the empty shape lets the storefront
         // hide those sections instead of logging a 404 on every home page.
         Route::get('bundle/home', 'PromotionController@bundle_home');
+        Route::get('bundle/list', 'PromotionController@bundle_home');
+        Route::get('bundle/store-bundles', 'PromotionController@bundle_home');
         Route::get('bogo/home', 'PromotionController@bogo_home');
+        Route::get('bogo/offers', 'PromotionController@bogo_home');
+        Route::get('bogo/store-offers', 'PromotionController@bogo_home');
         Route::get('happy-hour/running', 'PromotionController@happy_hour_running');
+        Route::get('happy-hour/stores', 'PromotionController@happy_hour_stores');
         Route::get('item/farming-list', 'ItemController@farming_list');
 
         Route::group(['prefix' => 'common-condition'], function () {

@@ -63,4 +63,12 @@ class PromotionController extends Controller
             'happy_hour' => null,
         ], 200);
     }
+
+    public function happy_hour_stores(Request $request)
+    {
+        return response()->json([
+            'data' => [],
+            'stores' => [],
+        ], 200);
+    }
 }
