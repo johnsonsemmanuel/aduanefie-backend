@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -20,10 +21,20 @@ return new class extends Migration
 
         // Cross-border destinations are usually outside every local zone, so
         // the address can no longer require a zone.
+        //
+        // Deliberately not using `->change()` here: this table uses PostGIS
+        // `citext` columns, and Laravel's `change()` introspects the whole
+        // table through Doctrine DBAL, which cannot map `citext` and aborts the
+        // migration. Dropping the NOT NULL constraint directly is equivalent
+        // and works on both engines.
         if (Schema::hasColumn('customer_addresses', 'zone_id')) {
-            Schema::table('customer_addresses', function (Blueprint $table) {
-                $table->unsignedBigInteger('zone_id')->nullable()->change();
-            });
+            if (Schema::getConnection()->getDriverName() === 'pgsql') {
+                DB::statement('ALTER TABLE "customer_addresses" ALTER COLUMN "zone_id" DROP NOT NULL');
+            } else {
+                Schema::table('customer_addresses', function (Blueprint $table) {
+                    $table->unsignedBigInteger('zone_id')->nullable()->change();
+                });
+            }
         }
 
         if (! Schema::hasColumn('stores', 'country_code')) {
