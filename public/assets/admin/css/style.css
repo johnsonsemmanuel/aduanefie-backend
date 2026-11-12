@@ -15455,15 +15455,30 @@ main#content.main {
     z-index: 0;
 }
 
+.auth-wrapper-left .auth-left-logo {
+    position: absolute;
+    top: 32px;
+    left: 36px;
+    z-index: 2;
+    max-width: 180px;
+    height: 56px;
+    object-fit: contain;
+    object-position: left center;
+    background: transparent;
+}
+
 .auth-wrapper-left .auth-left-cont {
     position: relative;
     z-index: 1;
+    margin: 0 auto !important;
+    text-align: center;
+    padding: 0 32px;
 }
 
 .auth-wrapper-left .auth-left-cont img {
-    background-color: #ffffff;
-    padding: 8px 14px;
-    border-radius: 10px;
+    background-color: transparent;
+    padding: 0;
+    border-radius: 0;
 }
 
 .auth-wrapper-left .auth-left-cont .title {

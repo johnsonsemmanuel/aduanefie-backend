@@ -31,7 +31,7 @@
     <!-- CSS Front Template -->
     <link rel="stylesheet" href="{{asset('public/assets/admin/css/bootstrap.min.css')}}">
     <link rel="stylesheet" href="{{asset('public/assets/admin/css/theme.minc619.css?v=1.0')}}">
-    <link rel="stylesheet" href="{{asset('public/assets/admin/css/style.css?v=2.2')}}">
+    <link rel="stylesheet" href="{{asset('public/assets/admin/css/style.css?v=2.3')}}">
     <link rel="stylesheet" href="{{asset('public/assets/admin')}}/css/toastr.css">
     <link rel="stylesheet" href="{{asset('public/assets/admin/css/custom.css')}}">
 
@@ -144,9 +144,9 @@
 <main id="content" role="main" class="main">
     <div class="auth-wrapper">
         <div class="auth-wrapper-left">
+            <img class="auth-left-logo onerror-image" data-onerror-image="{{asset('/public/assets/admin/img/favicon.png')}}"
+                 src="{{ $store_logo_url }}" alt="Aduanefie">
             <div class="auth-left-cont">
-                <img class="onerror-image" data-onerror-image="{{asset('/public/assets/admin/img/favicon.png')}}"
-                     src="{{ $store_logo_url }}" alt="Aduanefie">
                 <h2 class="title">...building <span class="d-block">Africa's biggest</span> <strong class="aduanefie-auth-accent">marketplace.</strong></h2>
             </div>
         </div>
