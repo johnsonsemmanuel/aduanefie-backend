@@ -482,6 +482,13 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
         });
         Route::get('store-categories/items', 'ItemController@get_store_categories_items');
 
+        // v4.2 storefront marketing readers. This backend has no bundle/BOGO/
+        // happy-hour data yet; returning the empty shape lets the storefront
+        // hide those sections instead of logging a 404 on every home page.
+        Route::get('bundle/home', 'PromotionController@bundle_home');
+        Route::get('bogo/home', 'PromotionController@bogo_home');
+        Route::get('happy-hour/running', 'PromotionController@happy_hour_running');
+
         Route::group(['prefix' => 'common-condition'], function () {
             Route::get('/', 'CommonConditionController@get_conditions');
             Route::get('/list', 'CommonConditionController@getCommonConditionList');
