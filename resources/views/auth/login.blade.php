@@ -36,83 +36,15 @@
     <link rel="stylesheet" href="{{asset('public/assets/admin/css/custom.css')}}">
 
     <style>
-        /* Admin login theme colors from shared color component */
-        :root {
-            --primary-clr: #67513A;
-            --secondary-clr: #8B9F69;
-            --accent-clr: #5E7042;
-        }
-
-        .login-wrapper {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, var(--primary-clr) 0%, #5E7042 100%);
-            padding: 40px 20px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .login-wrapper::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('{{asset('/public/assets/admin/img/favicon.png')}}') repeat;
-            opacity: 0.03;
-            pointer-events: none;
-        }
-
-        .login-brand {
-            text-align: center;
-            margin-bottom: 40px;
-            color: #fff;
-        }
-
-        .login-brand img {
-            width: 48px;
-            height: 48px;
-            margin-bottom: 12px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        }
-
-        .login-brand h2 {
-            font-size: 24px;
-            font-weight: 700;
-            margin: 0;
-            color: #fff;
-        }
-
-        .login-brand h2 span {
-            display: block;
-            font-size: 14px;
-            font-weight: 400;
-            opacity: 0.85;
-            margin-top: 4px;
-        }
-
-        .login-brand .accent {
-            color: var(--secondary-clr);
-        }
-
-        /* Sliding panel container */
+        /* Sliding 2FA panel inside .auth-wrapper-form */
         .slide-container {
-            background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
-            overflow: hidden;
             width: 100%;
-            max-width: 500px;
-            border: 1px solid rgba(255,255,255,0.2);
+            overflow: hidden;
         }
 
         .slide-track {
             display: flex;
-            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
             width: 200%;
             position: relative;
         }
@@ -124,32 +56,31 @@
         .slide-step {
             flex: 0 0 50%;
             width: 50%;
-            padding: 40px;
             display: flex;
             flex-direction: column;
         }
 
         .slide-step-header {
-            margin-bottom: 32px;
+            margin-bottom: 24px;
         }
 
         .slide-step-title {
-            font-size: 22px;
+            font-size: 26px;
             font-weight: 700;
-            color: var(--primary-clr);
-            margin-bottom: 8px;
+            color: #1E2022;
+            margin-bottom: 6px;
         }
 
         .slide-step-subtitle {
-            color: #666;
+            color: #677788;
             font-size: 14px;
             line-height: 1.5;
         }
 
         .step-indicator {
             display: flex;
-            justify-content: center;
-            margin-bottom: 24px;
+            justify-content: flex-start;
+            margin-bottom: 16px;
         }
 
         .step-dot {
@@ -157,26 +88,26 @@
             height: 8px;
             border-radius: 50%;
             background: #E0D6BD;
-            margin: 0 4px;
+            margin-right: 6px;
             transition: all 0.3s ease;
         }
 
-        .slide-container.mfa-active .step-dot:nth-child(1) {
-            background: var(--primary-clr);
-        }
+        .slide-container:not(.mfa-active) .step-dot:nth-child(1),
         .slide-container.mfa-active .step-dot:nth-child(2) {
-            background: var(--secondary-clr);
+            background: #5E7042;
+            width: 20px;
+            border-radius: 4px;
         }
 
         .slide-footer {
-            margin-top: auto;
+            margin-top: 20px;
             text-align: center;
             color: #666;
             font-size: 13px;
         }
 
         .slide-footer a {
-            color: var(--primary-clr);
+            color: #5E7042;
             font-weight: 600;
             text-decoration: none;
         }
@@ -187,15 +118,15 @@
 
         .mfa-info {
             background: #F0F7EE;
-            border: 1px solid var(--secondary-clr);
+            border: 1px solid #8B9F69;
             border-radius: 8px;
             padding: 16px;
             margin-bottom: 24px;
         }
 
         .mfa-info h4 {
-            margin: 0 0 8px 0;
-            color: var(--primary-clr);
+            margin: 0 0 6px 0;
+            color: #5E7042;
             font-size: 15px;
         }
 
@@ -203,110 +134,35 @@
             margin: 0;
             color: #67513A;
             font-size: 13px;
-            opacity: 0.8;
-        }
-
-        .color-quick-pick {
-            margin-top: 24px;
-            padding-top: 20px;
-            border-top: 1px solid #f0f0f0;
-        }
-
-        .color-quick-pick label {
-            display: block;
-            font-size: 12px;
-            font-weight: 600;
-            color: #666;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .color-row {
-            display: flex;
-            gap: 8px;
-            justify-content: center;
-        }
-
-        .color-chip {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            border: 2px solid transparent;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        }
-
-        .color-chip:hover {
-            transform: scale(1.1);
-            border-color: rgba(0,0,0,0.2);
-        }
-
-        .color-chip.active {
-            border-color: #222;
-            transform: scale(1.15);
-            box-shadow: 0 0 0 2px rgba(255,255,255,0.8);
-        }
-
-        /* Error styling */
-        .has-error .form-control {
-            border-color: #dc3545;
-        }
-
-        .invalid-feedback {
-            color: #dc3545;
-            font-size: 12px;
-            margin-top: 4px;
-        }
-
-        .btn-loading {
-            position: relative;
-            color: transparent !important;
-        }
-
-        .btn-loading::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 20px;
-            height: 20px;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-top-color: #fff;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: translate(-50%, -50%) rotate(360deg); }
-        }
-
-        @media (max-width: 576px) {
-            .login-wrapper { padding: 20px 16px; }
-            .slide-step { padding: 24px 20px; }
+            opacity: 0.85;
         }
     </style>
 </head>
 
 <body>
 <!-- ========== MAIN CONTENT ========== -->
-<main id="content" role="main" class="main login-wrapper">
-    <div class="login-brand">
-        <img class="onerror-image"
-             data-onerror-image="{{asset('/public/assets/admin/img/favicon.png')}}"
-             src="{{ $store_logo_url }}"
-             alt="Aduanefie">
-        <h2>...building <span class="d-block">Africa's biggest</span> <strong class="accent">marketplace.</strong></h2>
-    </div>
-
-    <div class="slide-container {{ $mfaRequired ? 'mfa-active' : '' }}">
-        <div class="step-indicator">
-            <div class="step-dot"></div>
-            <div class="step-dot"></div>
+<main id="content" role="main" class="main">
+    <div class="auth-wrapper">
+        <div class="auth-wrapper-left">
+            <div class="auth-left-cont">
+                <img class="onerror-image" data-onerror-image="{{asset('/public/assets/admin/img/favicon.png')}}"
+                     src="{{ $store_logo_url }}" alt="Aduanefie">
+                <h2 class="title">...building <span class="d-block">Africa's biggest</span> <strong class="aduanefie-auth-accent">marketplace.</strong></h2>
+            </div>
         </div>
+        <div class="auth-wrapper-right">
+            <label class="badge badge-soft-success __login-badge">
+                {{translate('messages.software_version')}} : {{env('SOFTWARE_VERSION')}}
+            </label>
 
-        <div class="slide-track">
+            <div class="auth-wrapper-form">
+                <div class="slide-container {{ $mfaRequired ? 'mfa-active' : '' }}">
+                    <div class="step-indicator">
+                        <div class="step-dot"></div>
+                        <div class="step-dot"></div>
+                    </div>
+
+                    <div class="slide-track">
             <!-- Step 1: Credentials -->
             <div class="slide-step">
                 <div class="slide-step-header">
@@ -390,17 +246,6 @@
                     </div>
                 </div>
                 @endif
-
-                <div class="color-quick-pick mt-5">
-                    <label>Theme Color</label>
-                    <div class="color-row">
-                        <a class="color-chip" style="background-color: #67513A;" onclick="setLoginColor('--primary-clr', '#67513A', this)" data-var="--primary-clr"></a>
-                        <a class="color-chip" style="background-color: #8B9F69;" onclick="setLoginColor('--secondary-clr', '#8B9F69', this)" data-var="--secondary-clr"></a>
-                        <a class="color-chip" style="background-color: #5E7042;" onclick="setLoginColor('--accent-clr', '#5E7042', this)" data-var="--accent-clr"></a>
-                        <a class="color-chip" style="background-color: #1A5F7A;" onclick="setLoginColor('--primary-clr', '#1A5F7A', this)" data-var="--primary-clr"></a>
-                        <a class="color-chip" style="background-color: #C0392B;" onclick="setLoginColor('--primary-clr', '#C0392B', this)" data-var="--primary-clr"></a>
-                    </div>
-                </div>
             </div>
 
             <!-- Step 2: Two-Factor Authentication (slides in on same page) -->
@@ -456,6 +301,10 @@
             </div>
         </div>
     </div>
+            </div>
+        </div>
+    </div>
+</main>
 
     <!-- Modals -->
     <div class="modal fade" id="forgetPassModal">
@@ -518,13 +367,6 @@
             // Auto-focus the code input when MFA panel is active
             {{ $mfaRequired ? '$("#mfaForm input[name=code]").trigger("focus");' : '' }}
         });
-
-        // Theme color quick pick
-        function setLoginColor(varName, value, el) {
-            document.documentElement.style.setProperty(varName, value);
-            document.querySelectorAll('.color-chip').forEach(function (e) { e.classList.remove('active'); });
-            el.classList.add('active');
-        }
 
         $(document).ready(function() {
             $('.onerror-image').on('error', function() {
