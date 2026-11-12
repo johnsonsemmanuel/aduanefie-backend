@@ -53,6 +53,8 @@ class Item extends Model
         'minimum_order_qty'=>'integer',
         'hs_code'=>'string',
         'hs_description'=>'string',
+        'weight_kg'=>'float',
+        'origin_country'=>'string',
     ];
 
     protected $appends = ['unit_type','image_full_url','images_full_url'];

@@ -7621,4 +7621,7 @@ Smartly or Earn. ',
   'Store owner login' => 'Store owner login',
   'Store employee login' => 'Store employee login',
   'Error' => 'Error',
+  'Unsupported incoterm.' => 'Unsupported incoterm.',
+  'amount_crossed_maximum_cod_order_amount' => 'Amount crossed maximum cod order amount',
+  'You_can_not_place_empty_orders' => 'You can not place empty orders',
 );

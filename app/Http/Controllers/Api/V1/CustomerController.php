@@ -57,14 +57,21 @@ class CustomerController extends Controller
             'address' => 'required',
             'longitude' => 'required',
             'latitude' => 'required',
+            'country_code' => 'nullable|string|size:2',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => Helpers::error_processor($validator)], 403);
         }
 
+        $countryCode = $this->resolveAddressCountry($request);
         $zone = Zone::whereContains('coordinates', new Point($request->latitude, $request->longitude, POINT_SRID))->get(['id']);
-        if (count($zone) == 0) {
+
+        // A cross-border destination is normally outside every local delivery
+        // zone. Accept it with a null zone; domestic addresses still require
+        // coverage so local dispatch rules are not weakened.
+        $zoneId = count($zone) > 0 ? $zone[0]->id : null;
+        if ($zoneId === null && $countryCode === $this->platformCountry()) {
             $errors = [];
             array_push($errors, ['code' => 'coordinates', 'message' => translate('messages.service_not_available_in_this_area')]);
             return response()->json([
@@ -83,7 +90,8 @@ class CustomerController extends Controller
             'house' => $request->house,
             'longitude' => $request->longitude,
             'latitude' => $request->latitude,
-            'zone_id' => $zone[0]->id,
+            'zone_id' => $zoneId,
+            'country_code' => $countryCode,
             'created_at' => now(),
             'updated_at' => now()
         ];
@@ -99,20 +107,26 @@ class CustomerController extends Controller
             'contact_person_number' => 'required',
             'address' => 'required',
             'longitude' => 'required',
-            'latitude' => 'required'
+            'latitude' => 'required',
+            'country_code' => 'nullable|string|size:2',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => Helpers::error_processor($validator)], 403);
         }
+
+        $countryCode = $this->resolveAddressCountry($request);
         $zone = Zone::whereContains('coordinates', new Point($request->latitude, $request->longitude, POINT_SRID))->get(['id']);
-        if (!$zone) {
+        $zoneId = count($zone) > 0 ? $zone[0]->id : null;
+
+        if ($zoneId === null && $countryCode === $this->platformCountry()) {
             $errors = [];
             array_push($errors, ['code' => 'coordinates', 'message' => translate('messages.service_not_available_in_this_area')]);
             return response()->json([
                 'errors' => $errors
             ], 403);
         }
+
         $address = [
             'user_id' => $request->user()->id,
             'contact_person_name' => $request->contact_person_name,
@@ -124,12 +138,30 @@ class CustomerController extends Controller
             'house' => $request->house,
             'longitude' => $request->longitude,
             'latitude' => $request->latitude,
-            'zone_id' => $zone[0]->id,
+            'zone_id' => $zoneId,
+            'country_code' => $countryCode,
             'created_at' => now(),
             'updated_at' => now()
         ];
         DB::table('customer_addresses')->where('id', $id)->update($address);
-        return response()->json(['message' => translate('messages.updated_successfully'), 'zone_id' => $zone[0]->id], 200);
+        return response()->json(['message' => translate('messages.updated_successfully'), 'zone_id' => $zoneId], 200);
+    }
+
+    /**
+     * Country for an address: explicit value, else the platform's own country.
+     */
+    private function resolveAddressCountry(Request $request): string
+    {
+        $country = $request->input('country_code') ?: $this->platformCountry();
+
+        return strtoupper(substr((string) $country, 0, 2));
+    }
+
+    private function platformCountry(): string
+    {
+        $country = Helpers::get_business_settings('country');
+
+        return strtoupper(substr((string) ($country ?: 'GH'), 0, 2));
     }
 
     public function delete_address(Request $request)

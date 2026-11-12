@@ -9,7 +9,10 @@ use App\Models\Zone;
 use App\Models\Admin;
 use App\Models\Order;
 use App\Models\Store;
+use App\Models\Country;
+use App\Models\Module;
 use App\Models\Coupon;
+use App\Services\CrossBorder\ShippingQuoteService;
 use App\Models\Refund;
 use App\Mail\PlaceOrder;
 use App\Models\DMVehicle;
@@ -105,6 +108,10 @@ class OrderController extends Controller
             'charge_payer' => 'required_if:order_type,parcel|in:sender,receiver',
             'dm_tips' => 'nullable|numeric',
             'currency_code' => 'nullable|string|size:3',
+            'destination_country' => 'nullable|string|size:2',
+            'shipping_rate_id' => 'nullable|integer',
+            'shipping_method_id' => 'nullable|integer',
+            'incoterm' => 'nullable|string|size:3',
             'guest_id' => $request->user ? 'nullable' : 'required',
             'contact_person_name' => $request->user ? 'nullable' : 'required',
             'contact_person_number' => $request->user ? 'nullable' : 'required',
@@ -282,7 +289,13 @@ class OrderController extends Controller
 
         }
 
-        if (!$zone) {
+        $destinationCountry = $request->filled('destination_country')
+            ? strtoupper($request->destination_country)
+            : null;
+        $crossBorderService = app(ShippingQuoteService::class);
+        $isCrossBorder = $store && $destinationCountry && $crossBorderService->isCrossBorder($store, $destinationCountry);
+
+        if (!$zone && !$isCrossBorder) {
             $errors = [];
             array_push($errors, ['code' => 'coordinates', 'message' => translate('messages.out_of_coverage')]);
             return response()->json([
@@ -496,7 +509,65 @@ class OrderController extends Controller
             'house' => $request?->house??'',
             'longitude' => (string)$request->longitude,
             'latitude' => (string)$request->latitude,
+            'country_code' => $destinationCountry
+                ?: strtoupper((string) (Helpers::get_business_settings('country') ?: 'GH')),
         ];
+
+        $crossBorder = null;
+        if ($isCrossBorder) {
+            if (! $request->filled('shipping_rate_id') && ! $request->filled('shipping_method_id')) {
+                return response()->json([
+                    'errors' => [['code' => 'shipping_option', 'message' => 'Please select a shipping method for this destination.']],
+                ], 403);
+            }
+
+            $incoterm = strtoupper($request->input('incoterm', 'DDP'));
+            if (! in_array($incoterm, ShippingQuoteService::INCOTERMS, true)) {
+                return response()->json([
+                    'errors' => [['code' => 'incoterm', 'message' => 'Unsupported incoterm.']],
+                ], 403);
+            }
+
+            $crossBorderLines = $this->buildCrossBorderLines(
+                $request->user ? $request->user->id : $request['guest_id'],
+                $request->user ? 0 : 1,
+                $request
+            );
+
+            if (count($crossBorderLines) === 0) {
+                return response()->json([
+                    'errors' => [['code' => 'cart', 'message' => translate('messages.You_can_not_place_empty_orders')]],
+                ], 403);
+            }
+
+            $resolved = $crossBorderService->resolveOption(
+                $store,
+                $destinationCountry,
+                $crossBorderLines,
+                $request->filled('shipping_rate_id') ? (int) $request->shipping_rate_id : null,
+                $request->filled('shipping_method_id') ? (int) $request->shipping_method_id : null
+            );
+
+            if (! $resolved['available']) {
+                return response()->json([
+                    'errors' => [['code' => 'shipping_option', 'message' => 'The selected shipping option is not available for this destination.']],
+                ], 403);
+            }
+
+            $option = $resolved['option'];
+            $crossBorderTaxes = $crossBorderService->taxes($destinationCountry, $crossBorderLines);
+
+            // Re-quote server-side; the client's displayed price is never trusted.
+            $delivery_charge = $option['amount'];
+            $original_delivery_charge = $option['amount'];
+
+            $crossBorder = [
+                'destination_country' => $destinationCountry,
+                'incoterm' => $incoterm,
+                'option' => $option,
+                'taxes' => $crossBorderTaxes,
+            ];
+        }
 
         $total_addon_price = 0;
         $product_price = 0;
@@ -539,11 +610,52 @@ class OrderController extends Controller
         $order->cutlery = $request->cutlery ? 1 : 0;
         $order->is_guest = $request->user ? 0 : 1;
         $order->otp = rand(1000, 9999);
-        $order->zone_id = isset($zone) ? $zone->id : end(json_decode($request->header('zoneId'), true));
+        $order->zone_id = isset($zone)
+            ? $zone->id
+            : ($isCrossBorder ? $store->zone_id : end(json_decode($request->header('zoneId'), true)));
         $order->module_id = $request->header('moduleId');
         $order->parcel_category_id = $request->parcel_category_id;
-        $order->currency_code = $request->currency_code ?? Helpers::get_store_data()->currency ?? 'GHS';
+        // A customer checkout has no vendor session, so get_store_data() would
+        // dereference null. Only consult it when a vendor is actually logged in
+        // (POS path), and fall back to the platform currency otherwise.
+        $vendorStore = (auth('vendor')->check() || auth('vendor_employee')->check())
+            ? Helpers::get_store_data()
+            : null;
+        $order->currency_code = $request->currency_code
+            ?? ($vendorStore->currency ?? null)
+            ?? Helpers::currency_code()
+            ?? 'GHS';
         $order->receiver_details = json_decode($request->receiver_details);
+
+        if ($isCrossBorder && $crossBorder) {
+            $order->origin_country = $crossBorderService->originCountry($store);
+            $order->destination_country = $crossBorder['destination_country'];
+            $order->shipping_method_id = $crossBorder['option']['shipping_method_id'];
+            $order->shipping_rate_id = $crossBorder['option']['shipping_rate_id'];
+            $order->shipping_method_name = $crossBorder['option']['name'];
+            $order->shipping_mode = $crossBorder['option']['mode'];
+            $order->incoterm = $crossBorder['incoterm'];
+            $order->duty_amount = $crossBorder['taxes']['duty'];
+            $order->vat_amount = $crossBorder['taxes']['vat'];
+            $order->excise_amount = $crossBorder['taxes']['excise'];
+            $order->base_currency = $crossBorder['option']['currency'];
+            $order->destination_currency = Country::where('code', $crossBorder['destination_country'])->value('currency_code');
+            $order->landed_cost_breakdown = [
+                'goods' => $crossBorder['taxes']['goods_subtotal'],
+                'shipping' => $crossBorder['option']['amount'],
+                'duty' => $crossBorder['taxes']['duty'],
+                'vat' => $crossBorder['taxes']['vat'],
+                'excise' => $crossBorder['taxes']['excise'],
+                'total_taxes' => $crossBorder['taxes']['total_taxes'],
+                'currency' => $crossBorder['option']['currency'],
+                'incoterm' => $crossBorder['incoterm'],
+                'shipping_rate_id' => $crossBorder['option']['shipping_rate_id'],
+                'shipping_method_id' => $crossBorder['option']['shipping_method_id'],
+                'estimated_days' => $crossBorder['option']['estimated_days'],
+                'duty_configured' => $crossBorder['taxes']['duty_configured'],
+                'warnings' => $crossBorder['taxes']['warnings'],
+            ];
+        }
 
         if ($order_status == 'confirmed') {
             $order->confirmed = now();
@@ -929,20 +1041,22 @@ class OrderController extends Controller
             }
 
             $free_delivery_over = BusinessSetting::where('key', 'free_delivery_over')->first()->value;
-            if (isset($free_delivery_over)) {
+            if (!$isCrossBorder && isset($free_delivery_over)) {
                 if ($free_delivery_over <= $product_price + $total_addon_price - $coupon_discount_amount - $store_discount_amount - $flash_sale_admin_discount_amount - $flash_sale_vendor_discount_amount) {
                     $order->delivery_charge = 0;
                     $free_delivery_by = 'admin';
                 }
             }
 
-            if ($store->free_delivery) {
+            // Local free-delivery policy must never zero an international
+            // freight charge.
+            if ($store->free_delivery && !$isCrossBorder) {
                 $order->delivery_charge = 0;
                 $free_delivery_by = 'vendor';
             }
 
             if ($coupon) {
-                if ($coupon->coupon_type == 'free_delivery') {
+                if ($coupon->coupon_type == 'free_delivery' && !$isCrossBorder) {
                     if ($coupon->min_purchase <= $product_price + $total_addon_price - $store_discount_amount - $flash_sale_admin_discount_amount - $flash_sale_vendor_discount_amount) {
                         $order->delivery_charge = 0;
                         $free_delivery_by = $coupon->created_by;
@@ -959,6 +1073,15 @@ class OrderController extends Controller
             $order->total_tax_amount = round($total_tax_amount, config('round_up_to_digit'));
             $order->order_amount = round($total_price + $tax_a + $order->delivery_charge, config('round_up_to_digit'));
             $order->free_delivery_by = $free_delivery_by;
+
+            // Import duty/VAT/excise are collected with the order, on top of
+            // the domestic tax already included above.
+            if ($isCrossBorder && $crossBorder) {
+                $order->order_amount = round(
+                    $order->order_amount + $crossBorder['taxes']['total_taxes'],
+                    config('round_up_to_digit')
+                );
+            }
         } else {
             $point = new Point(json_decode($request->receiver_details, true)['latitude'], json_decode($request->receiver_details, true)['longitude']);
             $zone_id =  json_decode($request->receiver_details, true)['zone_id'];
@@ -1122,6 +1245,58 @@ class OrderController extends Controller
             ]
         ], 403);
     }
+    /**
+     * Resolve the current cart into priced lines for a cross-border quote.
+     * Prices, HS codes and billable weight all come from the catalogue; only
+     * quantity is accepted from the request.
+     */
+    private function buildCrossBorderLines($userId, $isGuest, Request $request): array
+    {
+        $moduleId = $request->header('moduleId');
+        if (! $moduleId) {
+            $defaultModule = Module::active()->orderBy('id')->first();
+            $moduleId = $defaultModule ? $defaultModule->id : null;
+        }
+
+        $carts = Cart::where('user_id', $userId)
+            ->where('is_guest', $isGuest)
+            ->where('module_id', $moduleId)
+            ->when($request->is_buy_now == 1 && $request->cart_id, function ($query) use ($request) {
+                return $query->where('id', $request->cart_id);
+            })
+            ->get();
+
+        if ($request->is_buy_now == 1 && $request->cart) {
+            $decoded = json_decode($request->cart, true);
+            if (is_array($decoded)) {
+                $carts = collect($decoded);
+            }
+        }
+
+        $lines = [];
+
+        foreach ($carts as $cart) {
+            $itemId = is_array($cart) ? ($cart['item_id'] ?? null) : $cart->item_id;
+            $quantity = max(1, (int) (is_array($cart) ? ($cart['quantity'] ?? 1) : $cart->quantity));
+            $item = Item::withoutGlobalScopes()->find($itemId);
+
+            if (! $item) {
+                continue;
+            }
+
+            $lines[] = [
+                'item_id' => (int) $item->id,
+                'name' => $item->name,
+                'quantity' => $quantity,
+                'unit_price' => (float) $item->price,
+                'weight' => (float) ($item->weight_kg ?? 0),
+                'hs_code' => $item->hs_code ?? null,
+            ];
+        }
+
+        return $lines;
+    }
+
     public function prescription_place_order(Request $request)
     {
         $validator = Validator::make($request->all(), [

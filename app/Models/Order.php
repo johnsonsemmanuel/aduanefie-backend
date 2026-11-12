@@ -37,6 +37,13 @@ class Order extends Model
         'updated_at' => 'datetime',
         'extra_packaging_amount' => 'float',
         'receiver_details' => 'array',
+        'landed_cost_breakdown' => 'array',
+        'shipping_method_id' => 'integer',
+        'shipping_rate_id' => 'integer',
+        'duty_amount' => 'float',
+        'vat_amount' => 'float',
+        'excise_amount' => 'float',
+        'exchange_rate' => 'float',
         'dm_tips' => 'float',
         'distance' => 'float',
         'tax_percentage' => 'float',
@@ -45,6 +52,8 @@ class Order extends Model
         'is_guest' => 'boolean',
         'ref_bonus_amount' => 'float',
         'currency_code' => 'string',
+        'is_pre_order' => 'boolean',
+        'expected_harvest_date' => 'date',
     ];
 
     protected $appends = ['module_type','order_attachment_full_url','order_proof_full_url'];

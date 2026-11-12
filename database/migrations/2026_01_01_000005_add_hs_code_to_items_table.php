@@ -13,10 +13,15 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::table('items', function (Blueprint $table) {
-            $table->string('hs_code')->nullable()->after('certification')->comment('Harmonized System code for customs');
-            $table->string('hs_description')->nullable()->after('hs_code')->comment('HS code description');
-        });
+        // `certification` does not exist on every environment (it is absent on
+        // the live schema), so don't position after it. Guard duplicates too:
+        // the cross-border migration may have added these columns already.
+        if (! Schema::hasColumn('items', 'hs_code')) {
+            Schema::table('items', function (Blueprint $table) {
+                $table->string('hs_code')->nullable()->comment('Harmonized System code for customs');
+                $table->string('hs_description')->nullable()->comment('HS code description');
+            });
+        }
     }
 
     /**
