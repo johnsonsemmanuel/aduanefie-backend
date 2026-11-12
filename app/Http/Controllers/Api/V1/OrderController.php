@@ -2372,4 +2372,26 @@ class OrderController extends Controller
 
         return response()->json(OrderLogic::format_order_cards($orders), 200);
     }
+
+    public function get_tax(Request $request)
+    {
+        $tax_included_setting = BusinessSetting::where(['key' => 'tax_included'])->first();
+        $tax_included = $tax_included_setting ? (int) $tax_included_setting->value : 0;
+        $tax_status = $tax_included === 1 ? 'included' : 'excluded';
+
+        $store_id = $request->input('store_id');
+        $store = $store_id ? Store::find($store_id) : null;
+        $tax_rate = ($store && $store->tax > 0) ? (float) $store->tax : 0;
+        $order_amount = (float) ($request->input('order_amount') ?? 0);
+
+        $tax_amount = ($tax_rate > 0 && $order_amount > 0)
+            ? round(Helpers::product_tax($order_amount, $tax_rate, $tax_status === 'included'), config('round_up_to_digit', 2))
+            : 0;
+
+        return response()->json([
+            'tax_amount' => $tax_amount,
+            'tax_included' => $tax_included,
+            'tax_status' => $tax_status,
+        ], 200);
+    }
 }

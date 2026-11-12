@@ -71,4 +71,20 @@ class PromotionController extends Controller
             'stores' => [],
         ], 200);
     }
+
+    public function pro_customer_active_offer(Request $request)
+    {
+        return response()->json([
+            'status' => false,
+            'benefit' => null,
+        ], 200);
+    }
+
+    public function delivery_charge_coverage_list(Request $request)
+    {
+        return response()->json([
+            'type' => null,
+            'coverage' => [],
+        ], 200);
+    }
 }

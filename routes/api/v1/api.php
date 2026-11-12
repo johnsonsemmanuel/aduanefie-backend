@@ -197,7 +197,34 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             Route::get('dashboard', 'FarmerController@dashboard');
             Route::get('products', 'FarmerController@products');
             Route::patch('products/{id}/farming-status', 'FarmerController@update_farming_status');
-            Route::patch('products/{id}/dates', 'FarmerController@update_dates');
+            Route::post('products/{id}/sms-broadcast', 'FarmerController@broadcast_sms');
+            Route::get('products/{id}/subscribers', 'FarmerController@get_subscribers');
+
+            // Pest reporting
+            Route::post('products/{id}/pest-report', 'FarmerController@report_pest');
+            Route::get('pest-reports', 'FarmerController@pest_reports');
+            Route::patch('pest-reports/{id}/treatment', 'FarmerController@update_pest_treatment');
+            Route::post('pest-recommendation', 'FarmerController@get_ai_pest_recommendation');
+
+            // Land allocation & plot management
+            Route::group(['prefix' => 'plots'], function () {
+                Route::get('/', 'FarmerController@plots');
+                Route::post('/', 'FarmerController@create_plot');
+                Route::patch('{id}', 'FarmerController@update_plot');
+                Route::delete('{id}', 'FarmerController@delete_plot');
+                Route::get('{id}/items', 'FarmerController@plot_items');
+            });
+
+            // Agro-service booking
+            Route::group(['prefix' => 'services'], function () {
+                Route::get('categories', 'FarmerController@service_categories');
+                Route::get('offerings', 'FarmerController@service_offerings');
+                Route::get('offerings/{id}', 'FarmerController@service_offering_details');
+                Route::post('bookings', 'FarmerController@book_service');
+                Route::get('bookings', 'FarmerController@service_bookings');
+                Route::get('bookings/{id}', 'FarmerController@service_booking_details');
+                Route::patch('bookings/{id}/cancel', 'FarmerController@cancel_service_booking');
+            });
         });
 
 
@@ -398,6 +425,12 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             Route::get('review-reminder', 'CustomerController@review_reminder');
             Route::get('review-reminder-cancel', 'CustomerController@review_reminder_cancel');
 
+            // Farming product subscription (SMS updates)
+            Route::group(['prefix' => 'farming'], function () {
+                Route::post('products/{id}/subscribe', 'CustomerController@subscribeToFarmingProduct');
+                Route::delete('products/{id}/unsubscribe', 'CustomerController@unsubscribeFromFarmingProduct');
+                Route::get('products/{id}/subscribers', 'CustomerController@getProductSubscribers');
+            });
         });
         Route::group(['prefix' => 'customer', 'middleware' => 'apiGuestCheck'], function () {
             Route::group(['prefix' => 'order'], function () {
@@ -415,8 +448,10 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
                 Route::put('offline-payment', 'OrderController@offline_payment');
                 Route::put('offline-payment-update', 'OrderController@update_offline_payment_info');
                 Route::get('payment-failed', 'CustomerController@orderPaymentFailed');
+                Route::post('get-Tax', 'OrderController@get_tax');
 
             });
+            Route::get('pro-customer/active-offer', 'PromotionController@pro_customer_active_offer');
             Route::get('reels/list', 'CustomerController@reels_list');
 
             Route::group(['prefix'=>'cart'], function() {
@@ -512,6 +547,7 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
         Route::get('happy-hour/running', 'PromotionController@happy_hour_running');
         Route::get('happy-hour/stores', 'PromotionController@happy_hour_stores');
         Route::get('item/farming-list', 'ItemController@farming_list');
+        Route::get('delivery-charge/coverage-list', 'PromotionController@delivery_charge_coverage_list');
 
         Route::group(['prefix' => 'common-condition'], function () {
             Route::get('/', 'CommonConditionController@get_conditions');
