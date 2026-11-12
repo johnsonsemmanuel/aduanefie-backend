@@ -29,14 +29,6 @@ class VendorPasswordResetController extends Controller
         $vendor = Vendor::Where(['email' => $request['email']])->first();
 
         if (isset($vendor)) {
-            $otp_interval_time = 60;
-            $verification_data = DB::table('password_resets')->where('email', $vendor['email'])->first();
-            if (isset($verification_data) && Carbon::parse($verification_data->created_at)->DiffInSeconds() < $otp_interval_time) {
-                $time = round($otp_interval_time - Carbon::parse($verification_data->created_at)->DiffInSeconds());
-                return response()->json(['errors' => [
-                    ['code' => 'otp', 'message' => translate('messages.please_try_again_after_') . $time . ' ' . translate('messages.seconds')]
-                ]], 405);
-            }
             $token = rand(1000,9999);
             DB::table('password_resets')->updateOrInsert([
                 'email' => $vendor['email'],
@@ -44,13 +36,7 @@ class VendorPasswordResetController extends Controller
                 'created_at' => now(),
             ]);
             if (config('mail.status')) {
-                try {
-                    Mail::to($vendor?->getRawOriginal('email'))->send(new \App\Mail\PasswordResetMail($token));
-                } catch (\Throwable $th) {
-                  return response()->json(['errors' => [
-                        ['code' => 'not-found', 'message' => 'Failed to send email.']
-                    ]], 403);
-                }
+                Mail::to($vendor['email'])->send(new \App\Mail\PasswordResetMail($token));
             }
             return response()->json(['message' => 'Email sent successfully.'], 200);
         }
@@ -71,7 +57,7 @@ class VendorPasswordResetController extends Controller
         }
 
         $data = DB::table('password_resets')->where(['token' => $request['reset_token'],'email'=>$request->email])->first();
-        if (isset($data) || (getEnvMode()=='demo'&& $request['reset_token'] == '123456' )) {
+        if (isset($data) || (env('APP_MODE')=='demo'&& $request['reset_token'] == '123456' )) {
             return response()->json(['message'=>translate("OTP found, you can proceed")], 200);
         } else{
             // $otp_hit = BusinessSetting::where('key', 'max_otp_hit')->first();
@@ -85,8 +71,10 @@ class VendorPasswordResetController extends Controller
 
 
             if(isset($verification_data)){
+                $time= $temp_block_time - Carbon::parse($verification_data->temp_block_time)->DiffInSeconds();
+
                 if(isset($verification_data->temp_block_time ) && Carbon::parse($verification_data->temp_block_time)->DiffInSeconds() <= $temp_block_time){
-                    $time= round($temp_block_time - Carbon::parse($verification_data->temp_block_time)->DiffInSeconds());
+                    $time= $temp_block_time - Carbon::parse($verification_data->temp_block_time)->DiffInSeconds();
 
                     $errors = [];
                     array_push($errors, ['code' => 'otp_block_time', 'message' => translate('messages.please_try_again_after_').CarbonInterval::seconds($time)->cascade()->forHumans()
@@ -155,7 +143,7 @@ class VendorPasswordResetController extends Controller
         if ($validator->fails()) {
             return response()->json(['errors' => Helpers::error_processor($validator)], 403);
         }
-        if(getEnvMode()=='demo') {
+        if(env('APP_MODE')=='demo') {
             if ($request['reset_token'] != '123456') {
                 return response()->json(['errors' => [
                     ['code' => 'invalid', 'message' => trans('messages.invalid_otp')]

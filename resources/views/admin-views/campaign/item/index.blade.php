@@ -21,9 +21,11 @@
             </h1>
         </div>
         <!-- End Page Header -->
-        <form id="campaign_form"
-                enctype="multipart/form-data" class="custom-validation" data-ajax="true">
+        <form method="post"
+        id="campaign_form"
+                enctype="multipart/form-data">
             <div class="row g-2">
+                @csrf
                 @php($language=\App\Models\BusinessSetting::where('key','language')->first())
                 @php($language = $language->value ?? null)
                 @php($defaultLang = str_replace('_', '-', app()->getLocale()))
@@ -59,26 +61,26 @@
                             @if ($language)
                             <div class="lang_form"
                             id="default-form">
-                                <div class="form-group error-wrapper">
+                                <div class="form-group">
                                     <label class="input-label"
                                         for="default_title">{{ translate('messages.title') }}
                                         (Default)
                                     </label>
-                                    <input type="text" name="title[]" id="default_title" required
+                                    <input type="text" name="title[]" id="default_title"
                                         class="form-control" placeholder="{{ translate('messages.new_item') }}"
                                     >
                                 </div>
                                 <input type="hidden" name="lang[]" value="default">
-                                <div class="form-group mb-0 error-wrapper">
+                                <div class="form-group mb-0">
                                     <label class="input-label"
                                         for="exampleFormControlInput1">{{ translate('messages.short_description') }} ({{ translate('messages.default') }})</label>
-                                    <textarea type="text" name="description[]" class="form-control min-h-90px ckeditor" required></textarea>
+                                    <textarea type="text" name="description[]" class="form-control min-h-90px ckeditor"></textarea>
                                 </div>
                             </div>
                                 @foreach (json_decode($language) as $lang)
                                     <div class="d-none lang_form"
                                         id="{{ $lang }}-form">
-                                        <div class="form-group error-wrapper">
+                                        <div class="form-group">
                                             <label class="input-label"
                                                 for="{{ $lang }}_title">{{ translate('messages.title') }}
                                                 ({{ strtoupper($lang) }})
@@ -87,7 +89,7 @@
                                                 class="form-control" placeholder="{{ translate('messages.new_item') }}">
                                         </div>
                                         <input type="hidden" name="lang[]" value="{{ $lang }}">
-                                        <div class="form-group mb-0 error-wrapper">
+                                        <div class="form-group mb-0">
                                             <label class="input-label"
                                                 for="exampleFormControlInput1">{{ translate('messages.short_description') }} ({{ strtoupper($lang) }})</label>
                                             <textarea type="text" name="description[]" class="form-control min-h-90px ckeditor"></textarea>
@@ -96,14 +98,14 @@
                                 @endforeach
                             @else
                                 <div id="default-form">
-                                    <div class="form-group error-wrapper">
+                                    <div class="form-group">
                                         <label class="input-label"
                                             for="exampleFormControlInput1">{{ translate('messages.title') }} ({{ translate('messages.default') }})</label>
                                         <input type="text" name="title[]" class="form-control"
                                             placeholder="{{ translate('messages.new_item') }}" >
                                     </div>
                                     <input type="hidden" name="lang[]" value="default">
-                                    <div class="form-group mb-0 error-wrapper">
+                                    <div class="form-group mb-0">
                                         <label class="input-label"
                                             for="exampleFormControlInput1">{{ translate('messages.short_description') }}</label>
                                         <textarea type="text" name="description[]" class="form-control min-h-90px ckeditor"></textarea>
@@ -123,22 +125,20 @@
                                 <span>{{ translate('Item Image') }}</span>
                             </h5>
                         </div>
-                        <div class="error-wrapper">
-                            <div class="card-body d-flex flex-column">
-                                <label>
-                                    {{translate('messages.item_image')}}
-                                    <small class="text-danger">* ( {{translate('messages.ratio')}} 1:1 )</small>
-                                </label>
+                        <div class="card-body d-flex flex-column">
+                            <label>
+                                {{translate('messages.item_image')}}
+                                <small class="text-danger">* ( {{translate('messages.ratio')}} 1:1 )</small>
+                            </label>
 
-                                <div id="image-viewer-section" class="text-center py-3 my-auto">
-                                    <img class="img--120" id="viewer"
-                                            src="{{asset('public/assets/admin/img/100x100/2.png')}}" alt="banner image"/>
-                                </div>
-                                <div class="custom-file">
-                                    <input type="file" name="image" id="customFileEg1" class="custom-file-input"
-                                            accept=".webp, .jpg, .png, .jpeg, .gif, .bmp, .tif, .tiff|image/*" required>
-                                    <label class="custom-file-label" for="customFileEg1">{{translate('messages.choose_file')}}</label>
-                                </div>
+                            <div id="image-viewer-section" class="text-center py-3 my-auto">
+                                <img class="img--120" id="viewer"
+                                        src="{{asset('public/assets/admin/img/100x100/2.png')}}" alt="banner image"/>
+                            </div>
+                            <div class="custom-file">
+                                <input type="file" name="image" id="customFileEg1" class="custom-file-input"
+                                        accept=".webp, .jpg, .png, .jpeg, .gif, .bmp, .tif, .tiff|image/*" required>
+                                <label class="custom-file-label" for="customFileEg1">{{translate('messages.choose_file')}}</label>
                             </div>
                         </div>
                     </div>
@@ -156,31 +156,31 @@
                         <div class="card-body">
                             <div class="row g-2">
                                 <div class="col-md-3 col-sm-6">
-                                    <div class="form-group mb-0 error-wrapper">
+                                    <div class="form-group mb-0">
                                         <label class="input-label" for="exampleFormControlSelect1">{{translate('messages.store')}}<span
                                                 class="input-label-secondary">*</span></label>
                                         <select name="store_id" class="js-data-example-ajax form-control" id="store_id"  data-toggle="tooltip" data-placement="right" data-original-title="{{ translate('Select Store') }}" required>
-                                        <option selected disabled>{{ translate('Select Store') }}</option>
+                                        <option selected>{{ translate('Select Store') }}</option>
 
                                         </select>
                                     </div>
 
                                 </div>
                                 <div class="col-md-3 col-sm-6" id="stock_input">
-                                    <div class="form-group mb-0 error-wrapper">
+                                    <div class="form-group mb-0">
                                         <label class="input-label" for="total_stock">{{translate('messages.total_stock')}}</label>
                                         <input type="number" class="form-control" name="current_stock" id="quantity">
                                     </div>
                                 </div>
                                 <div class="col-sm-6 col-lg-3" id="maximum_cart_quantity">
-                                    <div class="form-group mb-0 error-wrapper">
+                                    <div class="form-group mb-0">
                                         <label class="input-label"
                                             for="maximum_cart_quantity">{{ translate('messages.maximum_cart_quantity') }}</label>
                                         <input type="number" class="form-control" name="maximum_cart_quantity" min="0" id="cart_quantity">
                                     </div>
                                 </div>
                                 <div class="col-md-3 col-sm-6" id="addon_input">
-                                    <div class="form-group mb-0 error-wrapper">
+                                    <div class="form-group mb-0">
                                         <label class="input-label" for="exampleFormControlSelect1">{{translate('messages.addon')}}<span
                                                 class="input-label-secondary" data-toggle="tooltip" data-placement="right" data-original-title="{{translate('messages.store_required_warning')}}"><img src="{{asset('/public/assets/admin/img/info-circle.svg')}}" alt="{{translate('messages.store_required_warning')}}"></span></label>
                                         <select name="addon_ids[]" id="add_on" class="form-control js-select2-custom" multiple="multiple">
@@ -189,10 +189,10 @@
                                     </div>
                                 </div>
                                 <div class="col-md-3 col-sm-6">
-                                    <div class="form-group mb-0 error-wrapper">
+                                    <div class="form-group mb-0">
                                         <label class="input-label" for="exampleFormControlSelect1">{{translate('messages.category')}}<span
                                                 class="input-label-secondary">*</span></label>
-                                        <select name="category_id" class="js-data-example-ajax form-control" id="category_id" required>
+                                        <select name="category_id" class="js-data-example-ajax form-control" id="category_id">
                                             <option value="">---{{translate('messages.select')}}---</option>
                                             @php($categories=\App\Models\Category::where(['position' => 0])->get())
                                             @foreach($categories as $category)
@@ -202,7 +202,7 @@
                                     </div>
                                 </div>
                                 <div class="col-md-3 col-sm-6">
-                                    <div class="form-group mb-0 error-wrapper">
+                                    <div class="form-group mb-0">
                                         <label class="input-label" for="exampleFormControlSelect1">{{translate('messages.sub_category')}}
                                             <span class="input-label-secondary" data-toggle="tooltip" data-placement="right" data-original-title="{{translate('messages.category_required_warning')}}">
                                                 <img src="{{asset('/public/assets/admin/img/info-circle.svg')}}" alt="{{translate('messages.category_required_warning')}}">
@@ -221,17 +221,15 @@
                                             <i class="tio-info-outined"></i>
                                         </span>
                                         </label>
-                                        <div class="error-wrapper">
-                                            <div class="dropdown suggestion_dropdown">
-                                                <input type="text" class="form-control" name="generic_name" placeholder="{{ translate('messages.Type your content here') }}" autocomplete="off">
-                                                @if(count(\App\Models\GenericName::select(['generic_name'])->get())>0)
-                                                    <div class="dropdown-menu">
-                                                        @foreach (\App\Models\GenericName::select(['generic_name'])->get() as $generic_name)
-                                                            <div class="dropdown-item">{{ $generic_name->generic_name }}</div>
-                                                        @endforeach
-                                                    </div>
-                                                @endif
-                                            </div>
+                                        <div class="dropdown suggestion_dropdown">
+                                            <input type="text" class="form-control" name="generic_name" placeholder="{{ translate('messages.Type your content here') }}" autocomplete="off">
+                                            @if(count(\App\Models\GenericName::select(['generic_name'])->get())>0)
+                                                <div class="dropdown-menu">
+                                                    @foreach (\App\Models\GenericName::select(['generic_name'])->get() as $generic_name)
+                                                        <div class="dropdown-item">{{ $generic_name->generic_name }}</div>
+                                                    @endforeach
+                                                </div>
+                                            @endif
                                         </div>
                                     </div>
                                 @endif
@@ -239,7 +237,7 @@
                             <div class="row g-2">
                                 @if(Config::get('module.current_module_type') == 'grocery' || Config::get('module.current_module_type') == 'food')
 
-                                <div class="col-sm-6 error-wrapper" id="nutrition">
+                                <div class="col-sm-6" id="nutrition">
                                     <label class="input-label" for="sub-categories">
                                         {{translate('Nutrition')}}
                                         <span class="input-label-secondary" title="{{ translate('Specify the necessary keywords relating to energy values for the item.') }}" data-toggle="tooltip">
@@ -254,7 +252,7 @@
                                 </div>
 
 
-                                <div class="col-sm-6 error-wrapper" id="allergy">
+                                <div class="col-sm-6" id="allergy">
                                     <label class="input-label" for="sub-categories">
                                         {{translate('Allegren Ingredients')}}
                                         <span class="input-label-secondary" title="{{ translate('Specify the ingredients of the item which can make a reaction as an allergen.') }}" data-toggle="tooltip">
@@ -283,21 +281,21 @@
                         <div class="card-body">
                             <div class="row g-2">
                                 <div class="col-md-3 col-sm-6">
-                                    <div class="form-group mb-0 error-wrapper">
+                                    <div class="form-group mb-0">
                                         <label class="input-label" for="exampleFormControlInput1">{{translate('messages.price')}}</label>
-                                        <input type="number" min=".01" max="999999999" step="0.01" value="1" name="price" class="form-control"
+                                        <input type="number" min=".01" max="100000" step="0.01" value="1" name="price" class="form-control"
                                                 placeholder="{{ translate('messages.Ex:') }} 100" required>
                                     </div>
                                 </div>
                                 <div class="col-md-3 col-sm-6">
-                                    <div class="form-group mb-0 error-wrapper">
+                                    <div class="form-group mb-0">
                                         <label class="input-label" for="exampleFormControlInput1">{{translate('messages.discount')}}</label>
-                                        <input type="number" min="0" max="999999999" value="0" name="discount" class="form-control"
+                                        <input type="number" min="0" max="100000" value="0" name="discount" class="form-control"
                                                 placeholder="{{ translate('messages.Ex:') }} 100" >
                                     </div>
                                 </div>
                                 <div class="col-md-3 col-sm-6">
-                                    <div class="form-group mb-0 error-wrapper">
+                                    <div class="form-group mb-0">
                                         <label class="input-label" for="exampleFormControlInput1">{{translate('messages.discount_type')}}<span class="input-label-secondary text--title" data-toggle="tooltip"
                                             data-placement="right"
                                             data-original-title="{{ translate('Currently you need to manage discount with store.') }}">
@@ -310,14 +308,14 @@
                                     </div>
                                 </div>
                                 <div class="col-md-3 col-sm-6">
-                                    <div class="form-group mb-0 initial-hidden error-wrapper" id="veg_input">
+                                    <div class="form-group mb-0 initial-hidden" id="veg_input">
                                         <label class="input-label" for="exampleFormControlInput1">{{translate('messages.item_type')}}</label>
                                         <select name="veg" class="form-control js-select2-custom">
                                             <option value="0">{{translate('messages.non_veg')}}</option>
                                             <option value="1">{{translate('messages.veg')}}</option>
                                         </select>
                                     </div>
-                                    <div class="form-group mb-0 error-wrapper" id="unit_input">
+                                    <div class="form-group mb-0" id="unit_input">
                                         <label class="input-label text-capitalize" for="unit">{{translate('messages.unit')}}</label>
                                         <select name="unit" class="form-control js-select2-custom">
                                             @foreach (\App\Models\Unit::all() as $unit)
@@ -330,34 +328,6 @@
                         </div>
                     </div>
                 </div>
-
-                @if ($productWiseTax)
-                <div class="col-lg-12">
-                    <div class="card shadow--card-2 border-0">
-                        <div class="card-header flex-wrap">
-                            <h5 class="card-title">
-                                <span class="card-header-icon mr-2">
-                                    <i class="tio-canvas-text"></i>
-                                </span>
-                                <span>{{ translate('messages.Tax_Information') }}</span>
-                            </h5>
-                        </div>
-                        <div class="card-body error-wrapper">
-                                <span class="mb-2 d-block title-clr fw-normal">{{ translate('Select Tax Rate') }}</span>
-                                <select name="tax_ids[]" required id="tax__rate" class="form-control js-select2-custom"
-                                    multiple="multiple" placeholder="Type & Select Tax Rate">
-                                    @foreach ($taxVats as $taxVat)
-                                        <option value="{{ $taxVat->id }}"> {{ $taxVat->name }}
-                                            ({{ $taxVat->tax_rate }}%)
-                                        </option>
-                                    @endforeach
-                                </select>
-
-                            </div>
-                        </div>
-                    </div>
-
-                    @endif
                 <div class="col-md-12" id="attribute_section">
                     <div class="card">
                         <div class="card-header">
@@ -371,7 +341,7 @@
                         <div class="card-body pb-0">
                             <div class="row g-2">
                                 <div class="col-12">
-                                    <div class="form-group mb-0 error-wrapper">
+                                    <div class="form-group mb-0">
                                         <label class="input-label" for="exampleFormControlSelect1">{{translate('messages.attribute')}}<span
                                                 class="input-label-secondary"></span></label>
                                         <select name="attribute_id[]" id="choice_attributes"
@@ -436,27 +406,27 @@
                         <div class="card-body">
                             <div class="row g-2">
                                 <div class="col-md-3 col-sm-6">
-                                    <div class="form-group mb-0 mb-0 error-wrapper">
+                                    <div class="form-group mb-0 mb-0">
                                         <label class="input-label" for="title">{{translate('messages.start_date')}}</label>
                                         <input type="date" id="date_from" class="form-control" required="" name="start_date">
                                     </div>
                                 </div>
                                 <div class="col-md-3 col-sm-6">
-                                    <div class="form-group mb-0 error-wrapper">
+                                    <div class="form-group mb-0">
                                         <label class="input-label" for="title">{{translate('messages.end_date')}}</label>
                                         <input type="date" id="date_to" class="form-control" required="" name="end_date">
                                     </div>
                                 </div>
                                 <div class="col-md-3 col-sm-6">
-                                    <div class="form-group mb-0 error-wrapper">
+                                    <div class="form-group mb-0">
                                         <label class="input-label" for="title">{{translate('messages.start_time')}}</label>
-                                        <input type="time" id="start_time" class="form-control" name="start_time" required>
+                                        <input type="time" id="start_time" class="form-control" name="start_time">
                                     </div>
                                 </div>
                                 <div class="col-md-3 col-sm-6">
-                                    <div class="form-group mb-0 error-wrapper">
+                                    <div class="form-group mb-0">
                                         <label class="input-label" for="title">{{translate('messages.end_time')}}</label>
-                                        <input type="time" id="end_time" class="form-control" name="end_time" required>
+                                        <input type="time" id="end_time" class="form-control" name="end_time">
                                     </div>
                                 </div>
                             </div>
@@ -464,7 +434,7 @@
                     </div>
                 </div>
                 <div class="col-12">
-                    <div class="btn--container justify-content-end mt-20">
+                    <div class="btn--container justify-content-end mt-3">
                         <button type="reset" id="reset_btn" class="btn btn--reset">{{translate('messages.reset')}}</button>
                         <button type="submit" class="btn btn--primary">{{translate('messages.submit')}}</button>
                     </div>
@@ -479,19 +449,6 @@
     <script src="{{asset('public/assets/admin')}}/js/tags-input.min.js"></script>
     <script>
         "use strict";
-        $(document).ready(function(){
-            $('#date_from').attr('min',(new Date()).toISOString().split('T')[0]);
-            $('#date_to').attr('min',(new Date()).toISOString().split('T')[0]);
-        });
-
-        $("#date_from").on("change", function () {
-            $('#date_to').attr('min',$(this).val());
-        });
-
-        $("#date_to").on("change", function () {
-            $('#date_from').attr('max',$(this).val());
-        });
-        
         let module_data = "";
         let module_type = "";
         let element = "";
@@ -500,20 +457,9 @@
             $('#food_variation_section').hide();
         });
 
-
-        $('#choice_attributes').on('change', function() {
-
+        $('#choice_attributes').on('change', function () {
             $('#customer_choice_options').html(null);
-            $('#variant_combination').html(null);
-            $.each($("#choice_attributes option:selected"), function() {
-                if ($(this).val().length > 50) {
-                    toastr.error(
-                        '{{ translate('validation.max.string', ['attribute' => translate('messages.variation'), 'max' => '50']) }}', {
-                            CloseButton: true,
-                            ProgressBar: true
-                        });
-                    return false;
-                }
+            $.each($("#choice_attributes option:selected"), function () {
                 add_more_customer_choice_option($(this).val(), $(this).text());
             });
         });
@@ -688,7 +634,7 @@
 
         $('#store_id').select2({
             ajax: {
-                url: '{{ route('admin.store.get-stores') }}',
+                url: '{{url('/')}}/admin/store/get-stores',
                 data: function (params) {
                     return {
                         q: params.term, // search term
@@ -775,12 +721,6 @@
         });
         $('#campaign_form').on('submit', function(e) {
             e.preventDefault();
-
-            let $form = $(this);
-            if (!$form.valid()) {
-                return false;
-            }
-
             var formData = new FormData(this);
             $.ajaxSetup({
                 headers: {

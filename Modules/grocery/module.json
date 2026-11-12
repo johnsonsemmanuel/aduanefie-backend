@@ -1,0 +1,13 @@
+{
+    "name": "Grocery",
+    "alias": "grocery",
+    "description": "Grocery and produce module - fresh farm produce, staples, and grocery items for agricultural marketplace customers.",
+    "keywords": ["grocery", "produce", "farm", "market"],
+    "priority": 10,
+    "providers": [
+        "Modules\\Grocery\\Providers\\GroceryServiceProvider"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": []
+}

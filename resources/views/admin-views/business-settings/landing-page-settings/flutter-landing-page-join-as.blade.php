@@ -59,12 +59,12 @@
         @endif
         <div class="tab-content">
             <div class="tab-pane fade show active">
-                <form action="{{ route('admin.business-settings.flutter-landing-page-settings-update', 'join-seller') }}" method="post" id="join_seller_flutter_status_form">
+                <form action="{{ route('admin.business-settings.flutter-landing-page-settings', 'join-seller') }}" method="post" id="join_seller_flutter_status_form">
                     @csrf
                     <input type="hidden" name="join_seller_flutter_status" value="{{ $join_seller_flutter_status ?? 0 }}">
                 </form>
 
-                <form action="{{ route('admin.business-settings.flutter-landing-page-settings-update', 'join-seller') }}"
+                <form action="{{ route('admin.business-settings.flutter-landing-page-settings', 'join-seller') }}"
                     method="POST">
                     @csrf
 
@@ -249,7 +249,7 @@
                                 </div>
                                 <input type="hidden" name="lang[]" value="default">
                             @endif
-                            <div class="btn--container justify-content-end mt-20">
+                            <div class="btn--container justify-content-end mt-3">
                                 <button type="reset" class="btn btn--reset mb-2">{{ translate('Reset') }}</button>
                                 <button type="submit" class="btn btn--primary mb-2">{{ translate('Save') }}</button>
                             </div>
@@ -258,12 +258,12 @@
                 </form>
 
 
-                <form action="{{ route('admin.business-settings.flutter-landing-page-settings-update', 'join-delivery') }}" method="post" id="join_DM_flutter_status_form">
+                <form action="{{ route('admin.business-settings.flutter-landing-page-settings', 'join-delivery') }}" method="post" id="join_DM_flutter_status_form">
                     @csrf
                     <input type="hidden" name="join_DM_flutter_status" value="{{ $join_DM_flutter_status ?? 0 }}">
                 </form>
 
-                <form action="{{ route('admin.business-settings.flutter-landing-page-settings-update', 'join-delivery') }}"
+                <form action="{{ route('admin.business-settings.flutter-landing-page-settings', 'join-delivery') }}"
                     method="POST" enctype="multipart/form-data">
                     @csrf
 
@@ -453,7 +453,7 @@
                                 </div>
                                 <input type="hidden" name="lang[]" value="default">
                             @endif
-                            <div class="btn--container justify-content-end mt-20">
+                            <div class="btn--container justify-content-end mt-3">
                                 <button type="reset" class="btn btn--reset mb-2">{{ translate('Reset') }}</button>
                                 <button type="submit" class="btn btn--primary mb-2">{{ translate('Save') }}</button>
                             </div>

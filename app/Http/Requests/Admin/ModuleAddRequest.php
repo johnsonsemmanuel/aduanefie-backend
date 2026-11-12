@@ -45,7 +45,6 @@ class ModuleAddRequest extends FormRequest
             'thumbnail'=>'required',
             'module_name.0' => 'required',
             'description.0' => 'required',
-            'short_description.*' => 'nullable|string|max:100',
         ];
     }
 

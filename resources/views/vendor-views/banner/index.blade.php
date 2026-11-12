@@ -22,7 +22,7 @@
         <!-- End Page Header -->
         <div class="row gx-2 gx-lg-3">
             <div class="col-sm-12 col-lg-12 mb-3 mb-lg-2">
-                <form action="{{ route('vendor.banner.store') }}" method="POST" enctype="multipart/form-data" class="custom-validation">
+                <form action="{{ route('vendor.banner.store') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <div class="card mb-3">
                         <div class="card-body">
@@ -43,12 +43,12 @@
                                     </div>
                                 </div>
                                 <div class="col-sm-6">
-                                    <div class="form-group error-wrapper">
+                                    <div class="form-group">
 
                                         <label for="title" class="form-label">{{translate('Banner_title')}}</label>
                                         <input id="title" type="text" name="title" class="form-control" placeholder="{{translate('messages.title_here...')}}" required>
                                     </div>
-                                    <div class="form-group error-wrapper">
+                                    <div class="form-group">
 
                                         <label for="default_link" class="form-label">{{translate('Redirection_URL_/_Link')}}</label>
                                         <input id="default_link" type="url" name="default_link" class="form-control" placeholder="{{translate('messages.Enter_URL')}}">
@@ -58,11 +58,11 @@
                                         <h3 class="form-label d-block mb-2">
                                                 {{translate('Upload_Banner')}}
                                             </h3>
-                                    <label class="upload-img-3 m-0 d-block error-wrapper">
+                                    <label class="upload-img-3 m-0 d-block">
                                         <div class="img">
                                             <img src="{{asset('/public/assets/admin/img/upload-4.png')}}" id="viewer"  class="vertical-img mw-100 vertical" alt="">
                                         </div>
-                                            <input type="file" name="image"  hidden required>
+                                            <input type="file" name="image"  hidden>
                                     </label>
                                     <h3 class="form-label d-block mt-2">
                                         {{translate('Banner_Image_Ratio_3:1')}}
@@ -72,9 +72,9 @@
                                 <div class="col-sm-6">
                                 </div>
                             </div>
-                            <div class="btn--container justify-content-end mt-20">
+                            <div class="btn--container justify-content-end mt-3">
                                 <button type="reset" id="reset_btn" class="btn btn--reset">{{translate('Reset')}}</button>
-                                <button type="submit" class="btn btn--primary">{{translate('Submit')}}</button>
+                                <button type="submit" class="btn btn--primary mb-2">{{translate('Submit')}}</button>
                             </div>
                         </div>
                     </div>

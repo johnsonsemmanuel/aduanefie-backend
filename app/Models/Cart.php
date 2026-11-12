@@ -12,9 +12,7 @@ class Cart extends Model
     protected $casts = [
         'user_id' => 'integer',
         'module_id' => 'integer',
-        'store_id' => 'integer',
         'item_id' => 'integer',
-        'reel_id' => 'integer',
         'is_guest' => 'boolean',
         'price' => 'float',
         'quantity' => 'integer',
@@ -26,9 +24,7 @@ class Cart extends Model
     protected $fillable = [
         'user_id',
         'module_id',
-        'store_id',
         'item_id',
-        'reel_id',
         'is_guest',
         'add_on_ids',
         'add_on_qtys',
@@ -41,10 +37,5 @@ class Cart extends Model
     public function item()
     {
         return $this->morphTo();
-    }
-
-    public function store()
-    {
-        return $this->belongsTo(Store::class);
     }
 }

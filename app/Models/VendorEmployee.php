@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\CentralLogics\Helpers;
-use App\Traits\DemoMaskable;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -11,9 +10,9 @@ use Illuminate\Support\Facades\DB;
 
 class VendorEmployee extends Authenticatable
 {
-    use Notifiable, DemoMaskable;
+    use Notifiable;
 
-    protected $fillable = ['remember_token','login_remember_token'];
+    protected $fillable = ['remember_token'];
 
     protected $casts = [
         'employee_role_id' => 'integer',

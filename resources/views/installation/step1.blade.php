@@ -21,7 +21,7 @@
     <div class="card mt-4">
         <div class="p-4 mb-md-3 mx-xl-4 px-md-5">
             <div class="d-flex justify-content-end mb-2">
-                <a href="https://docs.6amtech.com/docs-six-am-mart/intro" class="d-flex align-items-center gap-1"
+                <a href="https://docs.aduanefie.com/docs-six-am-mart/intro" class="d-flex align-items-center gap-1"
                    target="_blank">
                     Read Documentation
                     <span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip"
@@ -52,9 +52,10 @@
                                     alt="">
                                 <div
                                     class="d-flex align-items-center gap-2 justify-content-between flex-grow-1">
-                                    PHP Version 8.3 +
+                                    PHP Version 8.1 +
 
-                                    @if ($phpVersion >= 8.3)
+                                    @php($phpVersion = number_format((float)phpversion(), 2, '.', ''))
+                                    @if ($phpVersion >= 8.1)
                                         <img width="20"
                                              src="{{asset('public/assets/installation')}}/assets/img/svg-icons/check.png"
                                              alt="">
@@ -62,7 +63,7 @@
                                         <span class="cursor-pointer" data-bs-toggle="tooltip"
                                               data-bs-placement="top" data-bs-custom-class="custom-tooltip"
                                               data-bs-html="true" data-bs-delay='{"hide":1000}'
-                                              data-bs-title="Your php version in server is lower than 8.3 version
+                                              data-bs-title="Your php version in server is lower than 8.1 version
                                                    <a href='https://support.cpanel.net/hc/en-us/articles/360052624713-How-to-change-the-PHP-version-for-a-domain-in-cPanel-or-WHM'
                                                    class='d-block' target='_blank'>See how to update</a> ">
                                                 <img
@@ -75,7 +76,7 @@
                             </div>
                         </div>
                         @foreach($permission as $key => $item)
-                            @if ($key != 'db_file_write_perm' && $key != 'routes_file_write_perm' && $key != 'config_file_write_perm')
+                            @if ($key != 'db_file_write_perm' && $key != 'routes_file_write_perm')
                                 <div class="col-md-6">
                                     <div class="d-flex gap-3 align-items-center">
                                         <img src="{{ asset('public/assets/installation') }}/assets/img/svg-icons/curl-enabled.svg" alt="">
@@ -115,33 +116,7 @@
                                         <span class="cursor-pointer" data-bs-toggle="tooltip"
                                               data-bs-placement="top" data-bs-custom-class="custom-tooltip"
                                               data-bs-html="true" data-bs-delay='{"hide":1000}'
-                                              data-bs-title="Write permission is required for: <br> {{ $fileChecks['db_file_write_perm']['path'] }}">
-                                                <img
-                                                    src="{{asset('public/assets/installation')}}/assets/img/svg-icons/info.svg"
-                                                    class="svg text-danger" alt="">
-                                            </span>
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="d-flex gap-3 align-items-center">
-                                <img
-                                    src="{{asset('public/assets/installation')}}/assets/img/svg-icons/route-service.svg"
-                                    alt="">
-                                <div
-                                    class="d-flex align-items-center gap-2 justify-content-between flex-grow-1">
-                                    config/system-addons.php File Permission
-
-                                    @if ($permission['config_file_write_perm'])
-                                        <img width="20"
-                                             src="{{asset('public/assets/installation')}}/assets/img/svg-icons/check.png"
-                                             alt="">
-                                    @else
-                                        <span class="cursor-pointer" data-bs-toggle="tooltip"
-                                              data-bs-placement="top" data-bs-custom-class="custom-tooltip"
-                                              data-bs-html="true" data-bs-delay='{"hide":1000}'
-                                              data-bs-title="Write permission is required for: <br> {{ $fileChecks['config_file_write_perm']['path'] }}">
+                                              data-bs-title="...">
                                                 <img
                                                     src="{{asset('public/assets/installation')}}/assets/img/svg-icons/info.svg"
                                                     class="svg text-danger" alt="">
@@ -168,7 +143,7 @@
                                         <span class="cursor-pointer" data-bs-toggle="tooltip"
                                               data-bs-placement="top" data-bs-custom-class="custom-tooltip"
                                               data-bs-html="true" data-bs-delay='{"hide":1000}'
-                                              data-bs-title="Write permission is required for: <br> {{ $fileChecks['routes_file_write_perm']['path'] }}">
+                                              data-bs-title="...">
                                                 <img
                                                     src="{{asset('public/assets/installation')}}/assets/img/svg-icons/info.svg"
                                                     class="svg text-danger" alt="">
@@ -184,7 +159,7 @@
             <div class="text-center">
                 <p>All the permissions are provided successfully ? </p>
 
-                @if ($permission['curl_enabled'] == 1 && $permission['db_file_write_perm'] == 1 &&  $permission['config_file_write_perm'] == 1 && $permission['routes_file_write_perm'] == 1 && $phpVersion >= 8.3)
+                @if ($permission['curl_enabled'] == 1 && $permission['db_file_write_perm'] == 1 && $permission['routes_file_write_perm'] == 1 && $phpVersion >= 8.1)
                     <a href="{{ route('step2',['token'=>bcrypt('step_2')]) }}" class="btn btn-dark px-sm-5">Proceed
                         Next</a>
                 @endif

@@ -24,6 +24,11 @@
             </div>
         </div>
         <!-- End Page Header -->
+        <div class="mt-3 justify-content-end btn--container">
+            <button class="btn btn--primary" data-toggle="modal" data-target="#escrow_deposit_model">
+                {{translate('messages.escrow_deposit')}}
+            </button>
+        </div>
         <?php
         $wallet = \App\Models\StoreWallet::where('vendor_id',\App\CentralLogics\Helpers::get_vendor_id())->first();
         if(isset($wallet)==false){
@@ -187,7 +192,7 @@
                     </button>
 
                 </div>
-                <form action="{{ route('vendor.wallet.wallet_make_payment') }}" method="POST" class="needs-validation">
+                <form action="{{ route('vendor.wallet.make_payment') }}" method="POST" class="needs-validation">
                     <div class="modal-body">
                         @csrf
                         <input type="hidden" value="{{ \App\CentralLogics\Helpers::get_store_id() }}" name="store_id"/>
@@ -199,7 +204,7 @@
                                     <div class="d-flex gap-3 align-items-center">
                                         <input type="radio" required id="{{$item['gateway'] }}" name="payment_gateway" value="{{$item['gateway'] }}">
                                         <label for="{{$item['gateway'] }}" class="d-flex align-items-center gap-3 mb-0">
-                                            <img height="24" src="{{ asset('storage/payment_modules/gateway_image/'. $item['gateway_image']) }}" alt="">
+                                            <img height="24" src="{{ asset('storage/app/public/payment_modules/gateway_image/'. $item['gateway_image']) }}" alt="">
                                             {{ $item['gateway_title'] }}
                                         </label>
                                     </div>
@@ -240,6 +245,40 @@
                     <div class="modal-footer">
                         <button id="reset_btn" type="reset" data-dismiss="modal" class="btn btn-secondary" >{{ translate('Close') }} </button>
                         <button type="submit" class="btn btn-primary">{{ translate('Proceed') }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="escrow_deposit_model" tabindex="-1"  role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">{{translate('messages.escrow_deposit')}}  </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+
+                </div>
+                <form action="" method="POST" class="needs-validation" id="escrow_deposit_form">
+                    @csrf
+                    <input type="hidden" name="contract_id" id="escrow_contract_id" value=""/>
+                    <div class="modal-body">
+                        <h5 class="mb-5 ">{{ translate('deposit_funds_into_escrow') }} </h5>
+                        <div class="form-group mt-3">
+                            <label class="input-label">{{ translate('messages.amount') }}</label>
+                            <input type="number" name="amount" id="escrow_deposit_amount" class="form-control" required placeholder="{{ translate('messages.enter_amount') }}">
+                        </div>
+                        <div class="form-group mt-3" id="escrow_contract_display" style="display:none;">
+                            <label class="input-label">{{ translate('messages.trade_contract') }}</label>
+                            <input type="text" class="form-control" readonly id="escrow_contract_name"/>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button id="reset_btn" type="reset" data-dismiss="modal" class="btn btn-secondary" >{{ translate('Close') }} </button>
+                        <button type="submit" class="btn btn-primary">{{ translate('messages.deposit') }}</button>
                     </div>
                 </form>
             </div>
@@ -299,6 +338,60 @@ $(document).ready(function() {
     $("#withdraw_form").on("submit", function(event) {
         $('#set_disable').attr('disabled', true);
     });
+
+    // Escrow deposit form handling
+    $('#escrow_deposit_form').on('submit', function(e) {
+        e.preventDefault();
+        let form = $(this);
+        let contractId = $('#escrow_contract_id').val();
+        let amount = $('#escrow_deposit_amount').val();
+        
+        if (!contractId) {
+            toastr.error('{{ translate('messages.select_contract_first') }}');
+            return;
+        }
+        
+        $.ajaxSetup({
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            }
+        });
+        $.ajax({
+            url: "{{route('trade-contracts.deposit', '__ID__')}}".replace('__ID__', contractId),
+            type: 'POST',
+            data: {
+                amount: amount,
+                _token: $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                if(response.success) {
+                    toastr.success('{{ translate('messages.funds_deposited_into_escrow') }}');
+                    $('#escrow_deposit_model').modal('hide');
+                    $('#escrow_deposit_form')[0].reset();
+                    location.reload();
+                } else {
+                    toastr.error(response.error || '{{ translate('messages.deposit_failed') }}');
+                }
+            },
+            error: function(xhr) {
+                let errors = xhr.responseJSON?.errors || {};
+                let errorMsg = '';
+                $.each(errors, function(key, value) {
+                    errorMsg += value + '<br>';
+                });
+                if(!errorMsg) errorMsg = '{{ translate('messages.deposit_failed') }}';
+                toastr.error(errorMsg);
+            }
+        });
+    });
+
+    // Open escrow deposit modal with contract id
+    window.openEscrowDeposit = function(contractId, contractName) {
+        $('#escrow_contract_id').val(contractId);
+        $('#escrow_contract_name').val(contractName);
+        $('#escrow_contract_display').show();
+        $('#escrow_deposit_model').modal('show');
+    };
 });
     </script>
 @endpush

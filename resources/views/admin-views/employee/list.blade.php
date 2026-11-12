@@ -4,11 +4,6 @@
 
 @endpush
 
-
-@section('employee_list')
-active
-@endsection
-
 @section('content')
 <div class="content container-fluid">
     <div class="page-header">
@@ -38,13 +33,13 @@ active
                         <form class="search-form min--200">
                             <!-- Search -->
                             <div class="input-group input--group">
-                                <input id="datatableSearch_" type="search" name="search"  value="{{ request()->input('search') }}" class="form-control" placeholder="{{translate('messages.ex_:_search_name')}}" aria-label="Search">
+                                <input id="datatableSearch_" type="search" name="search"  value="{{ request()->get('search') }}" class="form-control" placeholder="{{translate('messages.ex_:_search_name')}}" aria-label="Search">
                                 <button type="submit" class="btn btn--secondary"><i class="tio-search"></i></button>
                             </div>
                             <!-- End Search -->
                         </form>
 
-                        @if(request()->input('search'))
+                        @if(request()->get('search'))
                         <button type="reset" class="btn btn--primary ml-2 location-reload-to-base" data-url="{{url()->full()}}">{{translate('messages.reset')}}</button>
                         @endif
 
@@ -71,7 +66,7 @@ active
                                 <img class="avatar avatar-xss avatar-4by3 mr-2"
                                     src="{{ asset('public/assets/admin') }}/svg/components/placeholder-csv-format.svg"
                                     alt="Image Description">
-                                {{ translate('messages.csv') }}
+                                .{{ translate('messages.csv') }}
                             </a>
                         </div>
                     </div>

@@ -35,7 +35,7 @@
                                 </h5>
                                 <label class="toggle-switch toggle-switch-sm p-0">
                                     <span class="d-flex align-items-center switch--label">
-                                        <span class="form-label-secondary text-danger d-flex" data-toggle="tooltip" data-placement="right" data-original-title="{{ translate('messages.Toggle this option to enable or disable login through this provider.') }}"><img src="{{asset('public/assets/admin/img/info-circle.svg')}}" alt="Veg/non-veg toggle"> * </span>
+                                        <span class="form-label-secondary text-danger d-flex" data-toggle="tooltip" data-placement="right" data-original-title="Lorem ipsum dolor set amet"><img src="{{asset('public/assets/admin/img/info-circle.svg')}}" alt="Veg/non-veg toggle"> * </span>
                                     </span>
                                     <input id="{{$socialLoginService['login_medium']}}_status"
 
@@ -84,7 +84,7 @@
                                 </div>
                                 <div class="btn--container justify-content-end">
                                     <button type="reset" class="btn btn--reset mb-2">{{translate('Reset')}}</button>
-                                    <button type="submit" class="btn btn--primary mb-2 call-demo">{{translate('messages.save')}}</button>
+                                    <button type="{{env('APP_MODE')!='demo'?'submit':'button'}}" class="btn btn--primary mb-2">{{translate('messages.save')}}</button>
                                 </div>
                                 </div>
                             </div>
@@ -107,7 +107,7 @@
                                     </h5>
                                     <label class="toggle-switch toggle-switch-sm p-0">
                                         <span class="d-flex align-items-center switch--label">
-                                            <span class="form-label-secondary text-danger d-flex" data-toggle="tooltip" data-placement="right" data-original-title="{{ translate('messages.Toggle this option to enable or disable login through this provider.') }}"><img src="{{asset('public/assets/admin/img/info-circle.svg')}}" alt="Veg/non-veg toggle"> * </span>
+                                            <span class="form-label-secondary text-danger d-flex" data-toggle="tooltip" data-placement="right" data-original-title="Lorem ipsum dolor set amet"><img src="{{asset('public/assets/admin/img/info-circle.svg')}}" alt="Veg/non-veg toggle"> * </span>
                                         </span>
                                         <input  id="{{$appleLoginService['login_medium']}}_status"
                                                data-id="{{$appleLoginService['login_medium']}}_status"
@@ -180,7 +180,7 @@
                                     </div>
                                     <div class="btn--container justify-content-end">
                                         <button type="reset" class="btn btn--reset mb-2">{{translate('Reset')}}</button>
-                                        <button type="submit" class="btn btn--primary mb-2 call-demo">{{translate('messages.save')}}</button>
+                                        <button type="{{env('APP_MODE')!='demo'?'submit':'button'}}" class="btn btn--primary mb-2">{{translate('messages.save')}}</button>
                                     </div>
                                 </div>
                             </form>

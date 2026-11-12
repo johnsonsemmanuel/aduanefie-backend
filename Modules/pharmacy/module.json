@@ -1,0 +1,13 @@
+{
+    "name": "Pharmacy",
+    "alias": "pharmacy",
+    "description": "Veterinary and farm supplies module - veterinary medicines, animal feed, fertilizers, and agro-chemicals for farmers.",
+    "keywords": ["pharmacy", "veterinary", "farm-supplies", "fertilizer"],
+    "priority": 30,
+    "providers": [
+        "Modules\\Pharmacy\\Providers\\PharmacyServiceProvider"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": []
+}

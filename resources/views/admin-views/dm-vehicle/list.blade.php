@@ -38,7 +38,7 @@
                                 </div>
                                 <!-- End Search -->
                             </form>
-                            @if(request()->input('search'))
+                            @if(request()->get('search'))
                             <button type="reset" class="btn btn--primary ml-2 location-reload-to-base" data-url="{{url()->full()}}">{{translate('messages.reset')}}</button>
                             @endif
 
@@ -51,8 +51,7 @@
                                data-hs-datatables-options='{
                                  "order": [],
                                  "orderCellsTop": true,
-                                 "paging":false,
-                                 "columnDefs":[{"targets":[8],"orderable":false}]
+                                 "paging":false
                                }'>
                             <thead class="thead-light">
                             <tr>
@@ -79,21 +78,21 @@
                                         {{ $vehicle->delivery_man_count }}
                                     </td>
                                     <td>
-                                        <span class="bg-gradient-light text-dark">
+                                        <span class="bg-light text-dark">
                                             {{ $vehicle->starting_coverage_area }}
                                         </span>
                                     </td>
                                     <td>
-                                        <span class="bg-gradient-light text-dark">
+                                        <span class="bg-light text-dark">
                                             {{ $vehicle->maximum_coverage_area }}
                                         </span>
                                     </td>
                                     <td>
-                                        <span class="bg-gradient-light text-dark">
+                                        <span class="bg-light text-dark">
                                          {{ \App\CentralLogics\Helpers::format_currency($vehicle->extra_charges) }}
                                         </span>
                                     </td>
-                                    <td data-order="{{ $vehicle->status?1:0 }}">
+                                    <td>
                                         <label class="toggle-switch toggle-switch-sm" for="stocksCheckbox{{$vehicle->id}}">
                                             <input type="checkbox"
                                             data-id="statusCheckbox{{$vehicle->id}}"

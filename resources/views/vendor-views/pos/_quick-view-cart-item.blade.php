@@ -15,7 +15,7 @@
         <div class="d-flex align-items-center justify-content-center active h-9rem">
             <img class="img-responsive img-responsive-1 onerror-image" src="{{ $product['image_full_url']}}"
                 data-onerror-image="{{ asset('public/assets/admin/img/160x160/img2.jpg') }}"
-                data-zoom="{{ asset('storage/product') }}/{{ $product['image'] }}" alt="Product image"
+                data-zoom="{{ asset('storage/app/public/product') }}/{{ $product['image'] }}" alt="Product image"
                 width="">
             <div class="cz-image-zoom-pane"></div>
         </div>
@@ -216,7 +216,7 @@
                                     class="d-flex align-items-center btn btn-sm check-label mx-1 addon-input text-break"
                                     for="addon{{ $key }}">{{ Str::limit($add_on->name, 20, '...') }} <br>
                                     {{ \App\CentralLogics\Helpers::format_currency($add_on->price) }}</label>
-                                <label class="input-group addon-quantity-input mx-1 shadow-lg border bg-white rounded px-1"
+                                <label class="input-group addon-quantity-input mx-1 shadow bg-white rounded px-1"
                                     for="addon{{ $key }}"
                                     @if (in_array($add_on->id, $cart_item['add_ons'])) style="visibility:visible;" @endif>
                                     <button class="btn btn-sm h-100 text-dark px-0 decrease-button" type="button"
@@ -256,6 +256,7 @@
         </div>
     </div>
 </div>
+<script src="{{asset('public/assets/admin')}}/js/view-pages/common.js"></script>
 <script type="text/javascript">
     "use strict";
     cartQuantityInitialize();

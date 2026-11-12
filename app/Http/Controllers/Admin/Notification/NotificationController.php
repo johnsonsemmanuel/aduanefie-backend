@@ -41,21 +41,19 @@ class NotificationController extends BaseController
 
     private function getAddView($request): View
     {
-        $target = $request->input('target');
         $notifications = $this->notificationRepo->getListWhere(
             searchValue: $request['search'],
-            filters: $target && $target != 'all' ? ['tergat' => $target] : [],
             dataLimit: config('default_pagination'),
         );
         $zones = $this->zoneRepo->getList();
-        return view(NotificationViewPath::INDEX[VIEW], compact('notifications','zones','target'));
+        return view(NotificationViewPath::INDEX[VIEW], compact('notifications','zones'));
     }
 
     public function add(NotificationAddRequest $request): JsonResponse
     {
         $notification = $this->notificationRepo->add(data: $this->notificationService->getAddData(request: $request));
         $topic = $this->notificationService->getTopic(request: $request);
-        $notification->image = $notification->image ? $notification->toArray()['image_full_url'] :'';
+        $notification->image = $notification->toArray()['image_full_url'];
 
         try {
             $this->sendPushNotificationToTopic($notification, $topic, 'push_notification');
@@ -80,7 +78,7 @@ class NotificationController extends BaseController
 
         $topic = $this->notificationService->getTopic(request: $request);
         $notification = $this->notificationRepo->getFirstWhere(params: ['id' => $id]);
-        $notification->image = $notification->image ? $notification->toArray()['image_full_url'] :'';
+        $notification->image = $notification->toArray()['image_full_url'];
 
         try {
             $this->sendPushNotificationToTopic($notification, $topic, 'push_notification');

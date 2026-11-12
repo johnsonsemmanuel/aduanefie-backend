@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Support\Facades\DB;
-use Modules\TaxModule\Entities\Taxable;
 
 class ParcelCategory extends Model
 {
@@ -112,9 +111,5 @@ class ParcelCategory extends Model
             }
         });
 
-    }
-    public function taxVats()
-    {
-        return $this->morphMany(Taxable::class, 'taxable');
     }
 }

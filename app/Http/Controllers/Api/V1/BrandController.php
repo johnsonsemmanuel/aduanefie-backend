@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Models\Item;
 use App\Models\Brand;
+use App\Models\PriorityList;
 use Illuminate\Http\Request;
 use App\CentralLogics\Helpers;
+use App\Models\BusinessSetting;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Validator;
 
@@ -13,24 +15,19 @@ class BrandController extends Controller
 {
     public function get_brands(Request $request,$search=null)
     {
-        Helpers::setZoneIds($request);
 
         try {
-            $brand_default_status = Helpers::get_business_settings('brand_default_status') ?? 1;
-            $brand_sort_by_general = Helpers::getPriorityList(name: 'brand_sort_by_general', type: 'general');
+            $brand_default_status = BusinessSetting::where('key', 'brand_default_status')->first()?->value ?? 1;
+            $brand_sort_by_general = PriorityList::where('name', 'brand_sort_by_general')->where('type','general')->first()?->value ?? '';
             $key = explode(' ', $search);
 
             $zone_id= $request->header('zoneId');
-            $module_id= getModuleId($request->header('moduleId'));
+            $module_id= $request->header('moduleId');
+
             $brands = Brand::Active()
-            ->where(function($query) use($module_id){
-                $query->whereNull('module_id')->orWhere('module_id',  $module_id);
-            })
             ->withCount(['items' => function($query) use($zone_id, $module_id) {
                 $query->whereHas('item.store', function($q) use($zone_id, $module_id) {
-                    $q->when(isset($zone_id) ,function ($query) use($zone_id){
-                        $query->whereIn('zone_id', json_decode($zone_id, true));
-                    })
+                    $q->whereIn('zone_id', json_decode($zone_id, true))
                     ->where('module_id', $module_id);
                 });
             }])
@@ -55,7 +52,7 @@ class BrandController extends Controller
             })
             ->get();
 
-            if(($brand_default_status  != 1 &&  $brand_sort_by_general == 'order_count') || $request->top == 1){
+            if($brand_default_status  != 1 &&  $brand_sort_by_general == 'order_count'){
                 foreach ($brands as $brand) {
                     $productCountQuery = Item::active()
                         ->whereHas('ecommerce_item_details',function($q)use($brand){
@@ -75,17 +72,8 @@ class BrandController extends Controller
                     $brand['order_count'] = $orderCount;
                 }
 
-                $brands = $brands->sortByDesc('order_count')->values();
+                $brands = $brands->sortByDesc('order_count')->values()->all();
             }
-
-            $brands = collect($brands)->map(fn ($brand) => [
-                'id' => (int) $brand->id,
-                'name' => $brand->name,
-                'slug' => $brand->slug,
-                'image_full_url' => $brand->image_full_url,
-                'items_count' => (int) ($brand->items_count ?? 0),
-            ])->values();
-
             return response()->json($brands, 200);
         } catch (\Exception $e) {
             return response()->json([], 200);
@@ -94,7 +82,13 @@ class BrandController extends Controller
 
     public function get_products($id, Request $request)
     {
-        Helpers::setZoneIds($request);
+        if (!$request->hasHeader('zoneId')) {
+            $errors = [];
+            array_push($errors, ['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]);
+            return response()->json([
+                'errors' => $errors
+            ], 403);
+        }
         $validator = Validator::make($request->all(), [
             'limit' => 'required',
             'offset' => 'required',
@@ -104,10 +98,10 @@ class BrandController extends Controller
             return response()->json(['errors' => Helpers::error_processor($validator)], 403);
         }
 
-        $brand_item_default_status = Helpers::get_business_settings('brand_item_default_status') ?? 1;
-        $brand_item_sort_by_general = Helpers::getPriorityList(name: 'brand_item_sort_by_general', type: 'general');
-        $brand_item_sort_by_unavailable = Helpers::getPriorityList(name: 'brand_item_sort_by_unavailable', type: 'unavailable');
-        $brand_item_sort_by_temp_closed = Helpers::getPriorityList(name: 'brand_item_sort_by_temp_closed', type: 'temp_closed');
+        $brand_item_default_status = BusinessSetting::where('key', 'brand_item_default_status')->first()?->value ?? 1;
+        $brand_item_sort_by_general = PriorityList::where('name', 'brand_item_sort_by_general')->where('type','general')->first()?->value ?? '';
+        $brand_item_sort_by_unavailable = PriorityList::where('name', 'brand_item_sort_by_unavailable')->where('type','unavailable')->first()?->value ?? '';
+        $brand_item_sort_by_temp_closed = PriorityList::where('name', 'brand_item_sort_by_temp_closed')->where('type','temp_closed')->first()?->value ?? '';
 
         $zone_id= $request->header('zoneId');
 
@@ -118,9 +112,6 @@ class BrandController extends Controller
         $query = Item::
         whereHas('module.zones', function($query)use($zone_id){
             $query->whereIn('zones.id', json_decode($zone_id, true));
-        })
-        ->when(config('module.current_module_data'), function($query){
-            $query->where('module_id', config('module.current_module_data')['id']);
         })
         ->whereHas('store', function($query)use($zone_id){
             $query->whereIn('zone_id', json_decode($zone_id, true))->whereHas('zone.modules',function($query){

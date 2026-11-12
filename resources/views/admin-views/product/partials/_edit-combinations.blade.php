@@ -19,20 +19,20 @@
 
         @foreach ($combinations as $key => $combination)
             <tr>
-                <td class="text-center error-wrapper">
+                <td class="text-center">
                     <label class="control-label m-0">{{ $combination['type'] }}</label>
                     <input value="{{ $combination['type'] }}" name="type[]" type="hidden">
                 </td>
-                <td class="error-wrapper">
+                <td>
                     <input type="number" name="price_{{ $combination['type'] }}"
                            value="{{$combination['price']}}" min="0"
-                           step="{{ \App\CentralLogics\Helpers::getDecimalPlaces() }}" max="999999999999.999"
-                           class="form-control" required placeholder="0">
+                           step="0.01"
+                           class="form-control" required>
                 </td>
                 @if ($stock)
-                    <td class="error-wrapper">
+                    <td>
                         <input type="number" name="stock_{{ $combination['type'] }}" value="{{$combination['stock']??0}}" min="0"
-                                class="form-control update_qty" required placeholder="0">
+                                class="form-control update_qty" required>
                     </td>
                 @endif
 

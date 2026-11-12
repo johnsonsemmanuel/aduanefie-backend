@@ -58,49 +58,6 @@ return [
 
     'asset_url' => env('ASSET_URL', null),
 
-    'app_mode' => env('APP_MODE', 'live'),
-
-    /*
-    |--------------------------------------------------------------------------
-    | Host / Storefront domain split
-    |--------------------------------------------------------------------------
-    |
-    | `host_domain` is the single hostname where the admin/vendor panel and
-    | all `routes/*.php` host endpoints answer — e.g. `admin.aduanefie.com`
-    | or just `aduanefie.com` if the host runs on the apex.
-    |
-    | Every host route group in `App\Providers\RouteServiceProvider` is
-    | wrapped in `Route::domain(config('app.host_domain'))->group(...)`,
-    | so a request on any other host (vendor sub-domain, custom domain)
-    | falls through to the Builder module's storefront routes — which
-    | resolve the active store from `tenant_domain_configs` and 404 if
-    | nothing matches.
-    |
-    | `host_base_domain` is the parent zone where vendor sub-domain entries
-    | live (typically the bare apex, e.g. `aduanefie.com`). Used only to
-    | compute reserved sub-domain labels in the vendor's domain-setup UI —
-    | when the host runs on a sub-domain of the base, that label is
-    | reserved against vendor input.
-    |
-    | When `APP_HOST_DOMAIN` is unset, host routes match any host (legacy
-    | behavior). Leave both unset on a single-tenant install.
-    |
-    */
-
-    'host_domain'      => env('APP_HOST_DOMAIN'),
-
-    'host_base_domain' => env('APP_HOST_BASE_DOMAIN'),
-
-    /*
-    |--------------------------------------------------------------------------
-    | Public IP — surfaced to vendors in the Domain Settings instructions
-    | so they know which A-record IP to point their custom domain at.
-    | Leave unset on a dev / single-tenant install; the UI will fall back
-    | to a "contact your administrator" hint.
-    */
-
-    'public_ip' => env('APP_PUBLIC_IP'),
-
     /*
     |--------------------------------------------------------------------------
     | Application Timezone
@@ -166,17 +123,120 @@ return [
 
     'key' => env('APP_KEY'),
 
-    'previous_keys' => [
-        ...array_filter(
-            explode(',', (string) env('APP_PREVIOUS_KEYS', ''))
-        ),
-    ],
-
     'cipher' => 'AES-256-CBC',
 
-    'maintenance' => [
-        'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
-        'store' => env('APP_MAINTENANCE_STORE', 'database'),
+    /*
+    |--------------------------------------------------------------------------
+    | Autoloaded Service Providers
+    |--------------------------------------------------------------------------
+    |
+    | The service providers listed here will be automatically loaded on the
+    | request to your application. Feel free to add your own services to
+    | this array to grant expanded functionality to your applications.
+    |
+    */
+
+    'providers' => [
+
+        /*
+         * Laravel Framework Service Providers...
+         */
+        Illuminate\Auth\AuthServiceProvider::class,
+        Illuminate\Broadcasting\BroadcastServiceProvider::class,
+        Illuminate\Bus\BusServiceProvider::class,
+        Illuminate\Cache\CacheServiceProvider::class,
+        Illuminate\Foundation\Providers\ConsoleSupportServiceProvider::class,
+        Illuminate\Cookie\CookieServiceProvider::class,
+        Illuminate\Database\DatabaseServiceProvider::class,
+        Illuminate\Encryption\EncryptionServiceProvider::class,
+        Illuminate\Filesystem\FilesystemServiceProvider::class,
+        Illuminate\Foundation\Providers\FoundationServiceProvider::class,
+        Illuminate\Hashing\HashServiceProvider::class,
+        Illuminate\Mail\MailServiceProvider::class,
+        Illuminate\Notifications\NotificationServiceProvider::class,
+        Illuminate\Pagination\PaginationServiceProvider::class,
+        Illuminate\Pipeline\PipelineServiceProvider::class,
+        Illuminate\Queue\QueueServiceProvider::class,
+        Illuminate\Redis\RedisServiceProvider::class,
+        Illuminate\Auth\Passwords\PasswordResetServiceProvider::class,
+        Illuminate\Session\SessionServiceProvider::class,
+        Illuminate\Translation\TranslationServiceProvider::class,
+        Illuminate\Validation\ValidationServiceProvider::class,
+        Illuminate\View\ViewServiceProvider::class,
+
+        /*
+         * Package Service Providers...
+         */
+
+        /*
+         * Application Service Providers...
+         */
+        App\Providers\AppServiceProvider::class,
+        App\Providers\AuthServiceProvider::class,
+        // App\Providers\BroadcastServiceProvider::class,
+        App\Providers\EventServiceProvider::class,
+        App\Providers\RouteServiceProvider::class,
+        // Grimzy\LaravelMysqlSpatial\SpatialServiceProvider::class,
+        App\Providers\ConfigServiceProvider::class,
+        Laravelpkg\Laravelchk\LaravelchkServiceProvider::class,
+        // FruitCake\Cors\CorsServiceProvider::class,
+        Maatwebsite\Excel\ExcelServiceProvider::class,
+        InterfaceServiceProvider::class,
+        App\Providers\FirebaseServiceProvider::class,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Class Aliases
+    |--------------------------------------------------------------------------
+    |
+    | This array of class aliases will be registered when this application
+    | is started. However, feel free to register as many as you wish as
+    | the aliases are "lazy" loaded so they don't hinder performance.
+    |
+    */
+
+    'aliases' => [
+
+        'App' => Illuminate\Support\Facades\App::class,
+        'Arr' => Illuminate\Support\Arr::class,
+        'Artisan' => Illuminate\Support\Facades\Artisan::class,
+        'Auth' => Illuminate\Support\Facades\Auth::class,
+        'Blade' => Illuminate\Support\Facades\Blade::class,
+        'Broadcast' => Illuminate\Support\Facades\Broadcast::class,
+        'Bus' => Illuminate\Support\Facades\Bus::class,
+        'Cache' => Illuminate\Support\Facades\Cache::class,
+        'Config' => Illuminate\Support\Facades\Config::class,
+        'Cookie' => Illuminate\Support\Facades\Cookie::class,
+        'Crypt' => Illuminate\Support\Facades\Crypt::class,
+        'Date' => Illuminate\Support\Facades\Date::class,
+        'DB' => Illuminate\Support\Facades\DB::class,
+        'Eloquent' => Illuminate\Database\Eloquent\Model::class,
+        'Event' => Illuminate\Support\Facades\Event::class,
+        'File' => Illuminate\Support\Facades\File::class,
+        'Gate' => Illuminate\Support\Facades\Gate::class,
+        'Hash' => Illuminate\Support\Facades\Hash::class,
+        'Http' => Illuminate\Support\Facades\Http::class,
+        'Lang' => Illuminate\Support\Facades\Lang::class,
+        'Log' => Illuminate\Support\Facades\Log::class,
+        'Mail' => Illuminate\Support\Facades\Mail::class,
+        'Notification' => Illuminate\Support\Facades\Notification::class,
+        'Password' => Illuminate\Support\Facades\Password::class,
+        'Queue' => Illuminate\Support\Facades\Queue::class,
+        'Redirect' => Illuminate\Support\Facades\Redirect::class,
+        // 'Redis' => Illuminate\Support\Facades\Redis::class,
+        'Request' => Illuminate\Support\Facades\Request::class,
+        'Response' => Illuminate\Support\Facades\Response::class,
+        'Route' => Illuminate\Support\Facades\Route::class,
+        'Schema' => Illuminate\Support\Facades\Schema::class,
+        'Session' => Illuminate\Support\Facades\Session::class,
+        'Storage' => Illuminate\Support\Facades\Storage::class,
+        'Str' => Illuminate\Support\Str::class,
+        'URL' => Illuminate\Support\Facades\URL::class,
+        'Validator' => Illuminate\Support\Facades\Validator::class,
+        'View' => Illuminate\Support\Facades\View::class,
+        'Excel' => Maatwebsite\Excel\Facades\Excel::class,
+
     ],
 
 ];

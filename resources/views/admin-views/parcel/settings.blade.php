@@ -2,9 +2,10 @@
 
 @section('title',translate('messages.parcel_settings'))
 
- @section('parcel_settings')
- active
- @endsection
+@push('css_or_js')
+
+@endpush
+
 @section('content')
     <div class="content container-fluid">
         <!-- Page Header -->
@@ -20,6 +21,15 @@
         </div>
         <!-- End Page Header -->
 
+        @php($parcel_per_km_shipping_charge=\App\Models\BusinessSetting::where(['key'=>'parcel_per_km_shipping_charge'])->first())
+        @php($parcel_per_km_shipping_charge=$parcel_per_km_shipping_charge?$parcel_per_km_shipping_charge->value:null)
+
+        @php($parcel_minimum_shipping_charge=\App\Models\BusinessSetting::where(['key'=>'parcel_minimum_shipping_charge'])->first())
+        @php($parcel_minimum_shipping_charge=$parcel_minimum_shipping_charge?$parcel_minimum_shipping_charge->value:null)
+
+        @php($parcel_commission_dm=\App\Models\BusinessSetting::where(['key'=>'parcel_commission_dm'])->first())
+        @php($parcel_commission_dm=$parcel_commission_dm?$parcel_commission_dm->value:null)
+
         <div class="card">
             <div class="card-body">
                 <form action="{{route('admin.parcel.update.settings')}}" method="post"
@@ -28,29 +38,29 @@
                     <div class="row">
                         <div class="col-md-6 col-lg-4">
                             <div class="form-group">
-                                <label  class="input-label text-capitalize">{{translate('messages.per_km_shipping_charge')}}  ({{ \App\CentralLogics\Helpers::currency_symbol() }})</label>
-                                <input type="number" min="0" step=".01" placeholder="{{translate('messages.per_km_shipping_charge')}}" class="form-control" name="parcel_per_km_shipping_charge"
-                                    value="{{$parcelPerKmShippingCharge??''}}">
+                                <label  class="input-label text-capitalize">{{translate('messages.per_km_shipping_charge')}}</label>
+                                <input type="number" step=".01" placeholder="{{translate('messages.per_km_shipping_charge')}}" class="form-control" name="parcel_per_km_shipping_charge"
+                                    value="{{env('APP_MODE')!='demo'?$parcel_per_km_shipping_charge??'':''}}">
                             </div>
                         </div>
                         <div class="col-md-6 col-lg-4">
                             <div class="form-group">
-                                <label class="input-label text-capitalize">{{translate('messages.minimum_shipping_charge')}} ({{ \App\CentralLogics\Helpers::currency_symbol() }})</label>
-                                <input type="number" min="0" step=".01" placeholder="{{translate('messages.minimum_shipping_charge')}}" class="form-control" name="parcel_minimum_shipping_charge"
-                                    value="{{$parcelMinimumShippingCharge??''}}">
+                                <label class="input-label text-capitalize">{{translate('messages.minimum_shipping_charge')}}</label>
+                                <input type="number" step=".01" placeholder="{{translate('messages.minimum_shipping_charge')}}" class="form-control" name="parcel_minimum_shipping_charge"
+                                    value="{{env('APP_MODE')!='demo'?$parcel_minimum_shipping_charge??'':''}}">
                             </div>
                         </div>
 
                         <div class="col-md-6 col-lg-4">
                             <div class="form-group">
                                 <label class="input-label text-capitalize">{{translate('messages.deliveryman_commission')}} (%)</label>
-                                <input type="number" min="0" step=".01" placeholder="{{translate('messages.deliveryman_commission')}}" class="form-control" name="parcel_commission_dm" max="100" value="{{$parcelCommissionDm??''}}">
+                                <input type="number" step=".01" placeholder="{{translate('messages.deliveryman_commission')}}" class="form-control" name="parcel_commission_dm" max="100" value="{{env('APP_MODE')!='demo'?$parcel_commission_dm??'':''}}">
                             </div>
                         </div>
                     </div>
                     <div class="btn--container justify-content-end">
                         <button type="reset" class="btn btn--reset">{{translate('messages.reset')}}</button>
-                        <button type="{{getEnvMode()!='demo'?'submit':'button'}}"  class="btn btn--primary call-demo">{{translate('messages.submit')}}</button>
+                        <button type="{{env('APP_MODE')!='demo'?'submit':'button'}}"  class="btn btn--primary call-demo">{{translate('messages.submit')}}</button>
                     </div>
                 </form>
             </div>
@@ -67,7 +77,9 @@
                             </h5>
                         </div>
                     </div>
-
+                    @php($language=\App\Models\BusinessSetting::where('key','language')->first())
+                    @php($language = $language->value ?? null)
+                    @php($default_lang = str_replace('_', '-', app()->getLocale()))
                     @if($language)
                         <ul class="nav nav-tabs nav--tabs mt-3 mb-3 ">
                             <li class="nav-item">
@@ -75,7 +87,7 @@
                                    href="#"
                                    id="default-link1">{{ translate('Default') }}</a>
                             </li>
-                            @foreach ($language as $lang)
+                            @foreach (json_decode($language) as $lang)
                                 <li class="nav-item">
                                     <a class="nav-link lang_link1"
                                        href="#"
@@ -89,7 +101,7 @@
 
 
                         <div class="col-md-10 lang_form1 default-form1">
-                            <label class="form-label">{{translate('Instruction')}} ({{ translate('Default') }})<span class="form-label-secondary" data-toggle="tooltip" data-placement="right" data-original-title="{{ translate('Write the instruction within 191 characters') }}">
+                            <label class="form-label">{{translate('Instruction')}} ({{ translate('Default') }})<span class="form-label-secondary" data-toggle="tooltip" data-placement="right" data-original-title="{{ translate('Write_the_short_description_within_191_characters') }}">
                                                     <img src="{{asset('public/assets/admin/img/info-circle.svg')}}" alt="">
                                                 </span></label>
                             <input type="text" class="form-control h--45px" maxlength="191" name="instruction[]"
@@ -98,9 +110,9 @@
                         </div>
 
                         @if ($language)
-                            @foreach($language as $lang)
+                            @foreach(json_decode($language) as $lang)
                                 <div class="col-md-10 d-none lang_form1" id="{{$lang}}-form1">
-                                    <label class="form-label">{{translate('Instruction')}} ({{strtoupper($lang)}})<span class="form-label-secondary" data-toggle="tooltip" data-placement="right" data-original-title="{{ translate('Write the instruction within 191 characters') }}">
+                                    <label class="form-label">{{translate('Instruction')}} ({{strtoupper($lang)}})<span class="form-label-secondary" data-toggle="tooltip" data-placement="right" data-original-title="{{ translate('Write_the_short_description_within_191_characters') }}">
                                                     <img src="{{asset('public/assets/admin/img/info-circle.svg')}}" alt="">
                                                 </span></label>
                                     <input type="text" class="form-control h--45px" maxlength="191" name="instruction[]"
@@ -206,7 +218,9 @@
                                                     @method('put')
 
                                                     @php($instruction=  \App\Models\ParcelDeliveryInstruction::withoutGlobalScope('translate')->with('translations')->find($instruction->id))
-
+                                                    @php($language=\App\Models\BusinessSetting::where('key','language')->first())
+                                                    @php($language = $language->value ?? null)
+                                                    @php($default_lang = str_replace('_', '-', app()->getLocale()))
                                                     <ul class="nav nav-tabs nav--tabs mb-3 border-0">
                                                         <li class="nav-item">
                                                             <a class="nav-link update-lang_link add_active active"
@@ -214,7 +228,7 @@
                                                                id="default-link">{{ translate('Default') }}</a>
                                                         </li>
                                                         @if($language)
-                                                            @foreach ($language as $lang)
+                                                            @foreach (json_decode($language) as $lang)
                                                                 <li class="nav-item">
                                                                     <a class="nav-link update-lang_link"
                                                                        href="#"
@@ -232,7 +246,7 @@
                                                         <input type="hidden" name="lang1[]" value="default">
                                                     </div>
                                                     @if($language)
-                                                        @forelse($language as $lang)
+                                                        @forelse(json_decode($language) as $lang)
                                                                 <?php
                                                                 if($instruction?->translations){
                                                                     $translate = [];

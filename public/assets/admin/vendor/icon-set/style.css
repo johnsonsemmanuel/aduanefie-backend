@@ -416,7 +416,7 @@
 .tio-vibrations:before {
   content: "\e97b";
 }
-.tio-time:before {
+.tio-watch-later:before {
   content: "\e97c";
 }
 .tio-youtube-search:before {
@@ -3443,21 +3443,3 @@
 .tio-users-switch:before {
   content: "\ed6c";
 }
-
-
-.cus-border-in{
-    background-color: #2223241A;
-    width: 1px;
-    height: 10px;
-}
-
-@keyframes tio-spin-anim {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-
-.tio-spin {
-    display: inline-block;
-    animation: tio-spin-anim 1s linear infinite;
-}
-

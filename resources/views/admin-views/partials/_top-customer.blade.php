@@ -17,7 +17,7 @@
                         data-onerror-image="{{ asset('public/assets/admin/img/160x160/img1.jpg') }}"
                         src="{{ $item->image_full_url ?? asset('public/assets/admin/img/160x160/img1.jpg') }}">
                     <div class="cont pt-2">
-                        <h6 class="mb-1 text-hover--primary">{{ $item['f_name'] ?? translate('Not exist') }}</h6>
+                        <h6 class="mb-1">{{ $item['f_name'] ?? translate('Not exist') }}</h6>
                         <span>{{ $item['phone'] ?? '' }}</span>
                     </div>
                     <div class="ml-auto">
@@ -29,18 +29,14 @@
 
         </div>
     @else
-        <!-- <div class="empty--data">
+        <div class="empty--data">
             <img src="{{ asset('/public/assets/admin/svg/illustrations/empty-state.svg') }}" alt="public">
             <h5>
                 {{ translate('no_data_found') }}
-            </h5>
-        </div> -->
-        <div class="empty--data d-flex flex-column align-items-center justify-content-center h-100 w-100">
-            <img src="{{ asset('/public/assets/admin/img/no-customer.png') }}" alt="public">
-            <h5 class="secondary-clr">
-                {{ translate('No customer available') }}
             </h5>
         </div>
     @endif
 
 </div>
+
+<script src="{{ asset('public/assets/admin') }}/js/view-pages/common.js"></script>

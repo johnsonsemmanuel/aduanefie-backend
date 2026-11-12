@@ -59,7 +59,7 @@
                     <form class="search-form min--260">
                         <!-- Search -->
                         <div class="input-group input--group">
-                            <input id="datatableSearch_" type="search" value="{{request()->input('search')}}" name="search" class="form-control h--40px"
+                            <input id="datatableSearch_" type="search" value="{{request()->get('search')}}" name="search" class="form-control h--40px"
                                    placeholder="{{ translate('messages.Ex:') }} 10010"
                                    aria-label="{{translate('messages.search')}}" required>
                             <input type="hidden" name="parcel_order" value="0">
@@ -69,7 +69,7 @@
                         </div>
                         <!-- End Search -->
                     </form>
-                    @if(request()->input('search'))
+                    @if(request()->get('search'))
                         <button type="reset" class="btn btn--primary ml-2 location-reload-to-base" data-url="{{url()->full()}}">{{translate('messages.reset')}}</button>
                     @endif
 
@@ -329,19 +329,16 @@
                             @endforeach
                         </select>
                     </div>
-                    @if (!$parcel_order)
-
                     <hr class="my-4">
                     <small class="text-cap mb-3">{{translate('messages.store')}}</small>
                     <div class="mb-2 initial--21">
                         <select name="vendor[]" id="vendor_ids" class="form-control js-select2-custom"
                                 multiple="multiple">
-                            @foreach(\App\Models\Store::whereIn('id', $vendor_ids)->get(['id','name']) as $store)
-                                <option value="{{$store->id}}" data-verified="{{ (int) $store->verified_seller }}" selected>{{$store->name}}</option>
+                            @foreach(\App\Models\Store::whereIn('id', $vendor_ids)->get() as $store)
+                                <option value="{{$store->id}}" selected>{{$store->name}}</option>
                             @endforeach
                         </select>
                     </div>
-                    @endif
 
                     <hr class="my-4">
                     @if($status == 'all')
@@ -525,7 +522,7 @@
 
                     $('#vendor_ids').select2({
                         ajax: {
-                            url: '{{ route('admin.store.get-stores') }}',
+                            url: '{{url('/')}}/admin/store/get-restaurants',
                             data: function (params) {
                                 return {
                                     q: params.term, // search term

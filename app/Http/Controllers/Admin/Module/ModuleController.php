@@ -52,7 +52,6 @@ class ModuleController extends BaseController
         $module = $this->moduleRepo->add(data: $this->moduleService->getAddData(request: $request));
         $this->translationRepo->addByModel(request: $request, model: $module, modelPath: 'App\Models\Module', attribute: 'module_name');
         $this->translationRepo->addByModel(request: $request, model: $module, modelPath: 'App\Models\Module', attribute: 'description');
-        $this->translationRepo->addByModel(request: $request, model: $module, modelPath: 'App\Models\Module', attribute: 'short_description');
 
         Toastr::success(translate('messages.module_created_successfully'));
         return back();
@@ -67,7 +66,7 @@ class ModuleController extends BaseController
 
     public function getUpdateView(string|int $id): View|RedirectResponse
     {
-        if(getEnvMode()=='demo' && in_array($id, [1,2,3,4,5]))
+        if(env('APP_MODE')=='demo' && in_array($id, [1,2,3,4,5]))
         {
             Toastr::warning(translate('messages.you_can_not_edit_this_module_please_add_a_new_module_to_edit'));
             return back();
@@ -81,7 +80,7 @@ class ModuleController extends BaseController
 
     public function update(ModuleUpdateRequest $request, $id): RedirectResponse
     {
-        if(getEnvMode()=='demo' && in_array($id, [1,2,3,4,5]))
+        if(env('APP_MODE')=='demo' && in_array($id, [1,2,3,4,5]))
         {
             Toastr::warning(translate('messages.you_can_not_edit_this_module_please_add_a_new_module_to_edit'));
             return back();
@@ -90,7 +89,6 @@ class ModuleController extends BaseController
         $module = $this->moduleRepo->update(id: $id ,data: $this->moduleService->getUpdateData(request: $request,module: $module));
         $this->translationRepo->updateByModel(request: $request, model: $module, modelPath: 'App\Models\Module', attribute: 'module_name');
         $this->translationRepo->updateByModel(request: $request, model: $module, modelPath: 'App\Models\Module', attribute: 'description');
-        $this->translationRepo->updateByModel(request: $request, model: $module, modelPath: 'App\Models\Module', attribute: 'short_description');
 
         Toastr::success(translate('messages.module_updated_successfully'));
         return back();

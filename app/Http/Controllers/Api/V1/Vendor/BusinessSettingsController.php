@@ -12,67 +12,13 @@ use App\Models\Translation;
 
 class BusinessSettingsController extends Controller
 {
-   public function update_store_basic_info(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'contact_number' => 'required|string|max:20',
-            'logo' => 'nullable|image|max:2048',
-            'cover_photo' => 'nullable|image|max:2048',
-            'meta_title' => 'max:100',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => Helpers::error_processor($validator)], 403);
-        }
-
-        $store = $request['vendor']->store;
-
-        $data_trans = json_decode($request->translations, true);
-
-        if (count($data_trans) < 1) {
-            return response()->json([
-                'errors' => [['code' => 'translations', 'message' => translate('messages.Name and address in english is required')]]
-            ], 403);
-        }
-
-        $store->name = $data_trans[0]['value'];
-        $store->address = $data_trans[1]['value'];
-        $store->phone = $request->contact_number;
-        $store->logo = $request->has('logo') ? Helpers::update(dir:'store/', old_image:$store->logo, format:'png', image:$request->file('logo')) : $store->logo;
-        $store->cover_photo = $request->has('cover_photo') ? Helpers::update(dir:'store/cover/', old_image:$store->cover_photo,format: 'png', image:$request->file('cover_photo')) : $store->cover_photo;
-
-        $store->meta_title = $request->meta_title;
-        $store->meta_description = $request->meta_description;
-        $store->meta_image = $request->has('meta_image') ? Helpers::update(dir:'store/', old_image: $store->meta_image, format: 'png', image: $request->file('meta_image')) : $store->meta_image;
-        $store->meta_data = Helpers::formatMetaData($request->all(), $store->meta_data);
-
-        $store->save();
-
-        foreach ($data_trans as $key => $i) {
-            Translation::updateOrInsert(
-                ['translationable_type' => 'App\Models\Store',
-                'translationable_id' => $store->id,
-                'locale' => $i['locale'],
-                'key' => $i['key']],
-                ['value' => $i['value']]
-            );
-        }
-
-        if($store?->vendor?->userinfo) {
-            $userinfo = $store->vendor->userinfo;
-            $userinfo->f_name = $store->name;
-            $userinfo->image = $store->logo;
-            $userinfo->save();
-        }
-
-        return response()->json(['message' => translate('messages.store_basic_info_updated')], 200);
-    }
-
-
 
     public function update_store_setup(Request $request)
     {
         $validator = Validator::make($request->all(), [
+            // 'name' => 'required',
+            // 'address' => 'required',
+            'contact_number' => 'required',
             'delivery' => 'required|boolean',
             'prescription_order' => 'required|boolean',
             'take_away' => 'required|boolean',
@@ -88,7 +34,7 @@ class BusinessSettingsController extends Controller
         ],[
             'gst.required_if' => translate('messages.gst_can_not_be_empty'),
         ]);
-        $store = $request['vendor']->store;
+        $store = $request['vendor']->stores[0];
 
 
         $validator->sometimes('per_km_delivery_charge', 'required_with:minimum_delivery_charge', function ($request) use($store) {
@@ -97,7 +43,15 @@ class BusinessSettingsController extends Controller
         $validator->sometimes('minimum_delivery_charge', 'required_with:per_km_delivery_charge', function ($request) use($store) {
             return ($store->sub_self_delivery);
         });
+        // $validator->sometimes('delivery_charge', 'required', function ($request) use($store) {
+        //     return ($store->sub_self_delivery);
+        // });
 
+        $data = json_decode($request->translations, true);
+
+        if (count($data) < 1) {
+            $validator->getMessageBag()->add('translations', translate('messages.Name and address in english is required'));
+        }
 
         if ($validator->fails()) {
             return response()->json(['errors' => Helpers::error_processor($validator)], 403);
@@ -130,11 +84,21 @@ class BusinessSettingsController extends Controller
         $store->free_delivery = $request->free_delivery??0;
         $store->minimum_order = $request->minimum_order;
         $store->gst = json_encode(['status'=>$request->gst_status, 'code'=>$request->gst]);
+        // $store->delivery_charge = $store->sub_self_delivery?$request->delivery_charge: $store->delivery_charge;
         $store->minimum_shipping_charge = $store->sub_self_delivery?$request->minimum_delivery_charge??0: $store->minimum_shipping_charge;
         $store->per_km_shipping_charge = $store->sub_self_delivery?$request->per_km_delivery_charge??0: $store->per_km_shipping_charge;
         $store->maximum_shipping_charge = $store?$request->maximum_delivery_charge??0: $store->maximum_delivery_charge;
         $store->delivery_time = $request->minimum_delivery_time .'-'. $request->maximum_delivery_time.' '.$request->delivery_time_type;
+        $store->name = $data[0]['value'];
+        $store->address = $data[1]['value'];
+        $store->phone = $request->contact_number;
         $store->order_place_to_schedule_interval = $request->order_place_to_schedule_interval;
+
+        $store->logo = $request->has('logo') ? Helpers::update('store/', $store->logo, 'png', $request->file('logo')) : $store->logo;
+        $store->cover_photo = $request->has('cover_photo') ? Helpers::update('store/cover/', $store->cover_photo, 'png', $request->file('cover_photo')) : $store->cover_photo;
+        $store->meta_title = $data[2]['value'];
+        $store->meta_description = $data[3]['value'];
+        $store->meta_image = $request->has('meta_image') ? Helpers::update('store/', $store->meta_image, 'png', $request->file('meta_image')) : $store->meta_image;
 
         $store->save();
 
@@ -144,9 +108,19 @@ class BusinessSettingsController extends Controller
         $conf->halal_tag_status = $request->halal_tag_status ?? 0;
         $conf->extra_packaging_status = $request->extra_packaging_status ?? 0;
         $conf->extra_packaging_amount = $request->extra_packaging_amount;
-        $conf->minimum_stock_for_warning = $request->minimum_stock_for_warning ?? ($conf->minimum_stock_for_warning ?? 0);
-        $conf->show_low_stock_count = $request->show_low_stock_count ?? ($conf->show_low_stock_count ?? 1);
+        $conf->minimum_stock_for_warning = $request->minimum_stock_for_warning ?? 0;
         $conf->save();
+
+        foreach ($data as $key=>$i) {
+
+            Translation::updateOrInsert(
+                ['translationable_type'  => 'App\Models\Store',
+                    'translationable_id'    => $store->id,
+                    'locale'                => $i['locale'],
+                    'key'                   => $i['key']],
+                ['value'                 => $i['value']]
+            );
+        }
 
         return response()->json(['message'=>translate('messages.store_settings_updated')], 200);
     }

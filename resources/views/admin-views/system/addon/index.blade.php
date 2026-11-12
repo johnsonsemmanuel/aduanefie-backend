@@ -44,7 +44,7 @@
                                     <div class="">
                                         <img src="{{asset('public/assets/admin/img/addon_setting.png')}}" loading="lazy" alt="" class="dark-support rounded mb-4 mw-100">
                                         <ol>
-                                            <li>{{translate('After purchasing the ')}} <strong>{{translate('Payment & SMS Module/ Rental Module/ Ride Share Module')}}</strong> {{translate('from Codecanyon, you will find a file download option.')}}</li>
+                                            <li>{{translate('After purchasing the ')}} <strong>{{translate('Payment & SMS Module/Rental Module')}}</strong> {{translate('from Codecanyon, you will find a file download option.')}}</li>
                                             <li>{{translate('Download the file. It will be downloaded as Zip format Filename.Zip.')}}</li>
                                             <li>{{translate('Extract the file and you will get another file name Filename.zip.')}}</li>
                                             <li>{{translate('Upload the file here and your Addon uploading is complete !')}}</li>
@@ -105,21 +105,16 @@
                             <div class="pl-sm-5">
                                 <h5 class="mb-3 d-flex">{{ translate('instructions') }}</h5>
                                 <ul class="pl-3 d-flex flex-column gap-2 instructions-list">
-                                    <li><h5>
-                                        {{ translate('please_make_sure') }}, {{ translate('your_server_php') }}
-                                       "upload_max_filesize" {{translate('value_is_grater_or_equal_to_20MB') }}. {{ translate('current_value_is') }}
-                                       - {{ini_get('upload_max_filesize')}}B
-
-                                    </h5>
+                                    <li>
+                                        1. {{ translate('please_make_sure') }}, {{ translate('your_server_php') }}
+                                        "upload_max_filesize" {{translate('value_is_grater_or_equal_to_20MB') }}. {{ translate('current_value_is') }}
+                                        - {{ini_get('upload_max_filesize')}}B
                                     </li>
                                     <li>
-                                        <h5>
-                                            {{ translate('please_make_sure')}}, {{ translate('your_server_php')}}
-                                           "post_max_size"
-                                           {{translate('value_is_grater_or_equal_to_20MB')}}
-                                           . {{translate('current_value_is') }} - {{ini_get('post_max_size')}}B
-
-                                        </h5>
+                                        2. {{ translate('please_make_sure')}}, {{ translate('your_server_php')}}
+                                        "post_max_size"
+                                        {{translate('value_is_grater_or_equal_to_20MB')}}
+                                        . {{translate('current_value_is') }} - {{ini_get('post_max_size')}}B
                                     </li>
                                 </ul>
                             </div>
@@ -127,40 +122,13 @@
                         <div class="col-12">
                             <div class="d-flex justify-content-end mt-3">
                                 <button type="button"
-                                    class="btn btn--primary px-4 {{ getEnvMode() == 'demo' ? 'call-demo' : 'zip-upload' }}" id="upload_theme">{{translate('upload')}}</button>
+                                    class="btn btn--primary px-4 zip-upload" id="upload_theme">{{translate('upload')}}</button>
                             </div>
                         </div>
                     </div>
                 </form>
             </div>
         </div>
-
-        {{-- Builder addon needs wildcard sub-domains so each vendor's storefront
-             resolves on its own sub-domain. Uses the platform's standard info-hint
-             bar; only shown once Builder is active. --}}
-        @if(addon_published_status('Builder'))
-            {{-- Reduce a sub-domain host (e.g. admin.example.com) to its registrable
-                 root domain (example.com) so the wildcard hint targets the main domain.
-                 Inline php-directive form only here: a raw php block breaks the other
-                 inline php directives above in this same file. --}}
-            @php($appHost = preg_replace('/^www\./i', '', parse_url(config('app.url'), PHP_URL_HOST) ?: 'yourdomain.com'))
-            @php($hostParts = explode('.', $appHost))
-            @php($secondLevelTlds = ['co', 'com', 'net', 'org', 'gov', 'edu', 'ac'])
-            @php($appHost = count($hostParts) > 2 ? implode('.', array_slice($hostParts, -(in_array($hostParts[count($hostParts) - 2], $secondLevelTlds) ? 3 : 2))) : $appHost)
-            <div class="fs-12 color-656565 px-3 py-2 bg-opacity-10 rounded bg-info mb-5">
-                <div class="d-flex align-items-start gap-2 mb-0">
-                    <span class="text-info fs-16">
-                        <i class="tio-light-on"></i>
-                    </span>
-                    <span>
-                        <strong>{{ translate('Builder addon is active') }}.</strong>
-                        {{ translate('To let vendors open their storefronts on their own sub-domains, configure a wildcard domain on your server') }}
-                        (<code>*.{{ $appHost }}</code>)
-                        {{ translate('pointing to this server, with a matching wildcard SSL certificate. Without it, vendor sub-domains will not resolve and their storefronts will not open.') }}
-                    </span>
-                </div>
-            </div>
-        @endif
 
         <!-- Theme Items -->
         <div class="row g-1 g-sm-2">
@@ -274,9 +242,6 @@
             @endforeach
             <!-- Activated Theme Modal -->
             @include('admin-views.system.addon.partials.activation-modal')
-
-            <!-- Builder Requirements-Not-Met Modal -->
-            @include('admin-views.system.addon.partials.builder-requirements-modal')
         </div>
     </div>
 
@@ -415,11 +380,6 @@
                             // console.log(data.view)
                             $('#activatedThemeModal').modal('show');
                             $('#activateData').empty().html(data.view);
-                        } else if (data.flag === 'requirements_missing') {
-                            // Builder pre-flight blocked activation —
-                            // server returned the rendered modal body
-                            $('#builderRequirementsData').empty().html(data.view);
-                            $('#builderRequirementsModal').modal('show');
                         } else {
                             if (data.errors) {
                                 for (let i = 0; i < data.errors.length; i++) {
@@ -435,7 +395,7 @@
                                 });
                                 setTimeout(function () {
                                     location.reload()
-                                }, 3000);
+                                }, 2000);
                             }
                         }
                     }
@@ -479,13 +439,6 @@
                 },
             });
         })
-
-        @if(session('builder_requirements_issues'))
-            // activation() flashed pre-flight issues — open the modal once on load.
-            $(function () {
-                $('#builderRequirementsModal').modal('show');
-            });
-        @endif
 
         let swiper = new Swiper(".mySwiper", {
             pagination: {

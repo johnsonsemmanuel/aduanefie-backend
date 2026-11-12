@@ -39,11 +39,6 @@ enum Zone
         VIEW => 'admin-views.zone.module-setup'
     ];
 
-    const SURGE_SETUP = [
-        URI => 'surge-setup',
-        VIEW => 'admin-views.zone.surge-setup'
-    ];
-
     const STATUS = [
         URI => 'status',
         VIEW => ''
@@ -81,11 +76,6 @@ enum Zone
 
     const GET_COORDINATES = [
         URI => 'zone/get-coordinates',
-        VIEW => ''
-    ];
-
-    const GET_ZONE = [
-        URI => 'zone/get-zone',
         VIEW => ''
     ];
 

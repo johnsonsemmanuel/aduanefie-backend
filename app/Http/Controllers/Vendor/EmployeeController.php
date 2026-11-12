@@ -103,7 +103,6 @@ class EmployeeController extends Controller
             }
             $pass = bcrypt($request['password']);
             $e->remember_token=null;
-            $e->login_remember_token=null;
         }
 
         if ($request->has('image')) {

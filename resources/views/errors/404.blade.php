@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
     <!-- Title -->
-    <title>{{translate('messages.error')}} 404 | {{\App\Models\BusinessSetting::where(['key'=>'business_name'])->first()->value??'Aduanefie'}}</title>
+    <title>{{translate('messages.error')}} 404 | {{\App\CentralLogics\Helpers::cached_business_setting('business_name') ?? 'Aduanefie Marketplace'}}</title>
 
     <!-- Favicon -->
     <link rel="shortcut icon" href="favicon.ico">
@@ -56,15 +56,12 @@
 <div class="footer text-center">
     <ul class="list-inline list-separator">
         <li class="list-inline-item">
-            <a class="list-separator-link" target="_blank" href="{{route('contact-us')}}">{{\App\Models\BusinessSetting::where(['key'=>'business_name'])->first()->value??'Aduanefie'}} {{translate('messages.support')}}</a>
+            <a class="list-separator-link" target="_blank" href="{{route('contact-us')}}">{{\App\CentralLogics\Helpers::cached_business_setting('business_name') ?? 'Aduanefie Marketplace'}} {{translate('messages.support')}}</a>
         </li>
     </ul>
 </div>
 <!-- End Footer -->
 
-
-<!-- JS Front -->
-<script src="{{asset('public/assets/admin')}}/js/theme.min.js"></script>
 </body>
 
 </html>

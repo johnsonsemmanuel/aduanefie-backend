@@ -63,7 +63,6 @@ class AddonRepository implements AddonRepositoryInterface
     {
         $addon = $this->addon->withoutGlobalScope(StoreScope::class)->find($id);
         $addon->translations()->delete();
-        $addon?->taxVats()->delete();
         $addon->delete();
 
         return true;

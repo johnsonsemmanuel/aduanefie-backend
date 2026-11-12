@@ -45,8 +45,6 @@
                     {{ $at->store->name}}
                     @elseif($at->deliveryman)
                     {{ $at->deliveryman->f_name }} {{ $at->deliveryman->l_name }}
-                    @elseif($at->rider)
-                    {{ $at->rider->f_name }} {{ $at->rider->l_name }}
                     @else
                         {{translate('messages.not_found')}}
                     @endif
@@ -57,8 +55,6 @@
                     {{ $at->store->phone}}
                     @elseif($at->deliveryman)
                     {{ $at->deliveryman->phone }}
-                    @elseif($at->rider)
-                    {{ $at->rider->phone }}
                     @else
                         {{translate('messages.not_found')}}
                     @endif
@@ -68,8 +64,6 @@
                     {{ $at->store->email}}
                     @elseif($at->deliveryman)
                     {{ $at->deliveryman->email }}
-                    @elseif($at->rider)
-                    {{ $at->rider->email }}
                     @else
                         {{translate('messages.not_found')}}
                     @endif

@@ -75,11 +75,11 @@ class DeliveryManRepository implements DeliveryManRepositoryInterface
     {
         $deliveryMan = $this->deliveryMan->find($id);
         Helpers::check_and_delete('delivery-man/' , $deliveryMan['image']);
-
+        
 
         foreach (json_decode($deliveryMan['identity_image'], true) as $img) {
             Helpers::check_and_delete('delivery-man/' , $img);
-
+        
         }
 
         if($deliveryMan->userinfo){
@@ -163,8 +163,7 @@ class DeliveryManRepository implements DeliveryManRepositoryInterface
     public function getFilterWiseListWhere(string $zoneId = 'all', string $searchValue = null, array $filters = [],  string $additionalFilter = null ,  string $jobType = null ,array $relations = [], int|string $dataLimit = DEFAULT_DATA_LIMIT, int $offset = null): Collection|LengthAwarePaginator
     {
         $key = explode(' ', $searchValue);
-        $data = $this->deliveryMan->with($relations)
-            ->where($filters)
+        $data = $this->deliveryMan->with($relations)->where($filters)
             ->when(is_numeric($zoneId), function($query) use($zoneId){
                 return $query->where('zone_id', $zoneId);
             })

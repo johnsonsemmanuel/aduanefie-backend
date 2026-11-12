@@ -72,7 +72,6 @@ class DeliveryManController extends Controller
             'email' => 'required|unique:delivery_men',
             'phone' => 'required|regex:/^([0-9\s\-\+\(\)]*)$/|min:10|unique:delivery_men',
             'password' => ['required', Password::min(8)->mixedCase()->letters()->numbers()->symbols()->uncompromised()],
-            'image' => 'required|image|max:2048|mimes:'.IMAGE_FORMAT_FOR_VALIDATION,
         ]);
 
         if ($validator->fails()) {
@@ -112,10 +111,7 @@ class DeliveryManController extends Controller
         $dm->password = bcrypt($request->password);
         $dm->save();
 
-        return response()->json([
-            'message' => translate('messages.deliveryman_added_successfully'),
-            'redirect' => route('vendor.delivery-man.list')
-        ], 200);
+        return response()->json(['message' => translate('messages.deliveryman_added_successfully')], 200);
 
     }
 
@@ -256,10 +252,7 @@ class DeliveryManController extends Controller
             $userinfo->save();
         }
 
-        return response()->json([
-            'message' => translate('messages.deliveryman_updated_successfully'),
-            'redirect' => route('vendor.delivery-man.list')
-        ], 200);
+        return response()->json(['message' => translate('messages.deliveryman_updated_successfully')], 200);
 
     }
 

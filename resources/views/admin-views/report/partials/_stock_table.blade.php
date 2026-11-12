@@ -27,7 +27,7 @@
         @endif
     </td>
     <td>
-        {{ max((int) $item->stock, 0) }}
+        {{$item->stock}}
     </td>
 
     <td>
@@ -36,3 +36,4 @@
     </td>
 </tr>
 @endforeach
+<script src="{{asset('public/assets/admin')}}/js/view-pages/common.js"></script>

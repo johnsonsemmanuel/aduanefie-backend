@@ -26,15 +26,16 @@
             <div class="card-body">
                 <div class="row flex-wrap">
                     <div>
-                        <div class="d-flex flex-wrap align-items-start gap-3 food--media position-relative mr-4">
-                            <div class="position-relative">
-                                @include('partials._product-media-slider', ['product' => $product])
+                        <div class="d-flex flex-wrap align-items-center food--media position-relative mr-4">
+                            <img class="avatar avatar-xxl avatar-4by3 onerror-image"
+                            src="{{ $product['image_full_url'] }}"
+                                 data-onerror-image="{{ asset('public/assets/admin/img/160x160/img2.jpg') }}"
+                                alt="Image Description">
                                 @if ($product['is_rejected'] == 1 )
-                                    <div class="reject-info"> {{ translate('Your_Item_Has_Been_Rejected') }}</div>
+                                <div class="reject-info"> {{ translate('Your_Item_Has_Been_Rejected') }}</div>
                                 @else
-                                    <div class="pending-info"> {{ translate('This_Item_Is_Under_Review') }}</div>
+                                <div class="pending-info"> {{ translate('This_Item_Is_Under_Review') }}</div>
                                 @endif
-                            </div>
                         </div>
                     </div>
                     <div class="w-70 flex-grow">
@@ -159,21 +160,15 @@
                                     <strong>{{ Str::limit(($product?->category?->parent ? $product?->category?->parent?->name : $product?->category?->name )  ?? translate('messages.uncategorize')
                                         , 20, '...') }}</strong>
                                 </span>
-
                                 <span class="d-block mb-1">
                                     <span>{{ translate('messages.Sub_Category') }} : </span>
-                                    <strong>{{ Str::limit(( $product?->category?->parent?->name ? $product?->category?->name : '---' )
+                                    <strong>{{ Str::limit(($product?->category?->name )  ?? translate('messages.uncategorize')
                                         , 20, '...') }}</strong>
                                 </span>
-
-                                @if (in_array($product->module->module_type, ['grocery', 'farm_inputs']))
+                                @if ($product->module->module_type == 'grocery')
                                 <span class="d-block mb-1">
                                     <span>{{ translate('messages.Is_Organic') }} : </span>
                                     <strong> {{  $product->organic == 1 ?  translate('messages.yes') : translate('messages.no') }}</strong>
-                                </span>
-                                <span class="d-block mb-1">
-                                    <span>{{ translate('messages.Is_In_Season') }} : </span>
-                                    <strong> {{  $product->is_in_season == 1 ?  translate('messages.yes') : translate('messages.no') }}</strong>
                                 </span>
                                 @endif
                                 @if ($product->module->module_type == 'food')
@@ -184,7 +179,7 @@
                                 @else
                                 <span class="d-block mb-1">
                                     <span>{{ translate('messages.Total_stock') }} : </span>
-                                    <strong> {{  max((int) $product->stock, 0)  }}</strong>
+                                    <strong> {{  $product->stock  }}</strong>
                                 </span>
 
                                     @if ($product?->unit)
@@ -219,7 +214,12 @@
                                     <strong> {{ $product->discount_type == 'percent' ? $product->discount .'%' :  \App\CentralLogics\Helpers::format_currency($product['discount']) }} </strong>
                                 </span>
 
+                                @php($tax_included = \App\Models\BusinessSetting::where('key', 'tax_included')->first()?->value)
 
+                                <span class="d-block mb-1">
+                                    <span>{{ translate('messages.tax') }} :</span>
+                                    <strong> {{ $product?->store?->tax .'%' }}  ({{  $tax_included == 1 ? translate('included') :  translate('excluded')}})</strong>
+                                </span>
 
                             </td>
 

@@ -15,8 +15,9 @@
                 </span>
             </h1>
         </div>
-        @php($language=\App\CentralLogics\Helpers::get_business_settings('language') ?? [])
-
+        @php($language=\App\Models\BusinessSetting::where('key','language')->first())
+        @php($language = $language->value ?? null)
+        @php($defaultLang = str_replace('_', '-', app()->getLocale()))
         <!-- End Page Header -->
         <div class="row g-3">
             <div class="col-12">
@@ -31,7 +32,7 @@
                                             href="#"
                                             id="default-link">{{translate('messages.default')}}</a>
                                         </li>
-                                        @foreach ($language as $lang)
+                                        @foreach (json_decode($language) as $lang)
                                             <li class="nav-item">
                                                 <a class="nav-link lang_link"
                                                     href="#"
@@ -46,15 +47,15 @@
                                                 <div class="form-group">
                                                     <label class="input-label"
                                                         for="default_title">{{ translate('messages.title') }}
-                                                        ({{translate('messages.default')}}) <span class="text-danger">*</span>
+                                                        ({{translate('messages.default')}})
                                                     </label>
                                                     <input type="text" name="title[]" id="default_title"
                                                         class="form-control" maxlength="100" placeholder="{{ translate('messages.ex_:_new_flash_sale') }}"
-                                                        required>
+                                                    >
                                                 </div>
                                                 <input type="hidden" name="lang[]" value="default">
                                             </div>
-                                        @foreach ($language as $lang)
+                                        @foreach (json_decode($language) as $lang)
                                             <div class="d-none lang_form"
                                                 id="{{ $lang }}-form">
                                                 <div class="form-group">
@@ -69,7 +70,7 @@
                                             </div>
                                         @endforeach
                                         </div>
-                                        <div class="col-xl-6">
+                                        <div class="col-6">
                                             <div class="form-group">
                                                 <label class="input-label"
                                                     for="default_title">{{ translate('messages.discount_Bearer') }}
@@ -79,38 +80,38 @@
                                                 </label>
                                             </div>
                                             <div class="row g-3 __bg-F8F9FC-card">
-                                                <div class="col-lg-6">
-                                                    <label class="form-label">{{ translate('admin') }}(%) <span class="text-danger">*</span></label>
-                                                <input type="number"  min="{{\App\CentralLogics\Helpers::getDecimalPlaces() }}" step="{{\App\CentralLogics\Helpers::getDecimalPlaces() }}" max="100" name="admin_discount_percentage"
+                                                <div class="col-sm-6">
+                                                    <label class="form-label">{{ translate('admin') }}(%)</label>
+                                                <input type="number"  min=".01" step="0.001" max="100" name="admin_discount_percentage"
                                                         value=""
                                                         class="form-control" id="adminDiscount"
                                                         placeholder="{{ translate('Ex_:_50') }}" required>
                                                 </div>
-                                                <div class="col-lg-6">
-                                                    <label class="form-label">{{ translate('messages.store_owner') }}(%) <span class="text-danger">*</span></label>
-                                                <input type="number"  min="{{ \App\CentralLogics\Helpers::getDecimalPlaces() }}" step="{{ \App\CentralLogics\Helpers::getDecimalPlaces() }}" max="100" name="vendor_discount_percentage"
+                                                <div class="col-sm-6">
+                                                    <label class="form-label">{{ translate('messages.store_owner') }}(%)</label>
+                                                <input type="number"  min=".01" step="0.001" max="100" name="vendor_discount_percentage"
                                                         value=""
                                                         class="form-control" id="storeDiscount"
                                                         placeholder="{{ translate('Ex_:_50') }}" required>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="col-xl-6">
+                                        <div class="col-6">
                                             <div class="form-group">
                                                 <label class="input-label"
                                                     for="default_title">{{ translate('messages.validity') }}
                                                 </label>
                                             </div>
                                             <div class="row g-3 __bg-F8F9FC-card">
-                                                <div class="col-lg-6">
+                                                <div class="col-6">
                                                     <div>
-                                                        <label class="input-label" for="title">{{translate('messages.start_date')}} <span class="text-danger">*</span></label>
+                                                        <label class="input-label" for="title">{{translate('messages.start_date')}}</label>
                                                         <input type="datetime-local" id="from" class="form-control" required="" name="start_date">
                                                     </div>
                                                 </div>
-                                                <div class="col-lg-6">
+                                                <div class="col-6">
                                                     <div>
-                                                        <label class="input-label" for="title">{{translate('messages.end_date')}} <span class="text-danger">*</span></label>
+                                                        <label class="input-label" for="title">{{translate('messages.end_date')}}</label>
                                                         <input type="datetime-local" id="to" class="form-control" required="" name="end_date">
                                                     </div>
                                                 </div>
@@ -144,7 +145,7 @@
                                 </div>
                                 <!-- End Search -->
                             </form>
-                            @if(request()->input('search'))
+                            @if(request()->get('search'))
                             <button type="reset" class="btn btn--primary ml-2 location-reload-to-base" data-url="{{url()->full()}}">{{translate('messages.reset')}}</button>
                             @endif
 
@@ -185,7 +186,7 @@
                                         </span>
                                     </td>
                                     <td class="text-center">
-                                        <span class="bg-gradient-light text-dark">{{$flash_sale->start_date?$flash_sale->start_date->format('d/M/Y'). ' - ' .$flash_sale->end_date->format('d/M/Y'): 'N/A'}}</span>
+                                        <span class="bg-light text-dark">{{$flash_sale->start_date?$flash_sale->start_date->format('d/M/Y'). ' - ' .$flash_sale->end_date->format('d/M/Y'): 'N/A'}}</span>
                                     </td>
                                     <td class="text-center">
                                         <span class="font-size-sm text-body mr-3">
@@ -197,8 +198,8 @@
                                             <input type="checkbox" class="toggle-switch-input dynamic-checkbox" {{$flash_sale->is_publish?'checked':''}}
                                                     data-id="is_publish-{{$flash_sale['id']}}"
                                                    data-type="status"
-                                                   data-image-on='{{asset('/public/assets/admin/img/modal')}}/zone-status-on.png'
-                                                   data-image-off="{{asset('/public/assets/admin/img/modal')}}/zone-status-off.png"
+                                                   data-image-on='{{asset('/public/assets/admin/img/modal')}}/zone-is_publish-on.png'
+                                                   data-image-off="{{asset('/public/assets/admin/img/modal')}}/zone-is_publish-off.png"
                                                    data-title-on="{{translate('Want_to_publish_this_flash_sale?')}}"
                                                    data-title-off="{{translate('Want_to_hide_this_flash_sale?')}}"
                                                    data-text-on="<p>{{translate('If_you_publish_this_flash_sale,_Customers_can_see_all_stores_&_products_available_under_this_flash_sale_from_the_Customer_App_&_Website._other_flash_sales_will_be_turned_off.')}}</p>"

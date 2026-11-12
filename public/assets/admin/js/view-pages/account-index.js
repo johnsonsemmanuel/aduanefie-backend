@@ -12,24 +12,12 @@ $(document).on('ready', function () {
             $('#store').removeAttr("disabled");
             $('#deliveryman').val("").trigger( "change" );
             $('#deliveryman').attr("disabled","true");
-            $('#rider').val("").trigger( "change" );
-            $('#rider').attr("disabled","true");
         }
         else if($('#type').val() == 'deliveryman')
         {
             $('#deliveryman').removeAttr("disabled");
             $('#store').val("").trigger( "change" );
             $('#store').attr("disabled","true");
-            $('#rider').val("").trigger( "change" );
-            $('#rider').attr("disabled","true");
-        }
-        else if($('#type').val() == 'rider')
-        {
-            $('#rider').removeAttr("disabled");
-            $('#store').val("").trigger( "change" );
-            $('#store').attr("disabled","true");
-            $('#deliveryman').val("").trigger( "change" );
-            $('#deliveryman').attr("disabled","true");
         }
     });
 });
@@ -37,8 +25,6 @@ $('#reset_btn').click(function(){
     $('#store').val(null).trigger('change');
     $('#deliveryman').val(null).trigger('change');
     $('#deliveryman').removeAttr("disabled");
-    $('#rider').val(null).trigger('change');
-    $('#rider').removeAttr("disabled");
     $('#store').val("").trigger( "change" );
     $('#store').attr("disabled","true");
 

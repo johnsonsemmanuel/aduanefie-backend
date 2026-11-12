@@ -207,7 +207,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
-{{-- Font Awesome removed — icons replaced with TIO --}}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 
 <body>
 <div class="first">
@@ -221,7 +221,7 @@
                 </h4>
             </th>
             <th class="content-position-y text-right">
-                <img height="50" src="{{asset("/storage/business/$company_web_logo")}}" alt="">
+                <img height="50" src="{{asset("/storage/app/public/business/$company_web_logo")}}" alt="">
             </th>
         </tr>
     </table>
@@ -243,11 +243,8 @@
                                         @else
                                         <p class="fz-14" style="margin-top: 6px; margin-bottom:0px;">{{translate('messages.store_not_found')}}</p>
                                     @endif
-                                    @php($delivery_address = $order_transaction->order ? (is_array($order_transaction->order->delivery_address) ? $order_transaction->order->delivery_address : json_decode($order_transaction->order->delivery_address, true)) : null)
                                     @if (isset($order_transaction->order->customer) )
                                         <p class="fz-14" style=" margin-top: 6px; margin-bottom:0px;">{{translate('customer')}} : {{$order_transaction->order->customer['f_name'] . ' ' . $order_transaction->order->customer['l_name']}}</p>
-                                    @elseif (!empty($delivery_address['contact_person_name']))
-                                        <p class="fz-14" style=" margin-top: 6px; margin-bottom:0px;">{{translate('customer')}} : {{ $delivery_address['contact_person_name'] }}</p>
                                     @endif
                                 </div>
                                 </p>
@@ -301,77 +298,53 @@
             @endphp
             <tbody>
                 <tr>
-                    @php
-                    $count = 1;
-                    @endphp
-                    <td>{{  $count++ }}</td>
+                    <td>1</td>
                     <td>{{translate('messages.total_item_amount')}}</td>
-                    <td>{{ \App\CentralLogics\Helpers::format_currency($order_transaction->order['order_amount'] - $order_transaction->additional_charge - $order_transaction->order['dm_tips']-\App\CentralLogics\DeliveryFeeLogic::adjustedFeeForOrder($order_transaction->order)['adjusted'] - $order_transaction['tax']  + $order_transaction->order['coupon_discount_amount'] + $order_transaction->order['store_discount_amount']+$order_transaction->order['flash_admin_discount_amount']  +$order_transaction->order['flash_store_discount_amount'] + $order_transaction->order['ref_bonus_amount'] - $order_transaction->order['extra_packaging_amount'] + $order_transaction->order['extra_discount_amount'] + ($order_transaction->pro_discount ?? 0)) }}</td>
+                    <td>{{ \App\CentralLogics\Helpers::format_currency($order_transaction->order['order_amount'] - $order_transaction->additional_charge - $order_transaction->order['dm_tips']-$order_transaction->order['delivery_charge'] - $order_transaction['tax']  + $order_transaction->order['coupon_discount_amount'] + $order_transaction->order['store_discount_amount']+$order_transaction->order['flash_admin_discount_amount']  +$order_transaction->order['flash_store_discount_amount'] + $order_transaction->order['ref_bonus_amount'] - $order_transaction->order['extra_packaging_amount']) }}</td>
                 </tr>
                 <tr>
-                   <td>{{  $count++ }}</td>
+                    <td>2</td>
                     <td>{{translate('messages.item_discount')}}</td>
-                    @if ($order_transaction->discount_type == 'flash_sale')
-                    <td>{{ \App\CentralLogics\Helpers::format_currency($order_transaction->order['flash_admin_discount_amount'] +$order_transaction->order['flash_store_discount_amount']) }}</td>
-                        @else
-                    <td>{{ \App\CentralLogics\Helpers::format_currency($order_transaction->order->details()->sum(DB::raw('discount_on_item * quantity')) ) }}</td>
-                    @endif
+                    <td>{{ \App\CentralLogics\Helpers::format_currency($order_transaction->order->details()->sum(DB::raw('discount_on_item * quantity')) + $order_transaction->order['flash_admin_discount_amount'] +$order_transaction->order['flash_store_discount_amount']) }}</td>
                 </tr>
                 <tr>
-                     <td>{{  $count++ }}</td>
+                    <td>3</td>
                     <td>{{translate('messages.total_coupon_discount')}}</td>
                     <td>{{ \App\CentralLogics\Helpers::format_currency($order_transaction->order['coupon_discount_amount']) }}</td>
                 </tr>
                 <tr>
-                      <td>{{  $count++ }}</td>
+                    <td>4</td>
                     <td>{{translate('messages.referral_discount')}}</td>
                     <td>{{ \App\CentralLogics\Helpers::format_currency($order_transaction->order['ref_bonus_amount']) }}</td>
                 </tr>
-                @if (($order_transaction->pro_discount ?? 0) > 0)
                 <tr>
-                      <td>{{  $count++ }}</td>
-                    <td>{{translate('messages.Pro_Discount')}}</td>
-                    <td>{{ \App\CentralLogics\Helpers::format_currency($order_transaction->pro_discount) }}</td>
-                </tr>
-                @endif
-
-                @if ($order_transaction->order['extra_discount_amount'] > 0)
-                <tr>
-                     <td>{{  $count++ }}</td>
-                    <td>{{translate('Extra_Discount')}}</td>
-                    <td>{{ \App\CentralLogics\Helpers::format_currency($order_transaction->order['extra_discount_amount']) }}</td>
-                </tr>
-                @endif
-
-
-                <tr>
-                    <td>{{  $count++ }}</td>
+                    <td>5</td>
                     <td>{{translate('messages.total_discounted_amount')}}</td>
-                    <td>{{ \App\CentralLogics\Helpers::format_currency($order_transaction->order['coupon_discount_amount'] + $order_transaction->order['store_discount_amount']+$order_transaction->order['ref_bonus_amount'] +$order_transaction->order['flash_admin_discount_amount'] +$order_transaction->order['flash_store_discount_amount'] + $order_transaction->order['extra_discount_amount'] + ($order_transaction->pro_discount ?? 0)) }}</td>
+                    <td>{{ \App\CentralLogics\Helpers::format_currency($order_transaction->order['coupon_discount_amount'] + $order_transaction->order['store_discount_amount']+$order_transaction->order['ref_bonus_amount'] +$order_transaction->order['flash_admin_discount_amount'] +$order_transaction->order['flash_store_discount_amount']) }}</td>
                 </tr>
                 <tr>
-                     <td>{{  $count++ }}</td>
+                    <td>6</td>
                     <td>{{translate('messages.total_vat/_tax')}}</td>
                     <td>{{ \App\CentralLogics\Helpers::format_currency($order_transaction->tax) }}</td>
                 </tr>
                 <tr>
-                    <td>{{  $count++ }}</td>
+                    <td>7</td>
                     <td>{{translate('messages.total_delivery_charge')}}</td>
                     <td>{{ \App\CentralLogics\Helpers::format_currency($order_transaction->delivery_charge) }}</td>
                 </tr>
                 <tr>
-                   <td>{{  $count++ }}</td>
+                    <td>8</td>
                     <td>{{\App\CentralLogics\Helpers::get_business_data('additional_charge_name')??translate('messages.additional_charge')}}</td>
                     <td>{{ \App\CentralLogics\Helpers::format_currency($order_transaction->additional_charge) }}</td>
                 </tr>
                 <tr>
-                     <td>{{  $count++ }}</td>
+                    <td>9</td>
                     <td>{{translate('messages.extra_packaging_amount')}}</td>
                     <td>{{ \App\CentralLogics\Helpers::format_currency($order_transaction->extra_packaging_amount) }}</td>
                 </tr>
 
                 <tr>
-                     <td>{{  $count++ }}</td>
+                    <td>10</td>
                     <td>{{translate('messages.total_order_amount')}}</td>
                     <td>{{ \App\CentralLogics\Helpers::format_currency($order_transaction->order_amount) }}</td>
                 </tr>
@@ -405,7 +378,7 @@
                 </tr>
                 <tr>
                     <td>{{translate('messages.store_net_income')}}</td>
-                    <td>{{ \App\CentralLogics\Helpers::format_currency($order_transaction->store_amount - ($order_transaction?->order?->order_type == 'parcel' ? 0: $order_transaction->tax)) }}</td>
+                    <td>{{ \App\CentralLogics\Helpers::format_currency($order_transaction->store_amount - $order_transaction->tax) }}</td>
                 </tr>
             </tbody>
         </table>
@@ -427,12 +400,12 @@
                 <th class="content-position-y bg-light py-4">
                     <div class="d-flex justify-content-center gap-2">
                         <div class="mb-2">
-                            <i class="tio-phone"></i>
+                            <i class="fa fa-phone"></i>
                             {{translate('phone')}}
                             : {{ $company_phone }}
                         </div>
                         <div class="mb-2">
-                            <i class="tio-email" aria-hidden="true"></i>
+                            <i class="fa fa-envelope" aria-hidden="true"></i>
                             {{translate('email')}}
                             : {{$company_email}}
                         </div>

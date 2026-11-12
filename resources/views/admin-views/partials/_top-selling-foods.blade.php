@@ -27,7 +27,7 @@
                         data-onerror-image="{{ asset('public/assets/admin/img/placeholder-2.png') }}"
                         alt="{{ $item->name }} image">
                     <div class="cont pt-2" title="{{ $item?->name }}">
-                        <span class="fz--13 text-hover--primary">{{ Str::limit($item['name'], 20, '...') }}</span>
+                        <span class="fz--13">{{ Str::limit($item['name'], 20, '...') }}</span>
                     </div>
                     <div class="ml-auto">
                         <span class="badge badge-soft">
@@ -38,17 +38,13 @@
             @endforeach
         </div>
     @else
-        <!-- <div class="empty--data">
+        <div class="empty--data">
             <img src="{{ asset('/public/assets/admin/svg/illustrations/empty-state.svg') }}" alt="public">
             <h5>
                 {{ translate('no_data_found') }}
             </h5>
-        </div> -->
-        <div class="empty--data d-flex flex-column align-items-center justify-content-center h-100 w-100">
-            <img src="{{ asset('/public/assets/admin/img/no-items.png') }}" alt="public">
-            <h5 class="secondary-clr">
-                {{ translate('No items available') }}
-            </h5>
         </div>
     @endif
 </div>
+
+<script src="{{ asset('public/assets/admin') }}/js/view-pages/common.js"></script>

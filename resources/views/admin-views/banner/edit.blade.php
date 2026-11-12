@@ -20,7 +20,10 @@
             <div class="col-sm-12 col-lg-12 mb-3 mb-lg-2">
                 <div class="card">
                     <div class="card-body">
-                        <form data-ajax="true" id="banner_form" class="custom-validation">
+                        <form action="{{route('admin.banner.update', [$banner->id])}}" method="post"
+                            id="banner_form"
+                            >
+                            @csrf
                             <div class="row g-3">
                                 <div class="col-lg-6">
                                     @if($language)
@@ -39,9 +42,9 @@
                                             @endforeach
                                         </ul>
                                         <div class="lang_form" id="default-form">
-                                            <div class="form-group error-wrapper">
+                                            <div class="form-group">
                                                 <label class="input-label" for="default_title">{{translate('messages.title')}} ({{translate('messages.default')}})</label>
-                                                <input type="text" name="title[]" id="default_title" class="form-control" placeholder="{{translate('messages.new_banner')}}" required value="{{$banner?->getRawOriginal('title')}}">
+                                                <input type="text" name="title[]" id="default_title" class="form-control" placeholder="{{translate('messages.new_banner')}}" value="{{$banner?->getRawOriginal('title')}}">
                                             </div>
                                             <input type="hidden" name="lang[]" value="default">
                                         </div>
@@ -58,7 +61,7 @@
                                                 }
                                             ?>
                                             <div class="d-none lang_form" id="{{$lang}}-form">
-                                                <div class="form-group error-wrapper">
+                                                <div class="form-group">
                                                     <label class="input-label" for="{{$lang}}_title">{{translate('messages.title')}} ({{strtoupper($lang)}})</label>
                                                     <input type="text" name="title[]" id="{{$lang}}_title" class="form-control" placeholder="{{translate('messages.new_banner')}}" value="{{$translate[$lang]['title']??''}}">
                                                 </div>
@@ -67,19 +70,19 @@
                                         @endforeach
                                     @else
                                     <div id="default-form">
-                                        <div class="form-group error-wrapper">
+                                        <div class="form-group">
                                             <label class="input-label" for="exampleFormControlInput1">{{translate('messages.title')}} ({{ translate('messages.default') }})</label>
                                             <input type="text" name="title[]" class="form-control" placeholder="{{translate('messages.new_banner')}}" value="{{$banner['title']}}" maxlength="100">
                                         </div>
                                         <input type="hidden" name="lang[]" value="default">
                                     </div>
                                     @endif
-                                    <div class="form-group error-wrapper">
+                                    <div class="form-group">
                                         <label class="input-label" for="title">{{translate('messages.zone')}}</label>
                                         <select name="zone_id" id="zone" class="form-control js-select2-custom">
                                             <option  disabled selected>---{{translate('messages.select')}}---</option>
                                             @foreach($zones as $zone)
-                                                @if(auth('admin')?->user()?->zone_id)
+                                                @if(isset(auth('admin')->user()->zone_id))
                                                     @if(auth('admin')->user()->zone_id == $zone->id)
                                                         <option value="{{$zone['id']}}" {{$zone->id == $banner->zone_id?'selected':''}}>{{$zone['name']}}</option>
                                                     @endif
@@ -89,7 +92,7 @@
                                             @endforeach
                                         </select>
                                     </div>
-                                    <div class="form-group error-wrapper">
+                                    <div class="form-group">
                                         <label class="input-label" for="exampleFormControlInput1">{{translate('messages.banner_type')}}</label>
                                         <select name="banner_type" id="banner_type" class="form-control">
                                             <option value="store_wise" {{$banner->type == 'store_wise'? 'selected':'' }}>{{translate('messages.store_wise')}}</option>
@@ -97,45 +100,43 @@
                                             <option value="default" {{$banner->type == 'default'? 'selected':'' }}>{{translate('messages.default')}}</option>
                                         </select>
                                     </div>
-                                    <div class="form-group mb-0 error-wrapper" id="store_wise">
+                                    <div class="form-group mb-0" id="store_wise">
                                         <label class="input-label" for="exampleFormControlSelect1">{{translate('messages.store')}}<span
                                                 class="input-label-secondary"></span></label>
-                                        <select name="store_id" id="store_id" class="js-data-example-ajax"  title="Select Restaurant">
+                                        <select name="store_id" id="store_id" class="js-data-example-ajax" id="resturant_ids"  title="Select Restaurant">
                                         @if($banner->type=='store_wise')
                                         @php($store = \App\Models\Store::where('id', $banner->data)->first())
                                             @if($store)
-                                            <option value="{{$store->id}}" data-verified="{{ (int) $store->verified_seller }}" selected>{{$store->name}}</option>
+                                            <option value="{{$store->id}}" selected>{{$store->name}}</option>
                                             @endif
                                         @endif
                                         </select>
                                     </div>
-                                    <div class="form-group mb-0 error-wrapper" id="item_wise">
+                                    <div class="form-group mb-0" id="item_wise">
                                         <label class="input-label" for="exampleFormControlInput1">{{translate('messages.select_item')}}</label>
                                         <select name="item_id" id="choice_item" class="form-control js-select2-custom" placeholder="{{translate('messages.select_item')}}">
 
                                         </select>
                                     </div>
-                                    <div class="form-group mb-0 error-wrapper" id="default">
+                                    <div class="form-group mb-0" id="default">
                                         <label class="input-label" for="exampleFormControlInput1">{{translate('messages.default_link')}}</label>
                                         <input type="text" name="default_link" class="form-control" value="{{ $banner->default_link }}" placeholder="{{translate('messages.default_link')}}">
                                     </div>
                                 </div>
                                 <div class="col-lg-6">
-                                    <div class="error-wrapper">
-                                        <div class="h-100 d-flex flex-column">
-                                            <label class="mt-auto mb-0 d-block text-center">
-                                                {{translate('messages.banner_image')}}
-                                                <small class="text-danger">* ( {{translate('messages.ratio')}} 900x300 )</small>
-                                            </label>
-                                            <div class="text-center py-3 my-auto">
-                                                <img class="img--vertical onerror-image" id="viewer" data-onerror-image="{{asset('public/assets/admin/img/900x400/img1.jpg')}}" src="{{ $banner['image_full_url'] }}"
-                                                alt="banner image"/>
-                                            </div>
-                                            <div class="custom-file">
-                                                <input type="file" name="image" id="customFileEg1" class="custom-file-input"
-                                                    accept=".webp, .jpg, .png, .jpeg, .gif, .bmp, .tif, .tiff|image/*">
-                                                <label class="custom-file-label" for="customFileEg1">{{translate('messages.choose_file')}}</label>
-                                            </div>
+                                    <div class="h-100 d-flex flex-column">
+                                        <label class="mt-auto mb-0 d-block text-center">
+                                            {{translate('messages.banner_image')}}
+                                            <small class="text-danger">* ( {{translate('messages.ratio')}} 900x300 )</small>
+                                        </label>
+                                        <div class="text-center py-3 my-auto">
+                                            <img class="img--vertical onerror-image" id="viewer" data-onerror-image="{{asset('public/assets/admin/img/900x400/img1.jpg')}}" src="{{ $banner['image_full_url'] }}"
+                                            alt="banner image"/>
+                                        </div>
+                                        <div class="custom-file">
+                                            <input type="file" name="image" id="customFileEg1" class="custom-file-input"
+                                                accept=".webp, .jpg, .png, .jpeg, .gif, .bmp, .tif, .tiff|image/*">
+                                            <label class="custom-file-label" for="customFileEg1">{{translate('messages.choose_file')}}</label>
                                         </div>
                                     </div>
                                 </div>
@@ -191,17 +192,17 @@
                 if($(this).val())
                 {
                     zone_id = $(this).val();
-                    get_items();
+                    // get_items();
                 }
                 else
                 {
-                    zone_id = [];
+                    zone_id = true;
                 }
             });
 
             $('.js-data-example-ajax').select2({
                 ajax: {
-                    url: '{{ route('admin.store.get-stores') }}',
+                    url: '{{url('/')}}/admin/store/get-stores',
                     data: function (params) {
                         return {
                             q: params.term, // search term
@@ -239,12 +240,6 @@
         @endif
         $('#banner_form').on('submit', function (e) {
             e.preventDefault();
-
-            let $form = $(this);
-            if (!$form.valid()) {
-                return false;
-            }
-
             var formData = new FormData(this);
             $.ajaxSetup({
                 headers: {
@@ -276,7 +271,6 @@
                     }
                 }
             });
-
         });
     </script>
 @endpush

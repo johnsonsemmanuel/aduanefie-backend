@@ -147,16 +147,8 @@ class VendorLoginController extends Controller
             'password' => ['required', Password::min(8)->mixedCase()->letters()->numbers()->symbols()->uncompromised()],
             'zone_id' => 'required',
             'module_id' => 'required',
-            'logo' => 'required|image|max:2048|mimes:'.IMAGE_FORMAT_FOR_VALIDATION,
-            'cover_photo' => 'nullable|image|max:2048|mimes:'.IMAGE_FORMAT_FOR_VALIDATION,
-            'store_type' => 'nullable|string|in:default,farm',
-            'farm_name' => 'nullable|required_if:store_type,farm|max:255',
-            'growing_area_sqm' => 'nullable|required_if:store_type,farm|integer|min:1',
-            'primary_crops' => 'nullable|required_if:store_type,farm|array',
-            'farming_method' => 'nullable|required_if:store_type,farm|string|in:organic,mixed,conventional',
-            'farm_photos.*' => 'nullable|image|max:2048|mimes:'.IMAGE_FORMAT_FOR_VALIDATION,
-            'ghana_card_number' => 'nullable|required_if:store_type,farm|string|max:255',
-            'ghana_card_image' => 'nullable|required_if:store_type,farm|image|max:2048|mimes:'.IMAGE_FORMAT_FOR_VALIDATION,
+            'logo' => 'required',
+            'tax' => 'required'
         ],[
             'password.required' => translate('The password is required'),
             'password.min_length' => translate('The password must be at least :min characters long'),
@@ -214,23 +206,59 @@ class VendorLoginController extends Controller
         $store->longitude = $request->longitude;
         $store->vendor_id = $vendor->id;
         $store->zone_id = $request->zone_id;
-        $store->tin = $request->tin;
-        $store->tin_expire_date = $request->tin_expire_date == 'null' ? null : $request->tin_expire_date;
-        $extension = $request->file('tin_certificate_image') ? $request->file('tin_certificate_image')->getClientOriginalExtension() : 'png';
-        $store->tin_certificate_image = Helpers::upload('store/', $extension, $request->file('tin_certificate_image'));
+        $store->tax = $request->tax;
         $store->delivery_time = $request->minimum_delivery_time .'-'. $request->maximum_delivery_time.' '.$request->delivery_time_type;
         $store->module_id = $request->module_id;
         $store->status = 0;
         $store->store_business_model = 'none';
         $store->pickup_zone_id = $request['pickup_zone_id'] ?? json_encode([]);
-        $store->store_type = $request->store_type ?? 'default';
-        $store->farm_name = $request->farm_name;
-        $store->growing_area_sqm = $request->growing_area_sqm;
-        $store->primary_crops = $request->primary_crops ? json_encode($request->primary_crops) : null;
-        $store->farming_method = $request->farming_method;
-        $store->farm_photos = $request->farm_photos ? json_encode($request->farm_photos) : null;
-        $store->ghana_card_number = $request->ghana_card_number;
-        $store->ghana_card_image = $request->ghana_card_image ? Helpers::upload('store/', 'png', $request->file('ghana_card_image')) : null;
+
+        $storeColumns = \Illuminate\Support\Facades\Schema::getColumnListing('stores');
+        $farmType = $request->input('farm_type', 'commercial');
+        if (! in_array($farmType, ['commercial', 'backyard', 'cooperative', 'exporter', 'agribusiness'], true)) {
+            $farmType = 'commercial';
+        }
+        $isBackyard = (bool) ($request->boolean('is_backyard') || $farmType === 'backyard');
+
+        $optionalStoreFields = [
+            'farm_type' => $farmType,
+            'is_backyard' => $isBackyard,
+            'country' => $request->input('country', 'Ghana'),
+            'region' => $request->input('region'),
+            'farm_size_acres' => $request->filled('farm_size_acres') ? (float) $request->input('farm_size_acres') : null,
+            'primary_crops' => $request->input('primary_crops'),
+            'cultivation_status' => in_array($request->input('cultivation_status'), ['active', 'farming', 'harvest_ready'], true)
+                ? $request->input('cultivation_status')
+                : 'active',
+            'next_harvest_date' => $request->input('next_harvest_date') ?: null,
+        ];
+        foreach ($optionalStoreFields as $col => $val) {
+            if (in_array($col, $storeColumns, true)) {
+                $store->{$col} = $val;
+            }
+        }
+
+        if (in_array('marketer_id', $storeColumns, true)) {
+            $marketer = null;
+            if ($request->filled('marketer_id') && is_numeric($request->marketer_id)) {
+                $marketer = Admin::find((int) $request->marketer_id);
+            } elseif ($request->filled('marketer_code')) {
+                $rawCode = trim((string) $request->marketer_code);
+                if (\Illuminate\Support\Facades\Schema::hasColumn('admins', 'marketer_code')) {
+                    $marketer = Admin::whereRaw('LOWER(marketer_code) = ?', [strtolower($rawCode)])->first();
+                }
+                if (! $marketer && preg_match('/^(?:MKT-)?(\d+)$/i', $rawCode, $m)) {
+                    $marketer = Admin::find((int) $m[1]);
+                }
+            }
+            if ($marketer) {
+                $store->marketer_id = $marketer->id;
+                if (in_array('marketer_assigned_at', $storeColumns, true)) {
+                    $store->marketer_assigned_at = now();
+                }
+            }
+        }
+
         $store->save();
         // $store->module->increment('stores_count');
         if(config('module.'.$store->module->module_type)['always_open'])
@@ -257,10 +285,10 @@ class VendorLoginController extends Controller
 
             $mail_status = Helpers::get_mail_status('store_registration_mail_status_admin');
             if($module?->module_type != 'rental' && config('mail.status') && $mail_status == '1' &&  Helpers::getNotificationStatusData('admin','store_self_registration','mail_status')){
-                Mail::to($admin?->getRawOriginal('email'))->send(new StoreRegistration('pending', $vendor->f_name.' '.$vendor->l_name));
+                Mail::to($admin['email'])->send(new StoreRegistration('pending', $vendor->f_name.' '.$vendor->l_name));
             }
             elseif($module?->module_type == 'rental' && addon_published_status('Rental') && config('mail.status') && Helpers::get_mail_status('rental_provider_registration_mail_status_admin') == '1' &&  Helpers::getRentalNotificationStatusData('admin','provider_self_registration','mail_status') ){
-                Mail::to($admin?->getRawOriginal('email'))->send(new ProviderRegistration('pending', $vendor->f_name.' '.$vendor->l_name));
+                Mail::to($admin['email'])->send(new ProviderRegistration('pending', $vendor->f_name.' '.$vendor->l_name));
             }
         }catch(\Exception $ex){
             info($ex->getMessage());

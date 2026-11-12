@@ -27,7 +27,7 @@
                             class="onerror-image"
                             data-onerror-image="{{ asset('public/assets/admin/img/100x100/2.png') }}"
                             alt="{{ Str::limit($item->name ?? translate('messages.Item deleted!'), 20, '...') }}">
-                        <span class="line--limit-1 w-0 flex-grow-1 text-hover--primary" title="{{ $item?->name }}">
+                        <span class="line--limit-1 w-0 flex-grow-1" title="{{ $item?->name }}">
                             {{ Str::limit($item->name ?? translate('messages.Item deleted!'), 20, '...') }}
                         </span>
                         <div>
@@ -39,16 +39,10 @@
             @endforelse
         </div>
     @else
-        <!-- <div class="empty--data">
-            <img src="{{ asset('/public/assets/admin/img/illustrations/empty-state.svg') }}" alt="public">
+        <div class="empty--data">
+            <img src="{{ asset('/public/assets/admin/svg/illustrations/empty-state.svg') }}" alt="public">
             <h5>
                 {{ translate('no_data_found') }}
-            </h5>
-        </div> -->
-        <div class="empty--data d-flex flex-column align-items-center justify-content-center h-100 w-100">
-            <img src="{{ asset('/public/assets/admin/img/no-items.png') }}" alt="public">
-            <h5 class="secondary-clr">
-                {{ translate('No stores available') }}
             </h5>
         </div>
     @endif
@@ -60,3 +54,5 @@
 
 
 </div>
+
+<script src="{{ asset('public/assets/admin') }}/js/view-pages/common.js"></script>

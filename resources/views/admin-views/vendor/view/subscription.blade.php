@@ -15,141 +15,68 @@
     @if ($store->store_business_model == 'commission' &&  \App\CentralLogics\Helpers::commission_check())
 
     <div class="card mb-3">
-        <div class="card-header flex-wrap gap-2 border-0 align-items-center">
-            <div>
-                <h3 class="card-title mb-1 align-items-center gap-2">
-                    <!-- <span class="card-header-icon">
+        <div class="card-header border-0 align-items-center">
+            <h4 class="card-title align-items-center gap-2">
+                <span class="card-header-icon">
                     <img width="25" src="{{asset('public/assets/admin/img/subscription-plan/subscribed-user.png')}}" alt="">
-                    </span> -->
-                    <span class="text-title">{{ translate('Package Overview') }}</span>
-                </h3>
-                <span class="fs-12 d-block color-334257B2">Here you see your active business plan.</span>
-            </div>
-            <div class="btn--container justify-content-end m-0">
-                <button type="button" data-toggle="modal" data-target="#plan-modal" class="btn btn--primary">{{ translate('Change Business Plan') }}</button>
-            </div>
+                </span>
+                <span>{{ translate('Overview') }}</span>
+            </h4>
         </div>
         <div class="card-body pt-0">
-            <div class="bg-F7F8F9 p--20 rounded mb-20">
-                <div class="row g-3 align-items-center">
-                    <div class="col-md-6">
-                        <div class="max-w-595">
-                            <h3 class="name">{{ translate('Commission Base Plan') }}</h3>
-                            <div class="info-text fs-14">
-                                {{ translate('Store will pay') }} {{ $store->comission > 0 ?  $store->comission :  $admin_commission }}% {{ translate('commission to') }} <strong>{{ $business_name }}</strong> {{ translate('from each order. You will get access of all the features and options  in store panel , app and interaction with user.') }}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="bg-white d-flex align-items-center justify-content-between gap-2 flex-wrap rounded py-3 px-xxl-4 px-3">
-                            <h4 class="title mt-2">
-                                <span class="text-180 fs-32 theme-clr">
-                                 {{ $store->comission > 0 ?  $store->comission :  $admin_commission }}%
-                                </span>
-                                <span class="fs-14 font-semibold d-block">{{ translate('messages.Commission_per_order') }}</span>
-                            </h4>
-                            <img width="40" src="{{asset('public/assets/admin/img/money-percentage.png')}}" alt="">
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-F7F8F9 p--20 rounded">
+            <div class="__bg-F8F9FC-card __plan-details">
                 <div class="d-flex flex-wrap flex-md-nowrap justify-content-between __plan-details-top">
                     <div class="w-100">
-                        <div class="">
-                            <form action="{{route('admin.store.update-settings',[$store['id'] , 'tab' => 'business_plan'])}}" method="post">
-                                @csrf
-                                @method("post")
-                                <div class="row align-items-center g-3">
-                                    <div class="col-md-6">
-                                        <div class="max-w-595">
-                                            <h3 class="name">{{ translate('Change Commission Rate') }}</h3>
-                                            <div class="info-text fs-14">
-                                                {{ translate('When enabled admin will only receive the certain commission percentage set for this store. Otherwise the system default commission will be applied.') }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-20">
-                                            <label class="d-flex mb-1 justify-content-between switch toggle-switch-sm text-dark bg-white rounded border py-2 px-3 text-capitalize" for="comission_status">
-                                                <span class="fs-14 lh-1">{{translate('messages.Status')}}</span>
-                                                <input type="checkbox" class="toggle-switch-input" name="comission_status" id="comission_status" value="1" {{isset($store->comission)?'checked':''}}>
-                                                <span class="toggle-switch-label">
-                                                    <span class="toggle-switch-indicator"></span>
-                                                </span>
-                                            </label>
-                                        </div>
-                                        <div>
-                                            <label class="d-flex mb-2 justify-content-between text-dark text-capitalize">
-                                                <span>{{translate('messages.Change_Commission_Rate')}}(%)                                                 
-                                            </label>
-                                            <div class="d-flex flex-wrap gap-3">
-                                                <input type="number" id="comission" min="0" max="10000" step="0.01" name="comission" class="form-control w-200px flex-grow-1 bg-white" required value="{{$store->comission??'0'}}" {{isset($store->comission)?'':'readonly'}}>                                                
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="d-flex align-items-center justify-content-end gap-3 mt-4">
-                                    <button type="submit" class="btn min-w-120px btn--reset h--45px">{{ translate('Reset') }}</button>
-                                    <button type="submit" class="btn min-w-120px btn--primary h--45px">{{ translate('Change') }}</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- <div class="__bg-F8F9FC-card __plan-details">
-                <div class="d-flex flex-wrap flex-md-nowrap justify-content-between __plan-details-top">
-                    <div class="w-100">
-                        <h3 class="name text--primary">{{ translate('Commission Base Plan') }}</h3>
+                        <h2 class="name text--primary">{{ translate('Commission Base Plan') }}</h2>
                         <h4 class="title mt-2"><span class="text-180">{{ $store->comission > 0 ?  $store->comission :  $admin_commission }} %</span> {{ translate('messages.Commission_per_order') }}</h4>
                         <div class="info-text ">
                             {{ translate('Store will pay') }} {{ $store->comission > 0 ?  $store->comission :  $admin_commission }}% {{ translate('commission to') }} <strong>{{ $business_name }}</strong> {{ translate('from each order. You will get access of all the features and options  in store panel , app and interaction with user.') }}
                         </div>
-                        <div class="mt-3">
-                            <form action="{{route('admin.store.update-settings',[$store['id'] , 'tab' => 'business_plan'])}}" method="post">
-                                @csrf
-                                @method("post")
-                                <div class="row">
-                                    <div class="col-xl-6 col-xxl-5">
-                                        <div>
-                                            <label class="d-flex mb-1 justify-content-between switch toggle-switch-sm text-dark text-capitalize" for="comission_status">
-                                                <span>{{translate('messages.Change_Commission_Rate')}}(%) <span class="input-label-secondary" data-toggle="tooltip" data-placement="right" data-original-title="{{translate('When_enabled,_admin_will_only_receive_the_certain_commission_percentage_he_set_for_this_store._Otherwise,_the_system_default_commission_will_be_applied.')}}"><img src="{{asset('/public/assets/admin/img/info-circle.svg')}}" alt="{{translate('When_enabled,_admin_will_only_receive_the_certain_commission_percentage_he_set_for_this_store._Otherwise,_the_system_default_commission_will_be_applied.')}}"></span></span>
-                                                <input type="checkbox" class="toggle-switch-input" name="comission_status" id="comission_status" value="1" {{isset($store->comission)?'checked':''}}>
-                                                <span class="toggle-switch-label">
-                                                    <span class="toggle-switch-indicator"></span>
-                                                </span>
-                                            </label>
-                                            <div class="d-flex flex-wrap gap-3">
-                                                <input type="number" id="comission" min="0" max="10000" step="0.01" name="comission" class="form-control w-200px flex-grow-1 bg-white" required value="{{$store->comission??'0'}}" {{isset($store->comission)?'':'readonly'}}>
-                                                <button type="submit" class="btn btn--primary h--45px">{{ translate('Change') }}</button>
+                                <div class="mt-3">
+                                    <form action="{{route('admin.store.update-settings',[$store['id'] , 'tab' => 'business_plan'])}}" method="post">
+                                        @csrf
+                                        @method("post")
+                                        <div class="row">
+                                            <div class="col-xl-6 col-xxl-5">
+                                                <div>
+                                                    <label class="d-flex mb-1 justify-content-between switch toggle-switch-sm text-dark text-capitalize" for="comission_status">
+                                                        <span>{{translate('messages.Change_Commission_Rate')}}(%) <span class="input-label-secondary" data-toggle="tooltip" data-placement="right" data-original-title="{{translate('When_enabled,_admin_will_only_receive_the_certain_commission_percentage_he_set_for_this_store._Otherwise,_the_system_default_commission_will_be_applied.')}}"><img src="{{asset('/public/assets/admin/img/info-circle.svg')}}" alt="{{translate('When_enabled,_admin_will_only_receive_the_certain_commission_percentage_he_set_for_this_store._Otherwise,_the_system_default_commission_will_be_applied.')}}"></span></span>
+                                                        <input type="checkbox" class="toggle-switch-input" name="comission_status" id="comission_status" value="1" {{isset($store->comission)?'checked':''}}>
+                                                        <span class="toggle-switch-label">
+                                                            <span class="toggle-switch-indicator"></span>
+                                                        </span>
+                                                    </label>
+                                                    <div class="d-flex flex-wrap gap-3">
+                                                        <input type="number" id="comission" min="0" max="10000" step="0.01" name="comission" class="form-control w-200px flex-grow-1 bg-white" required value="{{$store->comission??'0'}}" {{isset($store->comission)?'':'readonly'}}>
+                                                        <button type="submit" class="btn btn--primary h--45px">{{ translate('Change') }}</button>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    </form>
                                 </div>
-                            </form>
-                        </div>
                     </div>
                 </div>
-            </div> -->
-            <!-- @if (\App\CentralLogics\Helpers::subscription_check() )
-                <div class="btn--container justify-content-end mt-20">
+
+            </div>
+            @if (\App\CentralLogics\Helpers::subscription_check() )
+                <div class="btn--container justify-content-end mt-3">
                     <button type="button" data-toggle="modal" data-target="#plan-modal" class="btn btn--primary">{{ translate('Change Business Plan') }}</button>
                 </div>
-            @endif -->
+            @endif
         </div>
     </div>
 
     @elseif (in_array($store->store_business_model,[ 'subscription' ,'unsubscribed']) && $store?->store_sub_update_application)
 
                 <div class="card mb-20">
-                    <div class="card-header flex-wrap gap-2 border-0 align-items-center">
-                        <h3 class="card-title align-items-center gap-2">
+                    <div class="card-header border-0 align-items-center">
+                        <h4 class="card-title align-items-center gap-2">
                             <span class="card-header-icon">
                                 <img src="{{asset('public/assets/admin/img/billing.png')}}" alt="">
                             </span>
                             <span class="text-title">{{ translate('Billing') }}</span>
-                        </h3>
+                        </h4>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
@@ -184,53 +111,40 @@
                     </div>
                 </div>
                 <div class="card mb-3">
-                    <div class="card-header flex-wrap gap-2 border-0 align-items-center">
-                        <div>
-                            <h3 class="card-title align-items-center gap-2">
-                                <!-- <span class="card-header-icon">
-                                    <img width="25" src="{{asset('public/assets/admin/img/subscription-plan/subscribed-user.png')}}" alt="">
-                                </span> -->
-                                <span class="text-title">{{ translate('Package Overview') }}
-                                    @if($store?->status == 0 &&  $store?->vendor?->status == 0)
-                                    <span class=" badge badge-pill badge-info">  &nbsp; {{ translate('Approval_Pending') }}  &nbsp; </span>
-                                    @elseif($store?->store_sub_update_application?->status == 0)
-                                    <span class=" badge badge-pill badge-danger">  &nbsp; {{ translate('Expired') }}  &nbsp; </span>
-                                    @elseif ($store?->store_sub_update_application?->is_canceled == 1)
-                                    <span class=" badge badge-pill badge-warning">  &nbsp; {{ translate('canceled') }}  &nbsp; </span>
-                                    @elseif($store?->store_sub_update_application?->status == 1)
-                                    <span class=" badge badge-pill badge-success">  &nbsp; {{ translate('Active') }}  &nbsp; </span>
-                                    @endif
-                                </span>
-                            </h3>
-                            <span class="fs-12 d-block color-334257B2">Here you see your active business plan.</span>
-                        </div>
-                        <div class="btn--container justify-content-end mt-20">
-                            @if ( $store?->store_sub_update_application?->is_canceled == 0 && $store?->store_sub_update_application?->status == 1  )
-                            <button type="button"  data-url="{{route('admin.business-settings.subscriptionackage.cancelSubscription',$store?->id)}}" data-message="{{translate('If_you_cancel_the_subscription,_after_')}} {{  Carbon\Carbon::now()->diffInDays($store?->store_sub_update_application?->expiry_date_parsed->format('Y-m-d'), false); }} {{ translate('days_the_vendor_will_no_longer_be_able_to_run_the_business_before_subscribe_a_new_plan.') }}"
-                                class="btn btn--danger text-white status_change_alert">{{ translate('Cancel Subscription') }}</button>
-                            @endif
-                            <button type="button" data-toggle="modal" data-target="#plan-modal" class="btn text-wrap btn--primary">{{ translate('Change / Renew Subscription Plan') }}</button>
-                        </div>
+                    <div class="card-header border-0 align-items-center">
+                        <h4 class="card-title align-items-center gap-2">
+                            <span class="card-header-icon">
+                                <img width="25" src="{{asset('public/assets/admin/img/subscription-plan/subscribed-user.png')}}" alt="">
+                            </span>
+                            <span>{{ translate('Package Overview') }}
+
+                                @if($store?->status == 0 &&  $store?->vendor?->status == 0)
+                                <span class=" badge badge-pill badge-info">  &nbsp; {{ translate('Approval_Pending') }}  &nbsp; </span>
+                                @elseif($store?->store_sub_update_application?->status == 0)
+                                <span class=" badge badge-pill badge-danger">  &nbsp; {{ translate('Expired') }}  &nbsp; </span>
+                                @elseif ($store?->store_sub_update_application?->is_canceled == 1)
+                                <span class=" badge badge-pill badge-warning">  &nbsp; {{ translate('canceled') }}  &nbsp; </span>
+                                @elseif($store?->store_sub_update_application?->status == 1)
+                                <span class=" badge badge-pill badge-success">  &nbsp; {{ translate('Active') }}  &nbsp; </span>
+                                @endif
+
+                            </span>
+                        </h4>
                     </div>
                     <div class="card-body pt-0">
-                        <div class="bg-F7F8F9 p--20 rounded mb-20">
-                             <div class="d-flex flex-wrap flex-md-nowrap justify-content-between __plan-details-top">
+                        <div class="__bg-F8F9FC-card __plan-details">
+                            <div class="d-flex flex-wrap flex-md-nowrap justify-content-between __plan-details-top">
                                 <div class="left">
                                     <h3 class="name">{{ $store?->store_sub_update_application?->package?->package_name }}</h3>
                                     <div class="font-medium text--title">{{ $store?->store_sub_update_application?->package?->text }}</div>
                                 </div>
                                 <h3 class="right">{{ \App\CentralLogics\Helpers::format_currency($store?->store_sub_update_application?->last_transcations?->price) }} /<small class="font-medium text--title">{{ $store?->store_sub_update_application?->last_transcations?->validity }} {{ translate('messages.Days') }}</small></h3>
                             </div>
-                        </div>
-                        <div class="bg-F7F8F9 p--20 rounded">
-                            <!-- <div class="d-flex flex-wrap flex-md-nowrap justify-content-between __plan-details-top">
-                                <div class="left">
-                                    <h3 class="name">{{ $store?->store_sub_update_application?->package?->package_name }}</h3>
-                                    <div class="font-medium text--title">{{ $store?->store_sub_update_application?->package?->text }}</div>
-                                </div>
-                                <h3 class="right">{{ \App\CentralLogics\Helpers::format_currency($store?->store_sub_update_application?->last_transcations?->price) }} /<small class="font-medium text--title">{{ $store?->store_sub_update_application?->last_transcations?->validity }} {{ translate('messages.Days') }}</small></h3>
-                            </div> -->
+
+
                             <div class="check--grid-wrapper mt-3 max-w-850px">
+
+
                                 <div>
                                     <div class="d-flex align-items-center gap-2">
                                         <img src="{{asset('/public/assets/admin/img/subscription-plan/check.png')}}" alt="">
@@ -242,6 +156,8 @@
                                         @endif
                                     </div>
                                 </div>
+
+
                                 <div>
                                     <div class="d-flex align-items-center gap-2">
                                         @if ( $store?->store_sub_update_application?->pos == 1 )
@@ -252,6 +168,7 @@
                                         <span class="form-check-label text-dark">{{ translate('messages.POS') }}</span>
                                     </div>
                                 </div>
+
                                 <div>
                                     <div class="d-flex align-items-center gap-2">
                                         @if ( $store?->store_sub_update_application?->mobile_app == 1 )
@@ -310,13 +227,15 @@
 
                             </div>
                         </div>
-                        <!-- <div class="btn--container justify-content-end mt-20">
+                        <div class="btn--container justify-content-end mt-3">
                             @if ( $store?->store_sub_update_application?->is_canceled == 0 && $store?->store_sub_update_application?->status == 1  )
                             <button type="button"  data-url="{{route('admin.business-settings.subscriptionackage.cancelSubscription',$store?->id)}}" data-message="{{translate('If_you_cancel_the_subscription,_after_')}} {{  Carbon\Carbon::now()->diffInDays($store?->store_sub_update_application?->expiry_date_parsed->format('Y-m-d'), false); }} {{ translate('days_the_vendor_will_no_longer_be_able_to_run_the_business_before_subscribe_a_new_plan.') }}"
                                 class="btn btn--danger text-white status_change_alert">{{ translate('Cancel Subscription') }}</button>
                             @endif
+
                             <button type="button" data-toggle="modal" data-target="#plan-modal" class="btn btn--primary">{{ translate('Change / Renew Subscription Plan') }}</button>
-                        </div> -->
+
+                        </div>
                     </div>
                 </div>
 
@@ -362,11 +281,11 @@
                                 <div class="inner-div">
                                     <div class="text-center">
                                         <h3 class="title">{{ translate('Commission Base') }}</h3>
-                                        <h2 class="price">{{  $store->comission > 0 ?  $store->comission :  $admin_commission }}%</h2>
+                                        <h2 class="price">{{ $admin_commission }}%</h2>
                                     </div>
                                     <div class="py-5 mt-4">
                                         <div class="info-text text-center">
-                                            {{ translate('Store will pay') }} {{  $store->comission > 0 ?  $store->comission :  $admin_commission }}% {{ translate('commission to') }} {{ $business_name }} {{ translate('from each order. You will get access of all the features and options  in store panel , app and interaction with user.') }}
+                                            {{ translate('Store will pay') }} {{ $admin_commission }}% {{ translate('commission to') }} {{ $business_name }} {{ translate('from each order. You will get access of all the features and options  in store panel , app and interaction with user.') }}
                                         </div>
                                     </div>
                                     <div class="text-center">

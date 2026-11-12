@@ -153,7 +153,7 @@
 
                 </div>
             </div>
-            <div class="btn--container justify-content-end mt-20">
+            <div class="btn--container justify-content-end mt-3">
                 <button id="reset_btn" type="reset" class="btn btn--reset">{{translate('messages.reset')}}</button>
                 <button type="button" class="btn btn--primary update_or_import">{{translate('messages.Upload')}}</button>
             </div>

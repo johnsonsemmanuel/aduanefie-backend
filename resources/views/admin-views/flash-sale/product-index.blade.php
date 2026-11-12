@@ -27,26 +27,26 @@
                         <form action="{{route('admin.flash-sale.store-product')}}" method="post">
                             @csrf
                             <input type="hidden" name="flash_sale_id" value="{{ $flash_sale->id }}">
-                            <div class="row g-3 mb-3">
-                                <div class="col-12 mb-0">
+                            <div class="row mb-3">
+                                <div class="col-12 mb-2">
                                     <div class="form-group mb-0" id="item_wise">
-                                        <label class="input-label" for="exampleFormControlInput1">{{translate('messages.select_item')}} <span class="text-danger">*</span></label>
-                                        <select name="item_id" id="choice_item" class="form-control js-select2-custom" placeholder="{{translate('messages.select_item')}}" required>
+                                        <label class="input-label" for="exampleFormControlInput1">{{translate('messages.select_item')}}</label>
+                                        <select name="item_id" id="choice_item" class="form-control js-select2-custom" placeholder="{{translate('messages.select_item')}}">
 
                                         </select>
                                     </div>
                                 </div>
-                                <div class="col-sm-4">
+                                <div class="col-sm-4 col-6">
                                     <div class="form-group mb-0">
                                         <label class="input-label"
-                                            for="total_stock">{{ translate('messages.total_stock') }} <span class="text-danger">*</span></label>
-                                        <input type="number" placeholder="{{ translate('messages.Ex:_10') }}" class="form-control" name="stock" min="0" id="quantity" required>
+                                            for="total_stock">{{ translate('messages.total_stock') }}</label>
+                                        <input type="number" placeholder="{{ translate('messages.Ex:_10') }}" class="form-control" name="stock" min="0" id="quantity">
                                     </div>
                                 </div>
-                                <div class="col-sm-4">
+                                <div class="col-sm-4 col-6">
                                     <div class="form-group mb-0">
                                         <label class="input-label"
-                                            for="exampleFormControlInput1">{{ translate('messages.discount_type') }} <span class="text-danger">*</span><span
+                                            for="exampleFormControlInput1">{{ translate('messages.discount_type') }}<span
                                                 class="input-label-secondary text--title" data-toggle="tooltip"
                                                 data-placement="right"
                                                 data-original-title="{{ translate('Admin_shares_the_same_percentage/amount_on_discount_as_he_takes_commissions_from_stores') }}">
@@ -55,18 +55,19 @@
                                         </label>
                                         <select name="discount_type" id="discount_type"
                                             class="form-control js-select2-custom">
+                                            {{-- <option value="current_active_discount">{{ translate('messages.current_active_discount') }}</option> --}}
                                             <option value="percent">{{ translate('messages.percent') }}</option>
                                             <option value="amount">{{ translate('messages.amount') }}</option>
                                         </select>
                                     </div>
                                 </div>
-                                <div class="col-sm-4">
+                                <div class="col-sm-4 col-6">
                                     <div class="form-group mb-0">
                                         <label class="input-label"
-                                            for="exampleFormControlInput1">{{ translate('messages.discount') }} <span class="text-danger">*</span></label>
-                                        <input type="number" min="{{ \App\CentralLogics\Helpers::getDecimalPlaces() }}" max="9999999999999999999999" value="0" step="{{ \App\CentralLogics\Helpers::getDecimalPlaces() }}"
+                                            for="exampleFormControlInput1">{{ translate('messages.discount') }}</label>
+                                        <input type="number" min="0" max="9999999999999999999999" value="0" step="0.001"
                                             name="discount" class="form-control" id="discount_amount"
-                                            placeholder="{{ translate('messages.Ex:') }} 100" required>
+                                            placeholder="{{ translate('messages.Ex:') }} 100">
                                     </div>
                                 </div>
                             </div>
@@ -115,7 +116,6 @@
                                 <th class="border-0">{{translate('messages.store')}}</th>
                                 <th class="border-0">{{translate('messages.stock_for_this_sale')}}</th>
                                 <th class="border-0">{{translate('messages.Qty_Sold')}}</th>
-                                <th class="border-0">{{translate('messages.discount')}}</th>
                                 <th class="border-0">{{translate('messages.price')}}</th>
                                 <th class="border-0">{{translate('messages.status')}}</th>
                                 <th class="border-0">{{translate('messages.action')}}</th>
@@ -141,22 +141,13 @@
                                         </a>
                                     </td>
                                     <td class="text-center" title="{{ $item->item->store?$item->item->store->name:'' }}">
-
-                                        @if ($item->item->store)
-                                            <a href="{{route('admin.store.view', $item->item->store->id)}}" class="" > {{  Str::limit($item->item->store->name, 20, '...') }}</a>
-                                        @else
                                         {{Str::limit($item->item->store?$item->item->store->name:translate('messages.store deleted!'), 20, '...')}}
-
-                                        @endif
                                         </td>
                                     <td class="text-center">
                                         {{ $item['stock'] }}
                                     </td>
                                     <td class="text-center">
                                         {{ $item['sold'] }}
-                                    </td>
-                                    <td class="text-center">
-                                        {{ \App\CentralLogics\Helpers::format_currency($item['discount_amount']) }}
                                     </td>
                                     <td class="text-center">
                                         {{ \App\CentralLogics\Helpers::format_currency($item['price']) }}

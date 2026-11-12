@@ -108,7 +108,7 @@
                                 </div>
                                 <!-- End Search -->
                             </form>
-                            @if(request()->input('search'))
+                            @if(request()->get('search'))
                             <button type="reset" class="btn btn--primary ml-2 location-reload-to-base" data-url="{{url()->full()}}">{{translate('messages.reset')}}</button>
                             @endif
 
@@ -137,7 +137,7 @@
                                         <img class="avatar avatar-xss avatar-4by3 mr-2"
                                             src="{{ asset('public/assets/admin') }}/svg/components/placeholder-csv-format.svg"
                                             alt="Image Description">
-                                        {{ translate('messages.csv') }}
+                                        .{{ translate('messages.csv') }}
                                     </a>
 
                                 </div>
@@ -157,7 +157,6 @@
                             <thead class="thead-light">
                             <tr class="text-center">
                                 <th class="border-0">{{translate('sl')}}</th>
-                                <th class="border-0">{{translate('ID')}}</th>
                                 <th class="border-0">{{translate('messages.name')}}</th>
                                 <th class="border-0">{{translate('messages.action')}}</th>
                             </tr>
@@ -170,11 +169,6 @@
                                     <td class="text-center">
                                         <span class="mr-3">
                                             {{$key+$attributes->firstItem()}}
-                                        </span>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="mr-3">
-                                            {{$attribute['id']}}
                                         </span>
                                     </td>
                                     <td class="text-center">

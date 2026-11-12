@@ -20,21 +20,22 @@
           toolbar: {
             show:false
         },
-            colors: ['#76ffcd','#ff6d6d', '#005555'],
+            colors: ['#8B9F69','#C98A5B', '#4F3E2C'],
         },
-            colors: ['#76ffcd','#ff6d6d', '#005555'],
+            colors: ['#8B9F69','#C98A5B', '#4F3E2C'],
         dataLabels: {
           enabled: false,
-            colors: ['#76ffcd','#ff6d6d', '#005555'],
+            colors: ['#8B9F69','#C98A5B', '#4F3E2C'],
         },
         stroke: {
           curve: 'smooth',
           width: 2,
-            colors: ['#76ffcd','#ff6d6d', '#005555'],
+            colors: ['#8B9F69','#C98A5B', '#4F3E2C'],
         },
         fill: {
-            type: 'gradient',
-            colors: ['#76ffcd','#ff6d6d', '#005555'],
+            type: 'solid',
+            opacity: 0.16,
+            colors: ['#8B9F69','#C98A5B', '#4F3E2C'],
         },
         xaxis: {
         //   type: 'datetime',

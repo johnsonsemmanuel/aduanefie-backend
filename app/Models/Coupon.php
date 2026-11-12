@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Traits\ReportFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -36,7 +35,6 @@ use Illuminate\Support\Carbon;
  */
 class Coupon extends Model
 {
-    use ReportFilter;
     /**
      * The attributes that are mass assignable.
      *

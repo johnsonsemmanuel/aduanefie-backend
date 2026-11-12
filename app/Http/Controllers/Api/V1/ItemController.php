@@ -3,8 +3,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Models\Item;
-use App\Models\Module;
-use App\Models\ItemCampaign;
 use App\Models\Order;
 use App\Models\Store;
 use App\Models\Review;
@@ -12,25 +10,21 @@ use App\Models\Allergy;
 use App\Models\Category;
 use App\Models\Nutrition;
 use App\Models\GenericName;
+use App\Models\PriorityList;
 use Illuminate\Http\Request;
 use App\CentralLogics\Helpers;
+use App\Models\BusinessSetting;
 use App\CentralLogics\StoreLogic;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use App\CentralLogics\ProductLogic;
-use App\CentralLogics\PersonalizationService;
-use App\Models\RecentSearch;
 use App\CentralLogics\CategoryLogic;
 use App\Http\Controllers\Controller;
-use App\Services\TrendingSearchService;
-use App\Traits\ItemFilter;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class ItemController extends Controller
 {
-    use ItemFilter;
-
-    public function __construct(protected TrendingSearchService $trendingService) {}
 
     public function get_latest_products(Request $request)
     {
@@ -45,26 +39,107 @@ class ItemController extends Controller
             return response()->json(['errors' => Helpers::error_processor($validator)], 403);
         }
 
-        Helpers::setZoneIds($request);
+        if (!$request->hasHeader('zoneId')) {
+            $errors = [];
+            array_push($errors, ['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]);
+            return response()->json([
+                'errors' => $errors
+            ], 403);
+        }
         $zone_id = $request->header('zoneId');
         $type = $request->query('type', 'all');
         $product_id = $request->query('product_id')??null;
         $min = $request->query('min_price');
         $max = $request->query('max_price');
-        $filter = $request['filter'] ? (is_array($request['filter']) ? $request['filter'] : str_getcsv(trim($request['filter'], "[]"), ',')) : '';
 
-        $rating_count = $request->query('rating_count');
-        $store_category_id = $request->query('store_category_id');
-
-        $items = ProductLogic::get_latest_products($zone_id, $request['limit'], $request['offset'], $request['store_id'], $request['category_id'], $type,$min,$max,$product_id,$filter,$rating_count,$store_category_id, auth('api')->id());
+        $items = ProductLogic::get_latest_products($zone_id, $request['limit'], $request['offset'], $request['store_id'], $request['category_id'], $type,$min,$max,$product_id);
         $items['categories'] = $items['categories'];
         $items['products'] = Helpers::product_data_formatting($items['products'], true, false, app()->getLocale());
         return response()->json($items, 200);
     }
 
+    public function get_simple_items(Request $request)
+    {
+        $items = Item::where('module_id', 20)
+            ->where('status', 1)
+            ->limit(20)
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'slug' => $item->slug,
+                    'description' => $item->description,
+                    'price' => $item->price,
+                    'unit' => $item->unit,
+                    'minimum_order_qty' => $item->minimum_order_qty,
+                    'origin_farm' => $item->origin_farm,
+                    'hs_code' => $item->hs_code,
+                    'hs_description' => $item->hs_description,
+                    'certification' => $item->certification,
+                    'cold_chain_required' => $item->cold_chain_required,
+                    'image' => $item->image,
+                    'store' => null,
+                ];
+            });
+
+        return response()->json(['items' => $items], 200);
+    }
+
+    public function farming_list(Request $request)
+    {
+        $moduleId = $request->query('module_id', null);
+        $limit = $request->query('limit', 24);
+        $offset = $request->query('offset', 1);
+
+        $query = Item::whereIn('farming_status', ['farming', 'harvest_ready'])
+            ->where('is_approved', 1)
+            ->where('status', 1);
+
+        if ($moduleId) {
+            $query->where('module_id', $moduleId);
+        }
+
+        $items = $query->latest()->offset(($offset - 1) * $limit)->limit($limit)->get()
+            ->map(function ($item) {
+                $store = $item->store;
+                $analytics = \App\Services\CropCycleAnalyticsService::analyze($item);
+                return [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'slug' => $item->slug,
+                    'description' => $item->description,
+                    'price' => $item->price,
+                    'unit' => $item->unit,
+                    'farming_status' => $item->farming_status,
+                    'effective_farming_status' => $analytics['effective_farming_status'] ?? $item->farming_status,
+                    'days_to_harvest' => $analytics['days_to_harvest'] ?? null,
+                    'cultivation_progress_pct' => $analytics['cultivation_progress_pct'] ?? null,
+                    'status_label' => $analytics['status_label'] ?? ucfirst($item->farming_status),
+                    'is_backyard' => $item->is_backyard,
+                    'image' => $item->image,
+                    'image_full_url' => $item->image_full_url,
+                    'store_name' => $store?->name,
+                    'store_id' => $store?->id,
+                    'rating' => $item->rating ?? 0,
+                ];
+            });
+
+        return response()->json([
+            'items' => $items,
+            'total' => $query->count(),
+        ], 200);
+    }
+
     public function get_new_products(Request $request)
     {
-        Helpers::setZoneIds($request);
+        if (!$request->hasHeader('zoneId')) {
+            $errors = [];
+            array_push($errors, ['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]);
+            return response()->json([
+                'errors' => $errors
+            ], 403);
+        }
         $zone_id = $request->header('zoneId');
         $type = $request->query('type', 'all');
         $product_id = $request->query('product_id')??null;
@@ -73,7 +148,7 @@ class ItemController extends Controller
         $limit = isset($request['limit'])?$request['limit']:50;
         $offset = isset($request['offset'])?$request['offset']:1;
 
-        $items = ProductLogic::get_new_products($zone_id, $type,$min,$max,$product_id,$limit,$offset, null, null, null, null, auth('api')->id());
+        $items = ProductLogic::get_new_products($zone_id, $type,$min,$max,$product_id,$limit,$offset);
         $items['categories'] = $items['categories'];
         $items['products'] = Helpers::product_data_formatting($items['products'], true, false, app()->getLocale());
         return response()->json($items, 200);
@@ -81,7 +156,13 @@ class ItemController extends Controller
 
     public function get_searched_products(Request $request)
     {
-        Helpers::setZoneIds($request);
+        if (!$request->hasHeader('zoneId')) {
+            $errors = [];
+            array_push($errors, ['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]);
+            return response()->json([
+                'errors' => $errors
+            ], 403);
+        }
         $validator = Validator::make($request->all(), [
             'name' => 'required'
         ]);
@@ -91,33 +172,24 @@ class ItemController extends Controller
         }
 
 
-        if(auth('api')->check()){
-            RecentSearch::create([
-                'user_id' => auth('api')->id(),
-                'user_type' => 'App\Models\User',
-                'keyword' => $request['name'],
-                'route_name' => 'api.v1.items.search',
-                'route_uri' => $request->path(),
-                'route_full_url' => $request->fullUrl(),
-            ]);
-            PersonalizationService::recordSearchAction(auth('api')->id(), $request['name'], $request->header('moduleId') ? (int)$request->header('moduleId') : null);
-        }
-
-        $product_search_default_status = Helpers::get_business_settings('product_search_default_status') ?? 1;
-        $product_search_sort_by_unavailable = Helpers::getPriorityList(name: 'product_search_sort_by_unavailable', type: 'unavailable');
-        $product_search_sort_by_temp_closed = Helpers::getPriorityList(name: 'product_search_sort_by_temp_closed', type: 'temp_closed');
+        $product_search_default_status =BusinessSetting::where('key', 'product_search_default_status')->first()?->value ?? 1;
+        $product_search_sort_by_general =PriorityList::where('name', 'product_search_sort_by_general')->where('type','general')->first()?->value ?? '';
+        $product_search_sort_by_unavailable =PriorityList::where('name', 'product_search_sort_by_unavailable')->where('type','unavailable')->first()?->value ?? '';
+        $product_search_sort_by_temp_closed =PriorityList::where('name', 'product_search_sort_by_temp_closed')->where('type','temp_closed')->first()?->value ?? '';
 
 
         $zone_id = $request->header('zoneId');
+
+        $key = explode(' ', $request['name']);
 
         $limit = $request['limit']??10;
         $offset = $request['offset']??1;
         $category_ids = $request['category_ids']?(is_array($request['category_ids'])?$request['category_ids']:json_decode($request['category_ids'])):'';
         $filter = $request['filter']?(is_array($request['filter'])?$request['filter']:str_getcsv(trim($request['filter'], "[]"), ',')):'';
         $type = $request->query('type', 'all');
-
-        $filters = $this->resolveSearchFilters($request, $filter);
-        $additional_data = ['sort_by' => $filters['sort_by'], 'filter_by' => $filters['filter_by']];
+        $min = $request->query('min_price');
+        $max = $request->query('max_price');
+        $rating_count = $request->query('rating_count');
 
         $query = Item::active()->type($type)
         ->with('store', function($query){
@@ -134,10 +206,13 @@ class ItemController extends Controller
 
 
         if ($product_search_default_status != '1'){
-            if($product_search_sort_by_unavailable == 'remove'){
-                $query = $query->where('stock', '>', 0);
-            }elseif($product_search_sort_by_unavailable == 'last'){
-                $query = $query->orderByRaw('CASE WHEN stock = 0 THEN 1 ELSE 0 END');
+            if(config('module.current_module_data')['module_type']  !== 'food'){
+                if($product_search_sort_by_unavailable == 'remove'){
+                    $query = $query->where('stock', '>', 0);
+                }elseif($product_search_sort_by_unavailable == 'last'){
+                    $query = $query->orderByRaw('CASE WHEN stock = 0 THEN 1 ELSE 0 END');
+                }
+
             }
 
             if($product_search_sort_by_temp_closed == 'remove'){
@@ -158,9 +233,6 @@ class ItemController extends Controller
                 return $q->whereIn('id',$category_ids)->orWhereIn('parent_id', $category_ids);
             });
         })
-        ->when($request->store_category_id, function($query) use($request){
-            return $query->where('store_category_id', $request->store_category_id);
-        })
         ->when($request->store_id, function($query) use($request){
             return $query->where('store_id', $request->store_id);
         })
@@ -174,40 +246,51 @@ class ItemController extends Controller
                 });
             })->whereIn('zone_id', json_decode($zone_id, true));
         })
-        ->search(keywords: $request['name'], relations: [
-            'translations' => 'value',
-            'tags' => 'tag',
-            'nutritions' => 'nutrition',
-            'allergies' => 'allergy',
-            'category.parent' => 'name',
-            'category' => 'name',
-            'generic' => 'generic_name',
-        ])
-        ->applyRating($request)
-        ->applyFilters($additional_data)
-        ->applySorting($additional_data['sort_by'])
-        ->applyPriceRange($request);
+        ->where(function ($q) use ($key) {
+            foreach ($key as $value) {
+                $q->orWhere('name', 'like', "%{$value}%");
+            }
 
-        $query = PersonalizationService::applyItemPersonalization($query, auth('api')->id(), $filter);
+            $relationships = [
+                'translations' => 'value',
+                'tags' => 'tag',
+                'nutritions' => 'nutrition',
+                'allergies' => 'allergy',
+                'category.parent' => 'name',
+                'category' => 'name',
+                'generic' => 'generic_name',
+                'ecommerce_item_details.brand' => 'name',
+                'pharmacy_item_details.common_condition' => 'name',
+            ];
+            $q->applyRelationShipSearch(relationships:$relationships ,searchParameter:$key);
+        })
+        ->when($rating_count, function($query) use ($rating_count){
+            $query->where('avg_rating', '>=' , $rating_count);
+        })
+        ->when($min && $max, function($query)use($min,$max){
+            $query->whereBetween('price',[$min,$max]);
+        })
+        ->orderByRaw("COALESCE(name = ?, false) DESC", [$request['name']])
+
+        ->when($filter&&in_array('top_rated',$filter),function ($qurey){
+            $qurey->withCount('reviews')->orderBy('reviews_count','desc');
+        })
+        ->when($filter&&in_array('popular',$filter),function ($qurey){
+            $qurey->popular();
+        })
+        ->when($filter&&in_array('discounted',$filter),function ($qurey){
+            $qurey->Discounted()->orderBy('discount','desc');
+        })
+        ->when($filter&&in_array('high',$filter),function ($qurey){
+            $qurey->orderBy('price', 'desc');
+        })
+        ->when($filter&&in_array('low',$filter),function ($qurey){
+            $qurey->orderBy('price', 'asc');
+        });
+
 
         $item_categories=  $query->pluck('category_id')->toArray();
         $items = $query->paginate($limit, ['*'], 'page', $offset);
-
-        try {
-            $userId = $request->user?->id ?? auth('api')->user()?->id;
-            $guestId = $userId ? null : ($request['guest_id'] ?? $request->header('guestId'));
-            $this->trendingService->log(
-                keyword: (string) $request['name'],
-                userId: $userId,
-                guestId: $guestId,
-                moduleId: (int) (config('module.current_module_data')['id'] ?? 0),
-                zoneId: (string) $request->header('zoneId'),
-                resultCount: (int) $items->total(),
-            );
-        } catch (\Throwable $e) {
-            // swallow — search response must not break on logging failure
-        }
-
         $item_categories = array_unique($item_categories);
 
         $categories = Category::withCount(['products','childes'])->with(['childes' => function($query)  {
@@ -234,7 +317,13 @@ class ItemController extends Controller
 
     public function get_searched_products_suggestion(Request $request)
     {
-        Helpers::setZoneIds($request);
+        if (!$request->hasHeader('zoneId')) {
+            $errors = [];
+            array_push($errors, ['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]);
+            return response()->json([
+                'errors' => $errors
+            ], 403);
+        }
         $validator = Validator::make($request->all(), [
             'name' => 'required'
         ]);
@@ -257,9 +346,6 @@ class ItemController extends Controller
             $query->whereHas('category',function($q)use($request){
                 return $q->whereId($request->category_id)->orWhere('parent_id', $request->category_id);
             });
-        })
-        ->when($request->store_category_id, function($query) use($request){
-            return $query->where('store_category_id', $request->store_category_id);
         })
         ->when($request->store_id, function($query) use($request){
             return $query->where('store_id', $request->store_id);
@@ -329,83 +415,96 @@ class ItemController extends Controller
 
     public function get_popular_products(Request $request)
     {
-        Helpers::setZoneIds($request);
-        $min_price = $request->query('min_price');
-        $max_price = $request->query('max_price');
-        $rating_count = $request->query('rating_count');
-
-        $filter = $request->query('filter', '');
-        $filter = $filter?(is_array($filter)?$filter:str_getcsv(trim($filter, "[]"), ',')):'';
-        $category_ids = $request->query('category_ids', '');
+        if (!$request->hasHeader('zoneId')) {
+            $errors = [];
+            array_push($errors, ['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]);
+            return response()->json([
+                'errors' => $errors
+            ], 403);
+        }
 
         $type = $request->query('type', 'all');
 
         $zone_id= $request->header('zoneId');
+        $cacheKey = 'api_v1_items_popular_' . md5(json_encode([
+            $zone_id,
+            config('module.current_module_data')['id'] ?? 'all',
+            app()->getLocale(),
+            $request['limit'],
+            $request['offset'],
+            $type,
+        ]));
 
-        $items = ProductLogic::popular_products($zone_id, $request['limit']??25, $request['offset']??1, $type,$category_ids, $filter, $min_price, $max_price, $rating_count,$request['search'], $request->query('store_category_id'), auth('api')->id());
-        $items['products'] = Helpers::productListDataFormatting($items['products']);
+        $items = Cache::remember($cacheKey, now()->addSeconds(90), function () use ($zone_id, $request, $type) {
+            $result = ProductLogic::popular_products($zone_id, $request['limit'], $request['offset'], $type);
+            $result['products'] = Helpers::product_data_formatting($result['products'], true, false, app()->getLocale());
+            return $result;
+        });
+
         return response()->json($items, 200);
     }
 
     public function get_most_reviewed_products(Request $request)
     {
-        Helpers::setZoneIds($request);
+        if (!$request->hasHeader('zoneId')) {
+            $errors = [];
+            array_push($errors, ['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]);
+            return response()->json([
+                'errors' => $errors
+            ], 403);
+        }
 
         $type = $request->query('type', 'all');
-        $min_price = $request->query('min_price');
-        $max_price = $request->query('max_price');
-        $rating_count = $request->query('rating_count');
-
-        $filter = $request->query('filter', '');
-        $filter = $filter?(is_array($filter)?$filter:str_getcsv(trim($filter, "[]"), ',')):'';
-        $category_ids = $request->query('category_ids', '');
 
         $zone_id= $request->header('zoneId');
-        $items = ProductLogic::most_reviewed_products($zone_id, $request['limit']??25, $request['offset']??1, $type,$category_ids, $filter ,$min_price, $max_price, $rating_count, $request['search']??null, $request->query('store_category_id'), auth('api')->id());
-        $items['categories'] = $items['categories'];
+        $cacheKey = 'api_v1_items_most_reviewed_' . md5(json_encode([
+            $zone_id,
+            config('module.current_module_data')['id'] ?? 'all',
+            app()->getLocale(),
+            $request['limit'],
+            $request['offset'],
+            $type,
+        ]));
 
-        $items['products'] = Helpers::productListDataFormatting($items['products']);
-        return response()->json($items, 200);
-    }
-
-    public function get_top_rated_products(Request $request)
-    {
-        Helpers::setZoneIds($request);
-
-        $type = $request->query('type', 'all');
-        $min_price = $request->query('min_price');
-        $max_price = $request->query('max_price');
-        $rating_count = $request->query('rating_count');
-
-        $filter = $request->query('filter', '');
-        $filter = $filter?(is_array($filter)?$filter:str_getcsv(trim($filter, "[]"), ',')):'';
-        $category_ids = $request->query('category_ids', '');
-
-        $zone_id= $request->header('zoneId');
-        $items = ProductLogic::top_rated_products($zone_id, $request['limit']??25, $request['offset']??1, $type, $category_ids, $filter, $min_price, $max_price, $rating_count, $request['search'], $request->query('store_category_id'), auth('api')->id());
-        $items['categories'] = $items['categories'];
-        $items['products'] = Helpers::productListDataFormatting($items['products']);
+        $items = Cache::remember($cacheKey, now()->addSeconds(90), function () use ($zone_id, $request, $type) {
+            $result = ProductLogic::most_reviewed_products($zone_id, $request['limit'], $request['offset'], $type);
+            $result['products'] = Helpers::product_data_formatting($result['products'], true, false, app()->getLocale());
+            return $result;
+        });
 
         return response()->json($items, 200);
     }
 
     public function get_discounted_products(Request $request)
     {
-        Helpers::setZoneIds($request);
+        if (!$request->hasHeader('zoneId')) {
+            $errors = [];
+            array_push($errors, ['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]);
+            return response()->json([
+                'errors' => $errors
+            ], 403);
+        }
 
         $type = $request->query('type', 'all');
-        $min_price = $request->query('min_price');
-        $max_price = $request->query('max_price');
-        $rating_count = $request->query('rating_count');
-
-        $filter = $request->query('filter', '');
-        $filter = $filter?(is_array($filter)?$filter:str_getcsv(trim($filter, "[]"), ',')):'';
         $category_ids = $request->query('category_ids', '');
 
         $zone_id= $request->header('zoneId');
+        $cacheKey = 'api_v1_items_discounted_' . md5(json_encode([
+            $zone_id,
+            config('module.current_module_data')['id'] ?? 'all',
+            app()->getLocale(),
+            $request['limit'],
+            $request['offset'],
+            $type,
+            $category_ids,
+        ]));
 
-        $items = ProductLogic::discounted_products(zone_id:$zone_id, limit: $request['limit']??25, offset: $request['offset']??1, type: $type, category_ids: $category_ids, filter:$filter,min: $min_price, max:$max_price, rating_count:$rating_count,search:$request['search']??null, store_category_id: $request->query('store_category_id'), user_id: auth('api')->id());
-        $items['products'] = Helpers::productListDataFormatting($items['products']);
+        $items = Cache::remember($cacheKey, now()->addSeconds(90), function () use ($zone_id, $request, $type, $category_ids) {
+            $result = ProductLogic::discounted_products($zone_id, $request['limit'], $request['offset'], $type, $category_ids);
+            $result['products'] = Helpers::product_data_formatting($result['products'], true, false, app()->getLocale());
+            return $result;
+        });
+
         return response()->json($items, 200);
     }
 
@@ -419,72 +518,44 @@ class ItemController extends Controller
             return response()->json(['errors' => Helpers::error_processor($validator)], 403);
         }
 
-        Helpers::setZoneIds($request);
+        if (!$request->hasHeader('zoneId')) {
+            $errors = [];
+            array_push($errors, ['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]);
+            return response()->json([
+                'errors' => $errors
+            ], 403);
+        }
         $zone_id = $request->header('zoneId');
 
         $type = $request->query('type', 'all');
         $recommended = $request->query('recommended');
-        $items = ProductLogic::cart_suggest_products($zone_id, $request['store_id'], $request['limit'], $request['offset'], $type, $recommended, auth('api')->id());
+
+        $items = ProductLogic::cart_suggest_products($zone_id, $request['store_id'], $request['limit'], $request['offset'], $type,$recommended);
         $items['items'] = Helpers::product_data_formatting($items['items'], true, false, app()->getLocale());
         return response()->json($items, 200);
     }
 
-    public function get_product(Request $request, $id)
+    public function get_product($id)
     {
         try {
-            Helpers::setZoneIds($request);
-            $zone_ids = $request->header('zoneId') ? json_decode($request->header('zoneId'), true) : null;
 
-            if ($request['campaign'] == 1) {
-                $item = ItemCampaign::active()
-                ->when(config('module.current_module_data'), function ($query) {
-                        $query->module(config('module.current_module_data')['id']);
-                    })
-                    ->when($zone_ids, function ($query) use ($zone_ids) {
-                        $query->whereIn('store_id', \App\Models\Store::whereIn('zone_id', $zone_ids)->pluck('id'));
-                    })
-                    ->when(is_numeric($id), function ($qurey) use ($id) {
-                        $qurey->where('id', $id);
-                    })
-                    ->when(!is_numeric($id), function ($qurey) use ($id) {
-                        $qurey->where('slug', $id);
-                    })
-                    ->first();
-            } else {
-                $item = Item::withCount('whislists')->with(['tags', 'nutritions', 'allergies', 'reviews', 'reviews.customer'])->active($zone_ids)
-                    ->when(config('module.current_module_data'), function ($query) {
-                        $query->module(config('module.current_module_data')['id']);
-                    })
-                    ->when(is_numeric($id), function ($qurey) use ($id) {
-                        $qurey->where('id', $id);
-                    })
-                    ->when(!is_numeric($id), function ($qurey) use ($id) {
-                        $qurey->where('slug', $id);
-                    })
-                    ->first();
-            }
-            if (!$item) {
-                return response()->json([
-                    'errors' => ['code' => 'product-001', 'message' => translate('messages.item_currently_unavailable')]
-                ], 404);
-            }
-            // Visitor Log
-            if ($item && auth('api')->check()) {
-                Helpers::visitor_log(
-                    model: 'item',
-                    user_id: auth('api')->id(),
-                    visitor_log_id: $item->id,
-                    order_count: false
-                );
-                PersonalizationService::recordItemAction(auth('api')->id(), $item->id, 'item_view');
-            }
-
+            $item = Item::withCount('whislists')->with(['tags','nutritions','allergies','reviews','reviews.customer'])->active()
+            ->when(config('module.current_module_data'), function($query){
+                $query->module(config('module.current_module_data')['id']);
+            })
+            ->when(is_numeric($id),function ($qurey) use($id){
+                $qurey-> where('id', $id);
+            })
+            ->when(!is_numeric($id),function ($qurey) use($id){
+                $qurey-> where('slug', $id);
+            })
+            ->first();
             $store = StoreLogic::get_store_details($item->store_id);
             if($store)
             {
                 $category_ids = DB::table('items')
                 ->join('categories', 'items.category_id', '=', 'categories.id')
-                ->selectRaw('categories.position as positions, IF((categories.position = "0"), categories.id, categories.parent_id) as categories')
+                ->selectRaw("categories.position as positions, CASE WHEN categories.position = '0' THEN categories.id ELSE categories.parent_id END as categories")
                 ->where('items.store_id', $item->store_id)
                 ->where('categories.status',1)
                 ->groupBy('categories','positions')
@@ -497,11 +568,10 @@ class ItemController extends Controller
                 ->select(DB::raw('MIN(price) AS min_price, MAX(price) AS max_price'))
                 ->get(['min_price','max_price'])->toArray();
             }
-            $item = Helpers::product_data_formatting($item, false, true, app()->getLocale());
+            $item = Helpers::product_data_formatting($item, false, false, app()->getLocale());
             $item['store_details'] = $store;
             return response()->json($item, 200);
         } catch (\Exception $e) {
-            \Log::error($e);
             return response()->json([
                 'errors' => ['code' => 'product-001', 'message' => translate('messages.not_found')]
             ], 404);
@@ -510,10 +580,16 @@ class ItemController extends Controller
 
     public function get_related_products(Request $request,$id)
     {
-        Helpers::setZoneIds($request);
+        if (!$request->hasHeader('zoneId')) {
+            $errors = [];
+            array_push($errors, ['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]);
+            return response()->json([
+                'errors' => $errors
+            ], 403);
+        }
         $zone_id= $request->header('zoneId');
         if (Item::find($id)) {
-            $items = ProductLogic::get_related_products($zone_id,$id,auth('api')->id());
+            $items = ProductLogic::get_related_products($zone_id,$id);
             $items = Helpers::product_data_formatting($items, true, false, app()->getLocale());
             return response()->json($items, 200);
         }
@@ -523,10 +599,16 @@ class ItemController extends Controller
     }
     public function get_related_store_products(Request $request,$id)
     {
-        Helpers::setZoneIds($request);
+        if (!$request->hasHeader('zoneId')) {
+            $errors = [];
+            array_push($errors, ['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]);
+            return response()->json([
+                'errors' => $errors
+            ], 403);
+        }
         $zone_id= $request->header('zoneId');
         if (Item::find($id)) {
-            $items = ProductLogic::get_related_store_products($zone_id,$id,auth('api')->id());
+            $items = ProductLogic::get_related_store_products($zone_id,$id);
             $items = Helpers::product_data_formatting($items, true, false, app()->getLocale());
             return response()->json($items, 200);
         }
@@ -537,16 +619,33 @@ class ItemController extends Controller
 
     public function get_recommended(Request $request)
     {
-        Helpers::setZoneIds($request);
+        if (!$request->hasHeader('zoneId')) {
+            $errors = [];
+            array_push($errors, ['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]);
+            return response()->json([
+                'errors' => $errors
+            ], 403);
+        }
 
         $type = $request->query('type', 'all');
         $filter = $request->query('filter', 'all');
 
         $zone_id= $request->header('zoneId');
-
-        $items = ProductLogic::recommended_items($zone_id, $request->store_id,$request['limit'], $request['offset'], $type, $filter, $request->query('store_category_id'), auth('api')->id());
+        $items = ProductLogic::recommended_items($zone_id, $request->store_id,$request['limit'], $request['offset'], $type, $filter);
         $items['items'] = Helpers::product_data_formatting($items['items'], true, false, app()->getLocale());
         return response()->json($items, 200);
+    }
+
+    public function get_set_menus()
+    {
+        try {
+            $items = Helpers::product_data_formatting(Item::active()->with(['rating'])->where(['set_menu' => 1, 'status' => 1])->get(), true, false, app()->getLocale());
+            return response()->json($items, 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'errors' => ['code' => 'product-001', 'message' => 'Set menu not found!']
+            ], 404);
+        }
     }
 
     public function get_product_reviews(Request $request, $item_id)
@@ -579,37 +678,7 @@ class ItemController extends Controller
             array_push($storage, $temp);
         }
 
-        $breakdownRows = Review::where('item_id', $item_id)
-            ->active()
-            ->selectRaw('FLOOR(rating) as star, COUNT(*) as total')
-            ->groupBy('star')
-            ->pluck('total', 'star');
-
-        $counts = [
-            5 => (int) ($breakdownRows[5] ?? 0),
-            4 => (int) ($breakdownRows[4] ?? 0),
-            3 => (int) ($breakdownRows[3] ?? 0),
-            2 => (int) ($breakdownRows[2] ?? 0),
-            1 => (int) ($breakdownRows[1] ?? 0),
-        ];
-        $totalReviews = array_sum($counts);
-        $weighted = ($counts[5] * 5) + ($counts[4] * 4) + ($counts[3] * 3) + ($counts[2] * 2) + ($counts[1] * 1);
-        $avgRating = $totalReviews > 0 ? round($weighted / $totalReviews, 1) : 0;
-
-        $rating_summary = [
-            'avg_rating' => (float) $avgRating,
-            'total_reviews' => $totalReviews,
-            'breakdown' => [
-                ['label' => 'excellent', 'star' => 5, 'count' => $counts[5]],
-                ['label' => 'good',      'star' => 4, 'count' => $counts[4]],
-                ['label' => 'average',   'star' => 3, 'count' => $counts[3]],
-                ['label' => 'below',     'star' => 2, 'count' => $counts[2]],
-                ['label' => 'poor',      'star' => 1, 'count' => $counts[1]],
-            ],
-        ];
-
         $data =  [
-            'rating_summary' => $rating_summary,
             'total_size' => $total,
             'limit' => $request['limit'],
             'offset' => $request['offset'],
@@ -688,8 +757,6 @@ class ItemController extends Controller
         $review->attachment = json_encode($image_array);
         $review->save();
 
-        PersonalizationService::recordItemAction($request->user()->id, (int)$request->item_id, 'review');
-
         if($item->store)
         {
             $store_rating = StoreLogic::update_store_rating($item->store->rating, (int)$request->rating);
@@ -707,7 +774,13 @@ class ItemController extends Controller
 
     public function item_or_store_search(Request $request){
 
-        Helpers::setZoneIds($request);
+        if (!$request->hasHeader('zoneId')) {
+            $errors = [];
+            array_push($errors, ['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]);
+            return response()->json([
+                'errors' => $errors
+            ], 403);
+        }
         if (!$request->hasHeader('longitude') || !$request->hasHeader('latitude')) {
             $errors = [];
             array_push($errors, ['code' => 'longitude-latitude', 'message' => translate('messages.longitude-latitude_required')]);
@@ -727,29 +800,12 @@ class ItemController extends Controller
         }
         $key = explode(' ', $request->name);
 
-        $isGlobal = $request->boolean('is_global');
-
-        if (!$isGlobal && !config('module.current_module_data') && $request->hasHeader('moduleId')) {
-            $moduleValue = $request->header('moduleId');
-            $resolvedModule = is_numeric($moduleValue)
-                ? Module::where('id', $moduleValue)->first()
-                : Module::where('slug', $moduleValue)->first();
-            if ($resolvedModule) {
-                config(['module.current_module_data' => $resolvedModule]);
-            }
-        }
-
-        $module = $isGlobal ? null : config('module.current_module_data');
-
-        $items = Item::active()->with('module')->whereHas('store', function($query)use($zone_id, $module){
-            $query->when($module, function($query)use($module){
-                $query->where('module_id', $module['id'])->whereHas('zone.modules',function($query)use($module){
-                    $query->where('modules.id', $module['id']);
+        $items = Item::active()->whereHas('store', function($query)use($zone_id){
+            $query->when(config('module.current_module_data'), function($query){
+                $query->where('module_id', config('module.current_module_data')['id'])->whereHas('zone.modules',function($query){
+                    $query->where('modules.id', config('module.current_module_data')['id']);
                 });
             })->whereIn('zone_id', json_decode($zone_id, true));
-        })
-        ->when($request->store_category_id, function($query) use($request){
-            return $query->where('store_category_id', $request->store_category_id);
         })
         ->where(function ($q) use ($key) {
             foreach ($key as $value) {
@@ -764,37 +820,20 @@ class ItemController extends Controller
                 'category.parent' => 'name',
                 'category' => 'name',
                 'generic' => 'generic_name',
+                'ecommerce_item_details.brand' => 'name',
+                'pharmacy_item_details.common_condition' => 'name',
             ];
             $q->applyRelationShipSearch(relationships:$relationships ,searchParameter:$key);
         })
-        ->orderByRaw("CASE
-                        WHEN LOWER(REPLACE(name, ' ', '')) = LOWER(REPLACE(?, ' ', '')) THEN 1
-                        WHEN LOWER(REPLACE(name, ' ', '')) LIKE LOWER(REPLACE(?, ' ', '')) THEN 2
-                        WHEN LOWER(REPLACE(name, ' ', '')) LIKE LOWER(REPLACE(?, ' ', '')) THEN 3
-                        ELSE 4
-                    END,  LENGTH(name) ASC, name ASC ", [
-                    $request['name'],            // exact match (normalized)
-                    "{$request['name']}%",       // starts with (normalized)
-                    "%{$request['name']}%",      // contains (normalized)
-                ])
-
         ->limit(50)
-        ->get(['id','name','image','module_id'])
-        ->map(function ($item) {
-            $row = $item->toArray();
-            $mod = $item->module;
-            $row['module'] = $mod ? [
-                'id' => $mod->id,
-                'name' => $mod->module_name,
-                'image' => $mod->icon_full_url,
-                'type' => $mod->module_type,
-            ] : null;
-            return $row;
-        });
+        ->get(['id','name','image']);
 
         $stores = Store::
-        withOpen($longitude??0,$latitude??0)
-        ->with(['module', 'discount'=>function($q){
+        whereHas('zone.modules', function($query){
+            $query->where('modules.id', config('module.current_module_data')['id']);
+        })
+        ->withOpen($longitude??0,$latitude??0)
+        ->with(['discount'=>function($q){
             return $q->validate();
         }])->weekday()
 
@@ -808,49 +847,21 @@ class ItemController extends Controller
                 'items.nutritions' => 'nutrition',
                 'items.allergies' => 'allergy',
                 'items.generic' => 'generic_name',
+                'items.ecommerce_item_details.brand' => 'name',
+                'items.pharmacy_item_details.common_condition' => 'name'
             ];
             $q->applyRelationShipSearch(relationships:$relationships ,searchParameter:$key);
         })
-        ->when($module, function($query)use($zone_id, $module){
-            $query->whereHas('zone.modules', function($q)use($module){
-                $q->where('modules.id', $module['id']);
-            })->module($module['id']);
-            if(!$module['all_zone_service']) {
+        ->when(config('module.current_module_data'), function($query)use($zone_id){
+            $query->module(config('module.current_module_data')['id']);
+            if(!config('module.current_module_data')['all_zone_service']) {
                 $query->whereIn('zone_id', json_decode($zone_id, true));
             }
         })
-        ->when(!$module, function($query)use($zone_id){
-            $query->whereIn('zone_id', json_decode($zone_id, true));
-        })
         ->active()
-                ->orderByRaw("CASE
-                        WHEN LOWER(REPLACE(name, ' ', '')) = LOWER(REPLACE(?, ' ', '')) THEN 1
-                        WHEN LOWER(REPLACE(name, ' ', '')) LIKE LOWER(REPLACE(?, ' ', '')) THEN 2
-                        WHEN LOWER(REPLACE(name, ' ', '')) LIKE LOWER(REPLACE(?, ' ', '')) THEN 3
-                        ELSE 4
-                    END,  LENGTH(name) ASC, name ASC ", [
-                    $request['name'],            // exact match (normalized)
-                    "{$request['name']}%",       // starts with (normalized)
-                    "%{$request['name']}%",      // contains (normalized)
-                ])
         ->limit(50)
-        ->select(['id','name','logo','module_id'])
-        ->get()
-        ->map(function ($store) {
-            $row = $store->toArray();
-            $mod = $store->module;
-            $row['module'] = $mod ? [
-                'id' => $mod->id,
-                'name' => $mod->module_name,
-                'image' => $mod->icon_full_url,
-                'type' => $mod->module_type,
-            ] : null;
-            return $row;
-        });
-
-        if(auth('api')->check()){
-            PersonalizationService::recordSearchAction(auth('api')->id(), $request->name, config('module.current_module_data') ? (int)config('module.current_module_data')['id'] : null);
-        }
+        ->select(['id','name','logo'])
+        ->get();
 
         return [
             'items' => $items,
@@ -861,7 +872,13 @@ class ItemController extends Controller
 
     public function get_store_condition_products(Request $request)
     {
-        Helpers::setZoneIds($request);
+        if (!$request->hasHeader('zoneId')) {
+            $errors = [];
+            array_push($errors, ['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]);
+            return response()->json([
+                'errors' => $errors
+            ], 403);
+        }
         $validator = Validator::make($request->all(), [
             'store_id' => 'required',
             'limit' => 'required',
@@ -877,52 +894,33 @@ class ItemController extends Controller
         $type = $request->query('type', 'all');
         $limit = $request['limit'];
         $offset = $request['offset'];
-        $zones = !empty($zone_id) ? json_decode($zone_id, true) : null;
 
-        $paginator = Item::query()
-
-        ->when(empty($request->store_id), function ($query) use ($zones) {
-
-            $query->when(!empty($zones), function ($query) use ($zones) {
-                $query->whereHas('module.zones', function ($q) use ($zones) {
-                    $q->whereIn('zones.id', $zones);
-                });
-            });
-
-            $query->whereHas('store', function ($q) use ($zones) {
-
-                $q->when(!empty($zones), function ($q) use ($zones) {
-                    $q->whereIn('zone_id', $zones);
-                });
-
-                $q->whereHas('zone.modules', function ($q) {
-                    $q->when(config('module.current_module_data'), function ($q) {
-                        $q->where('modules.id', config('module.current_module_data')['id']);
-                    });
+        $paginator = Item::
+        whereHas('module.zones', function($query)use($zone_id){
+            $query->whereIn('zones.id', json_decode($zone_id, true));
+        })
+        ->whereHas('store', function($query)use($zone_id){
+            $query->whereIn('zone_id', json_decode($zone_id, true))->whereHas('zone.modules',function($query){
+                $query->when(config('module.current_module_data'), function($query){
+                    $query->where('modules.id', config('module.current_module_data')['id']);
                 });
             });
         })
-
-        ->when(is_numeric($request->store_id), function ($query) use ($request) {
-            $query->where('store_id', $request->store_id);
+        ->whereHas('pharmacy_item_details',function($q){
+            return $q->whereNotNull('common_condition_id');
         })
-
+        ->whereHas('ecommerce_item_details',function($q){
+            return $q->whereNotNull('brand_id');
+        })
+        ->when(is_numeric($request->store_id),function ($qurey) use($request){
+            $qurey->where('store_id', $request->store_id);
+        })
         ->when(!is_numeric($request->store_id), function ($query) use ($request) {
             $query->whereHas('store', function ($q) use ($request) {
                 $q->where('slug', $request->store_id);
             });
         })
-
-        ->when($request->store_category_id, function ($query) use ($request) {
-            $query->where('store_category_id', $request->store_category_id);
-        })
-
-        ->active()
-        ->type($type);
-
-        $paginator = PersonalizationService::applyItemPersonalization($paginator, auth('api')->id());
-        $paginator = $paginator->latest()
-        ->paginate($limit, ['*'], 'page', $offset);
+        ->active()->type($type)->latest()->paginate($limit, ['*'], 'page', $offset);
         $data=[
             'total_size' => $paginator->total(),
             'limit' => $limit,
@@ -944,7 +942,13 @@ class ItemController extends Controller
             return response()->json(['errors' => Helpers::error_processor($validator)], 403);
         }
 
-        Helpers::setZoneIds($request);
+        if (!$request->hasHeader('zoneId')) {
+            $errors = [];
+            array_push($errors, ['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]);
+            return response()->json([
+                'errors' => $errors
+            ], 403);
+        }
         $zone_id = $request->header('zoneId');
         $type = $request->query('type', 'all');
         $product_id = $request->query('product_id')??null;
@@ -953,76 +957,19 @@ class ItemController extends Controller
         $limit = $request['limit']??25;
         $offset = $request['offset']??1;
 
-        $items = ProductLogic::get_popular_basic_products($zone_id, $limit, $offset, $type, $request['store_id'], $request['category_id'], $min,$max,$product_id, auth('api')->id());
+        $items = ProductLogic::get_popular_basic_products($zone_id, $limit, $offset, $type, $request['store_id'], $request['category_id'], $min,$max,$product_id);
         $items['categories'] = $items['categories'];
         $items['products'] = Helpers::product_data_formatting($items['products'], true, false, app()->getLocale());
         return response()->json($items, 200);
     }
 
-    public function get_organic_products(Request $request)
-    {
-        Helpers::setZoneIds($request);
-
-        $type = $request->query('type', 'all');
-        $min_price = $request->query('min_price');
-        $max_price = $request->query('max_price');
-        $rating_count = $request->query('rating_count');
-
-        $filter = $request->query('filter', '');
-        $filter = $filter?(is_array($filter)?$filter:str_getcsv(trim($filter, "[]"), ',')):'';
-        $category_ids = $request->query('category_ids', '');
-        $is_in_season = $request->has('is_in_season') ? (bool) $request->query('is_in_season') : null;
-
-        $zone_id = $request->header('zoneId');
-
-        $items = ProductLogic::organic_products($zone_id, $request['limit']??25, $request['offset']??1, $type, $category_ids, $filter, $min_price, $max_price, $rating_count, $request['search'], auth('api')->id(), $is_in_season);
-        $items['categories'] = $items['categories'];
-        $items['products'] = Helpers::productListDataFormatting($items['products']);
-
-        return response()->json($items, 200);
-    }
-
-    public function get_farm_inputs(Request $request)
-    {
-        Helpers::setZoneIds($request);
-
-        $type = $request->query('type', 'all');
-        $zone_id = $request->header('zoneId');
-        $limit = $request->get('limit', 25);
-        $offset = $request->get('offset', 1);
-
-        $query = Item::active()->type($type)
-            ->whereHas('store', function ($q) use ($zone_id) {
-                $q->where('status', 1)
-                    ->when(config('module.current_module_data'), function ($query) {
-                        $query->where('module_id', config('module.current_module_data')['id']);
-                    })
-                    ->whereIn('zone_id', json_decode($zone_id, true));
-            });
-
-        if ($request->filled('category_id')) {
-            $query->whereHas('category', function ($q) use ($request) {
-                $q->where('id', $request->category_id)
-                  ->orWhere('parent_id', $request->category_id);
-            });
-        }
-
-        $paginator = $query->latest()
-            ->paginate($limit, ['*'], 'page', $offset);
-
-        $data = [
-            'total_size' => $paginator->total(),
-            'limit' => $limit,
-            'offset' => $offset,
-            'products' => Helpers::product_data_formatting($paginator->items(), true, false, app()->getLocale()),
-        ];
-
-        return response()->json($data, 200);
-    }
-
     public function get_products(Request $request)
     {
-        Helpers::setZoneIds($request);
+        if (!$request->hasHeader('zoneId')) {
+            $errors = [['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]];
+            return response()->json(['errors' => $errors], 403);
+        }
+
         $data_type = $request->query('data_type', 'all');
 
         $zone_id = $request->header('zoneId');
@@ -1044,16 +991,10 @@ class ItemController extends Controller
                 return $this->get_searched_products($request);
                 break;
             case 'discounted':
-                $items = ProductLogic::discounted_products(zone_id:$zone_id,limit: $limit, offset: $offset, type: $type,  category_ids:$category_ids, filter: $filter, min: $min_price,max: $max_price,rating_count: $rating_count, search:$request['search']??null, user_id: auth('api')->id());
+                $items = ProductLogic::discounted_products($zone_id, $limit, $offset, $type, $category_ids, $filter, $min_price, $max_price, $rating_count);
                 break;
             case 'new':
-                $items = ProductLogic::get_new_products($zone_id, $type, $min_price, $max_price, $product_id, $limit, $offset, $filter, $rating_count, null, null, $request->query('store_category_id'), auth('api')->id());
-                break;
-            case 'top_rated':
-                $items = ProductLogic::top_rated_products($zone_id, $limit, $offset, $type, $category_ids, $filter, $min_price, $max_price, $rating_count, $request['search'], auth('api')->id());
-                break;
-            case 'organic':
-                $items = ProductLogic::organic_products($zone_id, $limit, $offset, $type, $category_ids, $filter, $min_price, $max_price, $rating_count, $request['search']);
+                $items = ProductLogic::get_new_products($zone_id, $type, $min_price, $max_price, $product_id, $limit, $offset, $filter, $rating_count);
                 break;
             case 'category':
                 $validator = Validator::make($request->all(), [
@@ -1064,7 +1005,7 @@ class ItemController extends Controller
                     return response()->json(['errors' => Helpers::error_processor($validator)], 403);
                 }
 
-                $items = CategoryLogic::category_products($category_ids, $zone_id, $limit, $offset, $type, $filter, $min_price, $max_price, $rating_count, null, auth('api')->id());
+                $items = CategoryLogic::category_products($category_ids, $zone_id, $limit, $offset, $type, $filter, $min_price, $max_price, $rating_count);
                 break;
             default:
             $items =  [
@@ -1095,87 +1036,5 @@ class ItemController extends Controller
         return response()->json($names, 200);
     }
 
-    public function get_recently_viewed_products(Request $request)
-    {
-        Helpers::setZoneIds($request);
-
-        $type = $request->query('type', 'all');
-        $min_price = $request->query('min_price');
-        $max_price = $request->query('max_price');
-        $rating_count = $request->query('rating_count');
-
-        $filter = $request->query('filter', '');
-        $filter = $filter?(is_array($filter)?$filter:str_getcsv(trim($filter, "[]"), ',')):'';
-        $category_ids = $request->query('category_ids', '');
-
-        $zone_id= $request->header('zoneId');
-        $items = ProductLogic::recently_viewed_products($zone_id, $request['limit']??25, $request['offset']??1, $type, $category_ids, $filter, $min_price, $max_price, $rating_count, $request['search'], $request->query('store_category_id'), auth('api')->id());
-        $items['categories'] = $items['categories'];
-        $items['products'] = Helpers::productListDataFormatting($items['products']);
-
-        return response()->json($items, 200);
-    }
-
-    public function getOfferItems(Request $request)
-    {
-        Helpers::setZoneIds($request);
-
-        $moduleHeader = $request->header('moduleId');
-        $moduleId = $moduleHeader ? getModuleId($moduleHeader) : null;
-        $userId = null;
-        try {
-            $userId = auth('api')->user()?->id;
-        } catch (\Throwable) {
-            $userId = null;
-        }
-
-        $limit = max(1, (int) $request->query('limit', 20));
-        $offset = max(1, (int) $request->query('offset', 1));
-
-        $data = ProductLogic::get_offer_items(
-            is_numeric($moduleId) ? (int) $moduleId : null,
-            $request->header('zoneId'),
-            $userId,
-            $limit,
-            $offset,
-            $request,
-        );
-
-        return response()->json($data, 200);
-    }
-
-    public function getOfferStores(Request $request)
-    {
-        Helpers::setZoneIds($request);
-
-        $moduleHeader = $request->header('moduleId');
-        $moduleId = $moduleHeader ? getModuleId($moduleHeader) : null;
-
-        $limit = max(1, (int) $request->query('limit', 20));
-        $offset = max(1, (int) $request->query('offset', 1));
-        $q = $request->query('search');
-
-        if (! $request->filled('quick_action') && $request->filled('store_type')) {
-            $request->merge(['quick_action' => $request->query('store_type')]);
-        }
-
-        $filter = $this->storeFilterInputs($request);
-
-        $longitude = is_numeric($request->header('longitude')) ? (float) $request->header('longitude') : 0.0;
-        $latitude = is_numeric($request->header('latitude')) ? (float) $request->header('latitude') : 0.0;
-
-        $data = ProductLogic::get_offer_stores(
-            is_numeric($moduleId) ? (int) $moduleId : null,
-            $request->header('zoneId'),
-            $longitude,
-            $latitude,
-            $offset,
-            $limit,
-            is_string($q) ? $q : null,
-            $filter,
-        );
-
-        return response()->json($data, 200);
-    }
 
 }

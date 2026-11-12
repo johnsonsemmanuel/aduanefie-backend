@@ -2,33 +2,29 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Admin;
- use App\Models\Module;
-use App\Models\Vendor;
-use App\Models\DataSetting;
-use Illuminate\Http\Request;
-use App\CentralLogics\Helpers;
-use App\Models\VendorEmployee;
-use Illuminate\Support\Carbon;
-use App\Models\BusinessSetting;
-use App\CentralLogics\SMS_module;
-use App\Models\PhoneVerification;
- use Illuminate\Support\Facades\DB;
- use Gregwar\Captcha\CaptchaBuilder;
-use Illuminate\Support\Facades\App;
-use App\Http\Controllers\Controller;
-use App\Mail\AdminPasswordResetMail;
-use Brian2694\Toastr\Facades\Toastr;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Crypt;
-use App\Mail\PasswordResetRequestMail;
-use Illuminate\Support\Facades\Cookie;
-use Illuminate\Support\Facades\Session;
-use Modules\Gateways\Traits\SmsGateway;
-use Illuminate\Validation\Rules\Password;
-use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Str;
+    use App\Models\Admin;
+    use App\Models\ExternalConfiguration;
+    use App\Models\Vendor;
+    use App\Models\DataSetting;
+    use Illuminate\Http\Request;
+    use App\Services\AdminMfaService;
+    use App\CentralLogics\Helpers;
+    use App\Models\VendorEmployee;
+    use Illuminate\Support\Carbon;
+    use App\Models\BusinessSetting;
+    use App\CentralLogics\SMS_module;
+    use App\Models\PhoneVerification;
+    use Illuminate\Support\Facades\Auth;
+    use Illuminate\Support\Facades\DB;
+    use App\Models\SubscriptionPackage;
+    use Illuminate\Support\Facades\App;
+    use App\Mail\AdminPasswordResetMail;
+    use Brian2694\Toastr\Facades\Toastr;
+    use Illuminate\Support\Facades\Mail;
+    use App\Mail\PasswordResetRequestMail;
+    use Illuminate\Support\Facades\Cookie;
+    use Modules\Gateways\Traits\SmsGateway;
+    use Illuminate\Validation\Rules\Password;
 
 class LoginController extends Controller
 {
@@ -76,18 +72,9 @@ class LoginController extends Controller
         $role = array_search($user_type, $loginTypes, true);
 
         abort_if($role == null, 404);
-
-        if (in_array($role, ['vendor', 'vendor_employee']) && Helpers::is_vendor_panel_maintenance_active()) {
-            return to_route('maintenance_mode');
-        }
-
         $site_direction = $siteDirections[$role];
         $locale = $locals[$role];
         App::setLocale($locale);
-        $custome_recaptcha = new CaptchaBuilder;
-        $custome_recaptcha->build();
-        Session::put('six_captcha', $custome_recaptcha->getPhrase());
-        $recaptcha = Helpers::get_business_settings('recaptcha');
 
         $email = null;
         $password = null;
@@ -96,32 +83,69 @@ class LoginController extends Controller
             $password = Crypt::decryptString(Cookie::get('p_token'));
         }
 
-        return view('auth.login', compact('custome_recaptcha', 'recaptcha', 'email', 'password', 'role', 'site_direction', 'locale'));
+        return view('auth.login', compact('email', 'password', 'role', 'site_direction', 'locale'));
     }
 
-    public function login_attemp($role, $email, $password, $ip, $remember = false)
+    public function login_attemp($role, $email, $password, $remember = false)
     {
         $auth = ($role == 'admin_employee' ? 'admin' : $role);
         if (auth($auth)->attempt(['email' => $email, 'password' => $password], $remember)) {
-            $user = auth($auth)->user();
-            $newToken = $user?->login_remember_token ?? Str::random(60);
-            $user->login_remember_token = $newToken;
-            $user->save();
-            session(['login_remember_token' => $newToken]);
+
+            // Both admin login tabs land on the same guard, so this branch is
+            // the only place the legacy /login/<tab> entry can be gated. The
+            // password-only session is torn down by begin(); 'remember' is
+            // carried in the pending marker and applied after the challenge.
+            if ($auth == 'admin') {
+                $mode = app(AdminMfaService::class)
+                    ->begin(request(), auth('admin')->user(), (bool) $remember);
+
+                return $mode === AdminMfaService::MODE_SETUP
+                    ? 'admin_mfa_setup'
+                    : 'admin_mfa';
+            }
+
             if ($remember) {
                 Cookie::queue('role', $role, 120);
                 Cookie::queue('e_token', Crypt::encryptString($email), 120);
                 Cookie::queue('p_token', Crypt::encryptString($password), 120);
+            } else {
+                $user = auth($auth)?->user();
+                $user?->update([
+                    'remember_token' => null
+                ]);
+                Cookie::forget('role');
+                Cookie::forget('e_token');
+                Cookie::forget('p_token');
             }
             if ($auth == 'admin') {
-                RateLimiter::clear('login-attempts:' . $ip);
                 return 'admin';
             } else {
-                RateLimiter::clear('login-attempts:' . $ip);
                 return 'vendor';
             }
         }
         return false;
+    }
+
+
+    public function externalLoginFromDrivemond(Request $request)
+    {
+        $drivemondToken = ExternalConfiguration::where(['key' => 'drivemond_token'])->first()->value ?? null;
+        $systemSelfToken = ExternalConfiguration::where(['key' => 'system_self_token'])->first()->value ?? null;
+        $drivemondBaseUrl = ExternalConfiguration::where(['key' => 'drivemond_base_url'])->first()->value ?? null;
+        if ($drivemondBaseUrl != null && $drivemondToken != null && $systemSelfToken != null) {
+            $user = Admin::where('role_id', 1)->first();
+            if (isset($user)) {
+                // DriveMond SSO would create a master-admin session with no
+                // password, and therefore with no second factor. Under the
+                // mandatory-MFA policy that must not grant panel access. The
+                // bridge now stops at the password step; re-enabling it needs a
+                // second-factor handshake in the DriveMond flow itself.
+                return redirect()->route('admin.login')->withErrors([
+                    'email' => 'Single sign-on cannot complete two-factor verification. Sign in with your password.',
+                ]);
+            }
+        }
+        return redirect()->route('admin.login');
     }
 
 
@@ -133,60 +157,18 @@ class LoginController extends Controller
             'role' => 'required'
         ]);
 
-        $recaptcha = Helpers::get_business_settings('recaptcha');
-        if (isset($recaptcha) && $recaptcha['status'] == 1 && !$request?->set_default_captcha) {
-            $request->validate([
-                'g-recaptcha-response' => [
-                    function ($attribute, $value, $fail) {
-                        $secret_key = Helpers::get_business_settings('recaptcha')['secret_key'];
-                        $gResponse = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
-                            'secret' => $secret_key,
-                            'response' => $value,
-                            'remoteip' => \request()->ip(),
-                        ]);
-
-                        if (!$gResponse->successful()) {
-                            $fail(translate('ReCaptcha Failed'));
-                        }
-                    },
-                ],
-            ]);
-        } else if (strtolower(session('six_captcha')) != strtolower($request->custome_recaptcha)) {
-            Toastr::error(translate('messages.ReCAPTCHA Failed'));
-            return back();
-        }
-
-        $ip = $request->ip();
-        $key = 'login-attempts:' . $ip;
-        $maxAttempts = 5;
-        $decayMinutes = 2;
-
-        if (RateLimiter::tooManyAttempts($key, $maxAttempts)) {
-            $seconds = RateLimiter::availableIn($key);
-            $time = $seconds > 60
-                ? ceil($seconds / 60) . ' minutes'
-                : $seconds . ' seconds';
-
-            return redirect()->back()
-                ->withInput($request->only('email', 'remember'))
-                ->withErrors(['Too many login attempts. Try again in ' . $time . '.']);
-        }
-
-
         if ($request->role == 'admin_employee') {
             $data = Admin::where('email', $request->email)->where('role_id', 1)->exists();
             if ($data) {
-                RateLimiter::hit($key, $decayMinutes * 60);
                 return redirect()->back()->withInput($request->only('email', 'remember'))
-                    ->withErrors(['Email does not match.']);
+                    ->withErrors(['Credentials does not match.']);
             }
         }
         elseif ($request->role == 'admin') {
             $data = Admin::where('email', $request->email)->where('role_id', 1)->exists();
             if (!$data) {
-                RateLimiter::hit($key, $decayMinutes * 60);
                 return redirect()->back()->withInput($request->only('email', 'remember'))
-                    ->withErrors(['Email does not match.']);
+                    ->withErrors(['Credentials does not match.']);
             }
         }
         elseif ($request->role == 'vendor') {
@@ -206,7 +188,7 @@ class LoginController extends Controller
                         'package_id' => $vendor?->stores[0]?->package_id,
                         'store_id' => $vendor?->stores[0]?->id,
                         'free_trial_settings' => $free_trial_settings,
-                        'payment_methods' => Helpers::getActivePaymentGateways(),
+                        'payment_methods' => Helpers::getDefaultPaymentMethods(),
                     ]);
                 }
 
@@ -214,10 +196,6 @@ class LoginController extends Controller
                     return redirect()->back()->withInput($request->only('email', 'remember'))
                         ->withErrors([translate('messages.Admin_did_not_approve_your_registration_yet.')]);
                 }
-            }else{
-                RateLimiter::hit($key, $decayMinutes * 60);
-                return redirect()->back()->withInput($request->only('email', 'remember'))
-                ->withErrors(['Email does not match.']);
             }
         } elseif ($request->role == 'vendor_employee') {
             $employee = VendorEmployee::where('email', $request->email)->first();
@@ -231,87 +209,40 @@ class LoginController extends Controller
                     return redirect()->back()->withInput($request->only('email', 'remember'))
                         ->withErrors([translate('messages.store_is_inactive')]);
                 }
-                if (!$employee) {
-                    RateLimiter::hit($key, $decayMinutes * 60);
-                    return redirect()->back()->withInput($request->only('email', 'remember'))
-                        ->withErrors(['Email does not match.']);
-                }
         }
 
-        $data = $this->login_attemp($request->role, $request->email, $request->password, $request->ip(), $request->remember);
+        $data = $this->login_attemp($request->role, $request->email, $request->password, $request->remember);
 
-        if($request->remember){
-            $forgetCookies = [];
-        }else{
-            $forgetCookies = [
-                Cookie::forget('role'),
-                Cookie::forget('e_token'),
-                Cookie::forget('p_token'),
-            ];
+        if ($data === 'admin_mfa' || $data === 'admin_mfa_setup') {
+            return redirect()->route(
+                $data === 'admin_mfa_setup' ? 'admin.mfa.setup' : 'admin.mfa.challenge'
+            );
         }
 
-
-        if ($data == 'admin') {
-            $admin = Admin::find(auth('admin')->id());
-            $admin->is_logged_in = 1;
-            $admin->save();
-            $modules = Module::Active()->get();
-            if (isset($modules) && ($modules->count() > 0)) {
-
-                return redirect(Helpers::admin_landing_url() ?? route('admin.dashboard'))->withCookies($forgetCookies);
-            }
-            return redirect()->route('admin.business-settings.business-setup')->withCookies($forgetCookies);
-        }
+        // There is deliberately no '$data == admin' branch here: both admin
+        // tabs return admin_mfa* above. Re-entering the panel without the
+        // second factor is not a code path that exists.
         if ($data == 'vendor') {
             if ($request->role === 'vendor_employee') {
                 $employee = VendorEmployee::where('email', $request->email)->first();
                 $employee->is_logged_in = 1;
                 $employee->save();
             }
-            $employee_landing = Helpers::employee_landing_url();
-            if ($employee_landing) {
-                return redirect($employee_landing)->withCookies($forgetCookies);
-            }
             if(Helpers::get_store_data()?->module_type == 'rental' && addon_published_status('Rental')){
-                return redirect()->route('vendor.providerDashboard')->withCookies($forgetCookies);
+                return redirect()->route('vendor.providerDashboard');
             }
-            return redirect()->route('vendor.dashboard')->withCookies($forgetCookies);
+            return redirect()->route('vendor.dashboard');
         }
-        RateLimiter::hit($key, $decayMinutes * 60);
+
         return redirect()->back()->withInput($request->only('email', 'remember'))
-            ->withErrors(['Password does not match.']);
-    }
-
-    public function reloadCaptcha()
-    {
-        $custome_recaptcha = new CaptchaBuilder;
-        $custome_recaptcha->build();
-        Session::put('six_captcha', $custome_recaptcha->getPhrase());
-
-        return response()->json([
-            'view' => view('auth.custom-captcha', compact('custome_recaptcha'))->render()
-        ], 200);
+            ->withErrors(['Credentials does not match.']);
     }
 
     public function reset_password_request(Request $request)
     {
-        $ip = $request->ip();
-        $key = 'admin-reset-password:' . $ip;
-        $maxAttempts = 2;
-        $decayMinutes = 60;
-
-        if (RateLimiter::tooManyAttempts($key, $maxAttempts)) {
-            $seconds = RateLimiter::availableIn($key);
-            $time = $seconds > 60 ? ceil($seconds / 60) . ' minutes' : $seconds . ' seconds';
-            Toastr::error(translate('Too many reset requests. Try again in ') . $time . '.');
-            return back();
-        }
-        RateLimiter::hit($key, $decayMinutes * 60);
-
         $admin = Admin::where('role_id', 1)->first();
 
         if (isset($admin)) {
-            DB::table('password_resets')->where(['email' => $admin['email'], 'created_by' => 'admin'])->delete();
             $token = Helpers::generate_reset_password_code();
             DB::table('password_resets')->insert([
                 'email' => $admin['email'],
@@ -322,7 +253,7 @@ class LoginController extends Controller
             $url = url('/') . '/password-reset?token=' . $token;
             try {
                 if (config('mail.status') && $admin['email'] && Helpers::get_mail_status('forget_password_mail_status_admin') == '1' && Helpers::getNotificationStatusData('admin', 'forget_password', 'mail_status')) {
-                    Mail::to($admin?->getRawOriginal('email'))->send(new AdminPasswordResetMail($url, $admin['f_name']));
+                    Mail::to($admin['email'])->send(new AdminPasswordResetMail($url, $admin['f_name']));
                     session()->put('log_email_succ', 1);
                 } else {
                     Toastr::error(translate('messages.Failed_to_send_mail'));
@@ -340,26 +271,11 @@ class LoginController extends Controller
     public function vendor_reset_password_request(Request $request)
     {
         $request->validate([
-            'email' => 'required|email'
+            'email' => 'required'
         ]);
-
-        $ip = $request->ip();
-        $key = 'vendor-reset-password:' . $ip;
-        $maxAttempts = 3;
-        $decayMinutes = 60;
-
-        if (RateLimiter::tooManyAttempts($key, $maxAttempts)) {
-            $seconds = RateLimiter::availableIn($key);
-            $time = $seconds > 60 ? ceil($seconds / 60) . ' minutes' : $seconds . ' seconds';
-            Toastr::error(translate('Too many reset requests. Try again in ') . $time . '.');
-            return back();
-        }
-        RateLimiter::hit($key, $decayMinutes * 60);
-
         $vendor = Vendor::where('email', $request['email'])->first();
 
         if (isset($vendor)) {
-            DB::table('password_resets')->where(['email' => $vendor['email'], 'created_by' => 'vendor'])->delete();
             $token = Helpers::generate_reset_password_code();
             DB::table('password_resets')->insert([
                 'email' => $vendor['email'],
@@ -371,7 +287,7 @@ class LoginController extends Controller
 
             try {
                 if (config('mail.status') && $vendor['email']) {
-                    Mail::to($vendor?->getRawOriginal('email'))->send(new PasswordResetRequestMail($url, $vendor['f_name']));
+                    Mail::to($vendor['email'])->send(new PasswordResetRequestMail($url, $vendor['f_name']));
                     session()->put('log_email_succ', 1);
                 } else {
                     Toastr::error(translate('messages.Failed_to_send_mail'));
@@ -487,17 +403,14 @@ class LoginController extends Controller
         $data = DB::table('password_resets')->where(['token' => $request['reset_token']])->first();
         if (isset($data)) {
             if ($request['password'] == $request['confirm_password']) {
-                $newRememberToken = Str::random(60);
                 if ($data->created_by == 'admin') {
                     DB::table('admins')->where(['email' => $data->email])->update([
-                        'password' => bcrypt($request['confirm_password']),
-                        'login_remember_token' => $newRememberToken,
+                        'password' => bcrypt($request['confirm_password'])
                     ]);
                     $user_link = Helpers::get_login_url('admin_login_url');
                 } else {
                     DB::table('vendors')->where(['email' => $data->email])->update([
-                        'password' => bcrypt($request['confirm_password']),
-                        'login_remember_token' => $newRememberToken,
+                        'password' => bcrypt($request['confirm_password'])
                     ]);
                     $user_link = Helpers::get_login_url('store_login_url');
                 }
@@ -533,6 +446,10 @@ class LoginController extends Controller
                 $user_link = Helpers::get_login_url('admin_employee_login_url');
             }
             auth()?->guard('admin')?->logout();
+            session()->forget([
+                AdminMfaService::SESSION_PENDING,
+                AdminMfaService::SESSION_VERIFIED,
+            ]);
         }
         return redirect()->route('login', [$user_link]);
     }

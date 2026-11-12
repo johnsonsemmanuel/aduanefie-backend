@@ -29,3 +29,4 @@
     @empty
     <p class="text-center">{{ translate('messages.No Data found') }}</p>
 @endforelse
+<script src="{{asset('public/assets/admin')}}/js/view-pages/common.js"></script>

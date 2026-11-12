@@ -4,16 +4,16 @@ namespace App\Models;
 
 use App\CentralLogics\Helpers;
 use App\Scopes\ZoneScope;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Support\Facades\DB;
-use App\Traits\GeneratesSlug;
+use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Modules\TaxModule\Entities\Taxable;
 
 class ItemCampaign extends Model
 {
-    use HasFactory, GeneratesSlug;
+    use HasFactory;
 
     protected $casts = [
         'tax' => 'float',
@@ -184,8 +184,21 @@ class ItemCampaign extends Model
                 ]);
             }
         });
-    }         public function taxVats()
+    }
+    private function generateSlug($name)
     {
-        return $this->morphMany(Taxable::class, 'taxable');
+        $slug = Str::slug($name);
+        if ($max_slug = static::where('slug', 'like',"{$slug}%")->latest('id')->value('slug')) {
+
+            if($max_slug == $slug) return "{$slug}-2";
+
+            $max_slug = explode('-',$max_slug);
+            $count = array_pop($max_slug);
+            if (isset($count) && is_numeric($count)) {
+                $max_slug[]= ++$count;
+                return implode('-', $max_slug);
+            }
+        }
+        return $slug;
     }
 }

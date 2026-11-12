@@ -1,0 +1,380 @@
+openapi: 3.0.3
+info:
+  title: Aduanefie API - Intra-African Agricultural Trade
+  description: |
+    Aduanefie is the premier marketplace for Africans to trade agricultural products 
+    with one another across borders. This API enables B2B agro-commodity trading, 
+    cross-border logistics, escrow settlement, and trade assurance.
+  version: "1.0.0"
+  contact:
+    name: Aduanefie Support
+    email: support@aduanefie.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.aduanefie.com
+    description: Production server
+  - url: http://localhost:8000
+    description: Local development server
+
+tags:
+  - name: Market
+    description: Product discovery and RFQ (Request for Quote) operations
+  - name: Trade
+    description: Trade contracts, escrow, and settlement
+  - name: Trade-Bloc
+    description: Regional trade bloc hubs (ECOWAS, SADC, EAC, COMESA)
+  - name: Trade-Assurance
+    description: Trade assurance and inspection services
+  - name: Seller
+    description: Seller dashboard and operations
+  - name: Sourcing
+    description: Buyer sourcing service
+  - name: Integrations
+    description: Third-party integrations (freight, customs, payments)
+
+paths:
+  /market:
+    get:
+      tags: [Market]
+      summary: List agricultural commodities
+      parameters:
+        - in: query
+          name: category
+          schema: { type: integer }
+          description: Filter by category ID
+        - in: query
+          name: search
+          schema: { type: string }
+          description: Search commodities
+        - in: query
+          name: origin
+          schema: { type: integer }
+          description: Filter by origin zone
+      responses:
+        '200':
+          description: List of commodities
+          content:
+            text/html:
+              schema: { type: string }
+
+  /market/{id}:
+    get:
+      tags: [Market]
+      summary: Get commodity detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Product detail page
+
+  /market/request-quote:
+    post:
+      tags: [Market]
+      summary: Submit RFQ (Request for Quote)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [product_id, quantity, unit, destination_country, incoterm]
+              properties:
+                product_id:
+                  type: integer
+                quantity:
+                  type: integer
+                unit:
+                  type: string
+                destination_country:
+                  type: string
+                incoterm:
+                  type: string
+                  enum: [EXW, FOB, CIF, DAP]
+                needed_by:
+                  type: string
+                  format: date
+                notes:
+                  type: string
+      responses:
+        '200':
+          description: RFQ submitted
+
+  /trade-contracts/{contract}:
+    get:
+      tags: [Trade]
+      summary: View trade contract
+      parameters:
+        - in: path
+          name: contract
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Trade contract view
+
+  /trade-contracts/{contract}/deposit:
+    post:
+      tags: [Trade]
+      summary: Deposit funds into escrow
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount:
+                  type: number
+      responses:
+        '200':
+          description: Funds deposited
+
+  /trade-contracts/{contract}/release:
+    post:
+      tags: [Trade]
+      summary: Release escrow funds to seller
+      security: []
+      responses:
+        '200':
+          description: Funds released
+
+  /trade-contracts/{contract}/refund:
+    post:
+      tags: [Trade]
+      summary: Refund escrow funds to buyer
+      security: []
+      responses:
+        '200':
+          description: Funds refunded
+
+  /trade-bloc:
+    get:
+      tags: [Trade-Bloc]
+      summary: List all trade blocs
+      responses:
+        '200':
+          description: List of trade blocs
+
+  /trade-bloc/{slug}:
+    get:
+      tags: [Trade-Bloc]
+      summary: Get trade bloc hub page
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Bloc hub page
+
+  /trade-bloc/reports/corridors:
+    get:
+      tags: [Trade-Bloc]
+      summary: Trade volume report by corridor
+      parameters:
+        - in: query
+          name: bloc
+          schema: { type: string }
+      responses:
+        '200':
+          description: Corridor statistics
+
+  /trade-assurance/{contract}/request:
+    post:
+      tags: [Trade-Assurance]
+      summary: Request trade assurance inspection
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [assurance_type, inspection_fee, currency_code]
+              properties:
+                assurance_type:
+                  type: string
+                  enum: [quality, quantity, both]
+                inspection_fee:
+                  type: number
+                currency_code:
+                  type: string
+      responses:
+        '200':
+          description: Assurance requested
+
+  /seller/dashboard:
+    get:
+      tags: [Seller]
+      summary: Seller dashboard
+      security: []
+      responses:
+        '200':
+          description: Seller dashboard page
+
+  /seller/rfq/{rfqId}/respond:
+    post:
+      tags: [Seller]
+      summary: Respond to RFQ with quote
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quoted_price, currency_code]
+              properties:
+                quoted_price:
+                  type: number
+                currency_code:
+                  type: string
+                estimated_delivery:
+                  type: string
+                  format: date
+                terms:
+                  type: string
+      responses:
+        '200':
+          description: Quote submitted
+
+  /api/integrations/gateways:
+    get:
+      tags: [Integrations]
+      summary: List supported payment gateways
+      responses:
+        '200':
+          description: Supported gateways
+
+  /api/integrations/customs/submit:
+    post:
+      tags: [Integrations]
+      summary: Submit customs documentation
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [contract_id, destination_country, hs_code, declared_value, documents]
+              properties:
+                contract_id:
+                  type: integer
+                destination_country:
+                  type: string
+                hs_code:
+                  type: string
+                declared_value:
+                  type: number
+                documents:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Customs submission accepted
+
+  /api/integrations/bank/payout:
+    post:
+      tags: [Integrations]
+      summary: Initiate bank payout to seller
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [contract_id, bank_account, bank_name, country_code, amount, currency_code]
+              properties:
+                contract_id:
+                  type: integer
+                bank_account:
+                  type: string
+                bank_name:
+                  type: string
+                country_code:
+                  type: string
+                amount:
+                  type: number
+                currency_code:
+                  type: string
+      responses:
+        '200':
+          description: Payout initiated
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      format: jwt
+
+  schemas:
+    TradeContract:
+      type: object
+      properties:
+        id:
+          type: integer
+        contract_amount:
+          type: number
+        currency_code:
+          type: string
+        escrow_amount:
+          type: number
+        payment_status:
+          type: string
+          enum: [pending, deposited, released, refunded, disputed]
+        delivery_status:
+          type: string
+          enum: [pending, in_transit, delivered, docs_verified, completed]
+        created_at:
+          type: string
+          format: date-time
+
+    TradeCorridor:
+      type: object
+      properties:
+        origin_country:
+          type: string
+        destination_country:
+          type: string
+        corridor_name:
+          type: string
+        distance_km:
+          type: number
+        transit_days_estimate:
+          type: integer
+        trucking_rate_per_ton_usd:
+          type: number
+        cold_chain_available:
+          type: boolean
+        warehousing_available:
+          type: boolean
+
+    TradeBloc:
+      type: object
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        member_countries:
+          type: array
+          items:
+            type: string
+        primary_currencies:
+          type: array
+          items:
+            type: string

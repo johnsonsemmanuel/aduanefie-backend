@@ -7,16 +7,21 @@ use App\Models\Campaign;
 use Illuminate\Http\Request;
 use App\CentralLogics\Helpers;
 use App\CentralLogics\BannerLogic;
-use App\CentralLogics\PersonalizationService;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Cache;
-
+use Illuminate\Support\Facades\Validator;
 
 class BannerController extends Controller
 {
     public function get_banners(Request $request)
     {
-        Helpers::setZoneIds($request);
+        if (!$request->hasHeader('zoneId')) {
+            $errors = [];
+            array_push($errors, ['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]);
+            return response()->json([
+                'errors' => $errors
+            ], 403);
+        }
         $zone_id= $request->header('zoneId');
         $banners = BannerLogic::get_banners($zone_id, $request->query('featured'));
         $campaigns = [];
@@ -44,12 +49,6 @@ class BannerController extends Controller
         }
 
         try {
-            // Personalize banner order for authenticated users
-            if(auth('api')->check() && is_array($banners)){
-                $bannersCollection = collect($banners);
-                $bannersCollection = PersonalizationService::reorderByPreference($bannersCollection, auth('api')->id(), 'store_id', 'store');
-                $banners = $bannersCollection->toArray();
-            }
             return response()->json(['campaigns'=>Helpers::basic_campaign_data_formatting($campaigns, true),'banners'=>$banners], 200);
         } catch (\Exception $e) {
             return response()->json([], 200);
@@ -58,7 +57,13 @@ class BannerController extends Controller
 
     public function get_store_banners(Request $request,$store_id)
     {
-       Helpers::setZoneIds($request);
+        if (!$request->hasHeader('zoneId')) {
+            $errors = [];
+            array_push($errors, ['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]);
+            return response()->json([
+                'errors' => $errors
+            ], 403);
+        }
         $zone_id= $request->header('zoneId');
         $moduleData = config('module.current_module_data');
         $moduleId = isset($moduleData['id']) ? $moduleData['id'] : 'default';

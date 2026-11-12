@@ -1,8 +1,8 @@
 <?php
 
-use App\Http\Controllers\Api\V1\ConfigController;
-use App\Http\Controllers\Api\V1\ProCustomerController;
+use App\WebSockets\Handler\DMLocationSocketHandler;
 use Illuminate\Support\Facades\Route;
+use BeyondCode\LaravelWebSockets\Facades\WebSocketsRouter;
 
 /*
 |--------------------------------------------------------------------------
@@ -31,7 +31,6 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
 
 
     Route::get('zone/list', 'ZoneController@get_zones');
-    Route::get('addon-category/list', 'AddonCategoryController@getList');
     Route::get('zone/check', 'ZoneController@zonesCheck');
 
     Route::get('offline_payment_method_list', 'ConfigController@offline_payment_method_list');
@@ -71,10 +70,6 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
         Route::post('social-register', 'SocialAuthController@social_register');
     });
 
-    Route::group(['prefix' => 'auth/marketer'], function () {
-        Route::post('register', 'MarketerController@register');
-    });
-
     //Store Subscription
     Route::group(['prefix' => 'vendor','namespace' => 'Vendor'], function () {
         Route::get('package-view', 'SubscriptionController@package_view');
@@ -88,7 +83,9 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
     // Module
     Route::get('module', 'ModuleController@index');
     Route::get('module/top-offer', 'ModuleController@topOffer');
+
     Route::post('newsletter/subscribe','NewsletterController@index');
+    Route::get('landing-page', 'ConfigController@landing_page');
     Route::get('react-landing-page', 'ConfigController@react_landing_page');
     Route::get('flutter-landing-page', 'ConfigController@flutter_landing_page');
     Route::get('app-download-section', 'ConfigController@app_settings_download_section');
@@ -104,16 +101,13 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
         });
         Route::group(['middleware'=>['dm.api']], function () {
             Route::get('profile', 'DeliverymanController@get_profile');
-            Route::get('convert-loyalty-points', 'DeliverymanController@convertLoyaltyPoints');
             Route::get('notifications', 'DeliverymanController@get_notifications');
             Route::put('update-profile', 'DeliverymanController@update_profile');
             Route::post('update-active-status', 'DeliverymanController@activeStatus');
             Route::get('current-orders', 'DeliverymanController@get_current_orders');
-            Route::get('orders-count', 'DeliverymanController@get_order_status_count');
             Route::get('latest-orders', 'DeliverymanController@get_latest_orders');
             Route::post('record-location-data', 'DeliverymanController@record_location_data');
             Route::get('all-orders', 'DeliverymanController@get_all_orders');
-            Route::get('income-statement', 'DeliverymanController@income_statement');
             Route::get('order-delivery-history', 'DeliverymanController@get_order_history');
             Route::put('accept-order', 'DeliverymanController@accept_order');
             Route::put('update-order-status', 'DeliverymanController@update_order_status');
@@ -125,13 +119,7 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             //Remove account
             Route::delete('remove-account', 'DeliverymanController@remove_account');
 
-            Route::get('new-earning-report', 'DeliverymanEarningReportController@getEarningReport');
-            Route::get('earning-report', 'DeliverymanController@earningReport');
-            Route::get('loyalty-report', 'DeliverymanController@loyaltyReport');
-            Route::get('referral-report', 'DeliverymanController@referralEarningReport');
-            Route::get('loyalty-point-list', 'DeliverymanController@loyaltyPointlist');
-            Route::get('referral-earning-list', 'DeliverymanController@referralEarninglist');
-            Route::get('parcel-return-earning-list', 'DeliverymanController@parcelReturnEarningList');
+
 
             Route::get('get-withdraw-method-list', 'DeliverymanController@withdraw_method_list');
             Route::get('get-disbursement-report', 'DeliverymanController@disbursement_report');
@@ -144,14 +132,9 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             });
 
 
-            Route::get('get-withdraw-list', 'DeliverymanController@withdraw_list');
-            Route::post('request-withdraw', 'DeliverymanController@request_withdraw');
-            Route::post('add-return-date', 'DeliverymanController@addReturnDate');
-
-
-            Route::post('make-collected-cash-payment', 'DeliverymanController@make_payment')->name('deliveryman_make_payment');
-            Route::post('make-wallet-adjustment', 'DeliverymanController@make_wallet_adjustment')->name('deliveryman_make_wallet_adjustment');
-            Route::get('wallet-payment-list', 'DeliverymanController@wallet_payment_list')->name('deliveryman_wallet_payment_list');
+            Route::post('make-collected-cash-payment', 'DeliverymanController@make_payment')->name('make_payment');
+            Route::post('make-wallet-adjustment', 'DeliverymanController@make_wallet_adjustment')->name('make_wallet_adjustment');
+            Route::get('wallet-payment-list', 'DeliverymanController@wallet_payment_list')->name('wallet_payment_list');
             Route::get('wallet-provided-earning-list', 'DeliverymanController@wallet_provided_earning_list')->name('wallet_provided_earning_list');
 
 
@@ -161,7 +144,6 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
                 Route::get('search-list', 'ConversationController@dm_search_conversations');
                 Route::get('details', 'ConversationController@dm_messages');
                 Route::post('send', 'ConversationController@dm_messages_store');
-                Route::post('question/send', 'ConversationController@dm_auto_messages_store');
             });
         });
     });
@@ -170,7 +152,6 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
         Route::get('notifications', 'VendorController@get_notifications');
         Route::get('profile', 'VendorController@get_profile');
         Route::post('update-active-status', 'VendorController@active_status');
-        // Route::get('verified-badge-popup-seen', 'VendorController@verifiedBadgePopupSeen');
         Route::get('earning-info', 'VendorController@get_earning_data');
         Route::put('update-profile', 'VendorController@update_profile');
         Route::put('update-announcment', 'VendorController@update_announcment');
@@ -180,9 +161,6 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
         Route::get('all-orders', 'VendorController@get_all_orders');
         Route::put('update-order-status', 'VendorController@update_order_status');
         Route::put('update-order-amount', 'VendorController@edit_order_amount');
-        Route::put('update-order', 'VendorOrderEditController@update_order');
-        Route::get('get-searched-food', 'VendorOrderEditController@get_searched_foods');
-        Route::get('order-edit-log', 'VendorOrderEditController@get_edit_logs');
         Route::get('order-details', 'VendorController@get_order_details');
         Route::get('order', 'VendorController@get_order');
         Route::put('update-fcm-token', 'VendorController@update_fcm_token');
@@ -194,13 +172,11 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
         Route::put('update-bank-info', 'VendorController@update_bank_info');
         Route::post('request-withdraw', 'VendorController@request_withdraw');
 
-        Route::get('earning-report', 'StoreEarningReportController@getEarningReport');
-
         Route::put('send-order-otp', 'VendorController@send_order_otp');
 
-        Route::post('make-collected-cash-payment', 'VendorController@make_payment')->name('vendor_make_payment');
-        Route::post('make-wallet-adjustment', 'VendorController@make_wallet_adjustment')->name('vendor_make_wallet_adjustment');
-        Route::get('wallet-payment-list', 'VendorController@wallet_payment_list')->name('vendor_wallet_payment_list');
+        Route::post('make-collected-cash-payment', 'VendorController@make_payment')->name('make_payment');
+        Route::post('make-wallet-adjustment', 'VendorController@make_wallet_adjustment')->name('make_wallet_adjustment');
+        Route::get('wallet-payment-list', 'VendorController@wallet_payment_list')->name('wallet_payment_list');
 
 
         Route::get('get-withdraw-method-list', 'WithdrawMethodController@withdraw_method_list');
@@ -213,8 +189,6 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
         });
 
         Route::get('get-expense', 'ReportController@expense_report');
-        Route::get('get-tax-report', 'ReportController@vendorTax');
-
         Route::get('get-disbursement-report', 'ReportController@disbursement_report');
         Route::get('subscription-transaction', 'SubscriptionController@transaction');
 
@@ -225,7 +199,6 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
 
         Route::get('unit','UnitController@index');
         // Business setup
-        Route::put('update-basic-info', 'BusinessSettingsController@update_store_basic_info');
         Route::put('update-business-setup', 'BusinessSettingsController@update_store_setup');
 
         // Reataurant schedule
@@ -273,13 +246,11 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             Route::put('update', 'BannerController@update');
             Route::get('status', 'BannerController@status');
             Route::delete('delete', 'BannerController@delete');
-            Route::get('edit/{id}', 'BannerController@edit');
         });
         //category
         Route::group(['prefix' => 'categories'], function () {
             Route::get('/', 'CategoryController@get_categories');
             Route::get('childes/{category_id}', 'CategoryController@get_childes');
-            Route::get('category-wise-products/{id}', 'CategoryController@getCategoryWiseProducts');
         });
 
         Route::group(['prefix' => 'delivery-man'], function () {
@@ -303,26 +274,11 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             Route::put('reply-update', 'ItemController@update_reply');
             Route::get('recommended', 'ItemController@recommended');
             Route::get('organic', 'ItemController@organic');
+            Route::get('farming-list', 'ItemController@farming_list');
             Route::get('pending/item/list', 'ItemController@pending_item_list');
             Route::get('requested/item/view/{id}', 'ItemController@requested_item_view');
             Route::put('stock-update', 'ItemController@stock_update');
             Route::get('stock-limit-list', 'ItemController@stock_limit_list');
-        });
-
-        // Store Category (vendor's own)
-        Route::group(['prefix' => 'store-category'], function () {
-            Route::get('list', 'StoreCategoryController@list');
-            Route::get('details/{id}', 'StoreCategoryController@details');
-            Route::post('store', 'StoreCategoryController@store');
-            Route::post('update/{id}', 'StoreCategoryController@update');
-            Route::post('status', 'StoreCategoryController@status');
-            Route::post('priority', 'StoreCategoryController@priority');
-            Route::delete('delete', 'StoreCategoryController@delete');
-            Route::get('items/{id}', 'StoreCategoryController@getProducts');
-
-            // Assign items to a My Category
-            Route::get('assignable-items/{id}', 'StoreCategoryController@assignableItems');
-            Route::post('assign-items', 'StoreCategoryController@assignItems');
         });
 
         // POS
@@ -350,8 +306,6 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
         Route::get('place-api-details', 'ConfigController@place_api_details');
         Route::get('geocode-api', 'ConfigController@geocode_api');
         Route::get('get-PaymentMethods', 'ConfigController@getPaymentMethods');
-        Route::get('get-analytic-scripts', 'ConfigController@analyticScripts');
-
     });
 
     Route::group(['prefix' => 'testimonial'], function () {
@@ -366,24 +320,12 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
     Route::get('item/get-allergy-name-list', 'ItemController@getAllergyNameList');
     Route::get('item/get-nutrition-name-list', 'ItemController@getNutritionNameList');
 
-    Route::get('customer/order/last', 'OrderController@get_last_orders');
+    Route::get('customer/order/parcel-instructions', 'OrderController@parcel_instructions');
     Route::get('most-tips', 'OrderController@most_tips');
     Route::get('stores/details/{id}', 'StoreController@get_details');
 
-    // Pro Customer — public endpoints
-    Route::group(['prefix' => 'pro-customer'], function () {
-        Route::get('plans', [ProCustomerController::class, 'plans']);
-        Route::get('faqs', [ProCustomerController::class, 'faqs']);
-        Route::get('terms-and-conditions', [ProCustomerController::class, 'termsAndConditions']);
-    });
-
     Route::group(['middleware'=>['module-check']], function(){
         Route::group(['prefix' => 'customer', 'middleware' => 'auth:api'], function () {
-
-            Route::get('saved-files', 'CustomerController@saved_files');
-            Route::post('saved-files/store', 'CustomerController@save_prescription_files');
-            Route::delete('saved-files/delete-all', 'CustomerController@delete_all_prescription_files');
-
             Route::post('get-data', 'CustomerController@getCustomer');
             Route::post('external-update-data', 'CustomerController@externalUpdateCustomer')->withoutMiddleware(['auth:api','module-check']);
             Route::get('notifications', 'NotificationController@get_notifications');
@@ -434,75 +376,55 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             });
 
             Route::get('visit-again', 'OrderController@order_again');
-            Route::get('recent-ordered-items', 'OrderController@get_recent_ordered_items');
-            Route::post('order-again/reorder', 'OrderController@reorderFromOrder');
-            Route::post('monthly-order/reorder', 'OrderController@reorderMonthly');
-            Route::get('monthly-order/list', 'OrderController@listMonthlySubscriptions');
-            Route::get('monthly-order/details', 'OrderController@monthlySubscriptionDetails');
-            Route::delete('monthly-order/remove', 'OrderController@removeMonthlySubscription');
 
             Route::get('review-reminder', 'CustomerController@review_reminder');
             Route::get('review-reminder-cancel', 'CustomerController@review_reminder_cancel');
-
-            // Pro Customer — auth endpoints
-            Route::prefix('pro-customer')->group(function () {
-                Route::post('subscribe', [ProCustomerController::class, 'subscribe']);
-                Route::post('cancel', [ProCustomerController::class, 'cancel']);
-                Route::get('active-offer', [ProCustomerController::class, 'activeOffer']);
-            });
-
-            Route::group(['prefix' => 'saved-recipes'], function () {
-                Route::post('add', 'SavedRecipeController@add');
-                Route::get('/', 'SavedRecipeController@list');
-                Route::delete('remove/{id}', 'SavedRecipeController@remove');
-            });
 
         });
         Route::group(['prefix' => 'customer', 'middleware' => 'apiGuestCheck'], function () {
             Route::group(['prefix' => 'order'], function () {
                 Route::get('list', 'OrderController@get_order_list');
+                Route::get('last', 'OrderController@get_last_orders');
                 Route::get('running-orders', 'OrderController@get_running_orders');
-                Route::get('all-running-orders', 'OrderController@get_all_running_orders');
                 Route::get('details', 'OrderController@get_order_details');
                 Route::post('place', 'OrderController@place_order');
-                Route::post('get-Tax', 'OrderController@getTaxFromCart');
                 Route::post('prescription/place', 'OrderController@prescription_place_order');
                 Route::put('cancel', 'OrderController@cancel_order');
-                Route::delete('delete', 'OrderController@delete_order');
                 Route::post('refund-request', 'OrderController@refund_request');
                 Route::get('refund-reasons', 'OrderController@refund_reasons');
-                Route::get('track', 'OrderController@track_order')->withoutMiddleware('auth:apiGuestCheck');
+                Route::get('track', 'OrderController@track_order');
                 Route::put('payment-method', 'OrderController@update_payment_method');
                 Route::put('offline-payment', 'OrderController@offline_payment');
                 Route::put('offline-payment-update', 'OrderController@update_offline_payment_info');
-                Route::post('get-surge-price', 'OrderController@getSurgePriceAmount');
-                Route::post('wallet-payment', 'OrderController@walletPayment');
                 Route::get('payment-failed', 'CustomerController@orderPaymentFailed');
 
             });
+            Route::get('reels/list', 'CustomerController@reels_list');
 
             Route::group(['prefix'=>'cart'], function() {
                 Route::get('list', 'CartController@get_carts');
-                Route::get('get-all', 'CartController@get_all_carts');
                 Route::post('add', 'CartController@add_to_cart');
-                Route::post('add-multiple', 'CartController@add_to_cart_multiple');
                 Route::post('update', 'CartController@update_cart');
                 Route::delete('remove-item', 'CartController@remove_cart_item');
                 Route::delete('remove', 'CartController@remove_cart');
             });
 
+            Route::group(['prefix' => 'ai-chat'], function () {
+                Route::post('send', 'AiChatController@send');
+                Route::get('conversations', 'AiChatController@conversations');
+                Route::get('messages', 'AiChatController@messages');
+                Route::delete('conversations/{id}', 'AiChatController@deleteConversation');
+            });
 
         });
 
         Route::group(['prefix' => 'items'], function () {
-            Route::get('latest', 'ItemController@get_latest_products');
+            Route::get('latest', 'ItemController@get_simple_items');
             Route::get('new-arrival', 'ItemController@get_new_products');
             Route::get('popular', 'ItemController@get_popular_products');
             Route::get('most-reviewed', 'ItemController@get_most_reviewed_products');
-            Route::get('top-rated', 'ItemController@get_top_rated_products');
-            Route::get('recently-viewed', 'ItemController@get_recently_viewed_products');
-            Route::get('organic', 'ItemController@get_organic_products');
             Route::get('discounted', 'ItemController@get_discounted_products');
+            Route::get('set-menu', 'ItemController@get_set_menus');
             Route::get('search', 'ItemController@get_searched_products');
             Route::get('search-suggestion', 'ItemController@get_searched_products_suggestion');
             Route::get('details/{id}', 'ItemController@get_product');
@@ -513,18 +435,15 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             Route::get('recommended', 'ItemController@get_recommended');
             Route::get('basic', 'ItemController@get_popular_basic_products');
             Route::get('suggested', 'ItemController@get_cart_suggest_products');
-            Route::get('item-or-store-search', 'ItemController@item_or_store_search')->withoutMiddleware(['module-check']);
+            Route::get('item-or-store-search', 'ItemController@item_or_store_search');
             Route::post('reviews/submit', 'ItemController@submit_product_review')->middleware('auth:api');
             Route::get('common-conditions', 'ItemController@get_store_condition_products');
             Route::get('get-products', 'ItemController@get_products');
-            Route::get('farm-inputs', 'ItemController@get_farm_inputs');
         });
 
         Route::group(['prefix' => 'stores'], function () {
             Route::get('get-stores/{filter_data}', 'StoreController@get_stores');
-            Route::get('verified', 'StoreController@get_verified_stores');
             Route::get('latest', 'StoreController@get_latest_stores');
-            Route::get('distance', 'StoreController@get_distance_wise_stores');
             Route::get('popular', 'StoreController@get_popular_stores');
             Route::get('recommended', 'StoreController@get_recommended_stores');
             Route::get('discounted', 'StoreController@get_discounted_stores');
@@ -535,20 +454,12 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             Route::get('get-data', 'StoreController@get_combined_data');
             Route::get('top-offer-near-me', 'StoreController@get_top_offer_near_me');
             Route::get('quick-delivery', 'StoreController@get_quick_delivery_stores');
-            Route::get('exclusive-deals', 'StoreController@get_exclusive_deals');
-            Route::get('organic', 'StoreController@get_organic_stores');
-            Route::get('farm-updates', 'StoreController@get_farm_updates');
         });
         Route::get('get-combined-data', 'SearchController@get_combined_data');
-        Route::get('trending-searches', 'SearchController@getTrendingSearches')->withoutMiddleware(['module-check']);
 
         Route::group(['prefix' => 'banners'], function () {
             Route::get('/', 'BannerController@get_banners');
             Route::get('{store_id}/', 'BannerController@get_store_banners');
-        });
-
-        Route::group(['prefix' => 'smart-banners'], function () {
-            Route::get('/', 'SmartBannerController@get_banners')->withoutMiddleware(['module-check']);
         });
 
         Route::group(['prefix' => 'other-banners'], function () {
@@ -567,7 +478,6 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             Route::get('stores/{category_id}', 'CategoryController@get_stores');
             Route::get('featured/items', 'CategoryController@get_featured_category_products');
             Route::get('popular', 'CategoryController@get_popular_category_list');
-            Route::get('top', 'CategoryController@get_top_categories')->withoutMiddleware(['module-check']);
         });
 
         Route::group(['prefix' => 'common-condition'], function () {
@@ -605,66 +515,192 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
         Route::get('parcel-category','ParcelCategoryController@index');
         Route::get('advertisement/list', 'AdvertisementController@get_adds');
 
-        Route::group(['prefix' => 'store-categories'], function () {
-            Route::get('/', 'StoreCategoryController@getCategories');
-            Route::get('store/{storeId}', 'StoreCategoryController@getByStore');
-            Route::get('items', 'StoreCategoryController@getCategoriesWithItems');
+        Route::group(['prefix' => 'export-documents'], function () {
+            Route::get('/', 'ExportDocumentController@index');
+            Route::post('/', 'ExportDocumentController@store');
+            Route::get('{id}', 'ExportDocumentController@show');
+            Route::put('{id}', 'ExportDocumentController@update');
+            Route::delete('{id}', 'ExportDocumentController@destroy');
         });
 
-        Route::group(['prefix' => 'community-zones'], function () {
-            Route::get('/', 'CommunityZoneController@index');
-            Route::get('by-zone', 'CommunityZoneController@byZone');
+        Route::group(['prefix' => 'standards-compliance'], function () {
+            Route::get('/', 'StandardsComplianceController@index');
+            Route::post('/', 'StandardsComplianceController@store');
+            Route::get('{id}', 'StandardsComplianceController@show');
+            Route::put('{id}', 'StandardsComplianceController@update');
+            Route::delete('{id}', 'StandardsComplianceController@destroy');
         });
 
-        Route::group(['prefix' => 'community-delivery'], function () {
-            Route::post('check', 'CommunityDeliveryController@check');
+        Route::group(['prefix' => 'agro-credit'], function () {
+            Route::get('/', 'AgroCreditController@index');
+            Route::post('/', 'AgroCreditController@store');
+            Route::get('{id}', 'AgroCreditController@show');
+            Route::put('{id}', 'AgroCreditController@update');
+            Route::delete('{id}', 'AgroCreditController@destroy');
         });
 
-        Route::group(['prefix' => 'community-agent', 'middleware' => 'auth:api'], function () {
-            Route::get('earnings', 'CommunityAgentController@earnings');
+        Route::group(['prefix' => 'crop-insurance'], function () {
+            Route::get('/', 'CropInsuranceController@index');
+            Route::post('/', 'CropInsuranceController@store');
+            Route::get('{id}', 'CropInsuranceController@show');
+            Route::put('{id}', 'CropInsuranceController@update');
+            Route::delete('{id}', 'CropInsuranceController@destroy');
         });
 
-        Route::group(['prefix' => 'recipes'], function () {
-            Route::get('/', 'RecipeController@index');
-            Route::get('details/{id}', 'RecipeController@details');
-            Route::get('ingredients/{id}', 'RecipeController@ingredients');
+        Route::group(['prefix' => 'processing-facilities'], function () {
+            Route::get('/', 'ProcessingFacilityController@index');
+            Route::post('/', 'ProcessingFacilityController@store');
+            Route::get('{id}', 'ProcessingFacilityController@show');
+            Route::put('{id}', 'ProcessingFacilityController@update');
+            Route::delete('{id}', 'ProcessingFacilityController@destroy');
         });
 
-        Route::group(['prefix' => 'customer', 'middleware' => 'auth:api'], function () {
-            Route::group(['prefix' => 'saved-recipes'], function () {
-                Route::get('/', 'SavedRecipeController@index');
-                Route::post('add', 'SavedRecipeController@store');
-                Route::delete('remove/{id}', 'SavedRecipeController@destroy');
-            });
+        Route::group(['prefix' => 'processing-orders'], function () {
+            Route::get('/', 'ProcessingOrderController@index');
+            Route::post('/', 'ProcessingOrderController@store');
+            Route::get('{id}', 'ProcessingOrderController@show');
+            Route::put('{id}', 'ProcessingOrderController@update');
+            Route::delete('{id}', 'ProcessingOrderController@destroy');
         });
 
-        Route::group(['prefix' => 'marketer', 'middleware' => 'auth:api'], function () {
-            Route::get('dashboard', 'MarketerController@dashboard');
-            Route::get('referrals', 'MarketerController@referrals');
-            Route::get('leaderboard', 'MarketerController@leaderboard');
+        Route::group(['prefix' => 'contract-farming'], function () {
+            Route::get('/', 'ContractFarmingController@index');
+            Route::post('/', 'ContractFarmingController@store');
+            Route::get('{id}', 'ContractFarmingController@show');
+            Route::put('{id}', 'ContractFarmingController@update');
+            Route::delete('{id}', 'ContractFarmingController@destroy');
         });
 
-        Route::group(['prefix' => 'equipment'], function () {
-            Route::get('/', 'EquipmentBookingController@browse');
-            Route::get('{id}', 'EquipmentBookingController@showEquipment');
+        Route::group(['prefix' => 'cooperatives'], function () {
+            Route::get('/', 'CooperativeController@index');
+            Route::post('/', 'CooperativeController@store');
+            Route::get('{id}', 'CooperativeController@show');
+            Route::put('{id}', 'CooperativeController@update');
+            Route::delete('{id}', 'CooperativeController@destroy');
         });
 
-        Route::group(['prefix' => 'equipment-bookings', 'middleware' => 'auth:api'], function () {
-            Route::post('/', 'EquipmentBookingController@store');
-            Route::get('/', 'EquipmentBookingController@index');
-            Route::get('{id}', 'EquipmentBookingController@show');
-            Route::post('{id}/cancel', 'EquipmentBookingController@cancel');
-            Route::post('{id}/condition-report', 'EquipmentBookingController@submitConditionReport');
+        Route::group(['prefix' => 'cooperative-members'], function () {
+            Route::get('/', 'CooperativeMemberController@index');
+            Route::post('/', 'CooperativeMemberController@store');
+            Route::get('{id}', 'CooperativeMemberController@show');
+            Route::put('{id}', 'CooperativeMemberController@update');
+            Route::delete('{id}', 'CooperativeMemberController@destroy');
         });
+
     });
-    Route::group(['prefix' => 'offers'], function () {
-        Route::get('items', 'ItemController@getOfferItems');
-        Route::get('stores', 'ItemController@getOfferStores');
+Route::get('vehicle/extra_charge', 'ConfigController@extra_charge');
+Route::get('get-vehicles', 'ConfigController@get_vehicles');
+
+// ============================================================================
+// Intra-African Agricultural Trade API Routes
+// ============================================================================
+Route::group(['prefix' => 'trade'], function () {
+    // Corridors
+    Route::get('corridors', 'TradeCorridorController@index');
+    Route::get('corridors/{origin}/{destination}', 'TradeCorridorController@show');
+    Route::post('corridors', 'TradeCorridorController@store');
+    Route::get('corridors/by-bloc/{bloc}', 'TradeCorridorController@byBloc');
+
+    // Customs Duties
+    Route::post('customs-duties/calculate', 'CustomsDutyController@calculate');
+    Route::get('customs-duties/by-country/{country}', 'CustomsDutyController@byCountry');
+
+    // Trade Blocs
+    Route::get('blocs', 'TradeBlocController@index');
+    Route::get('blocs/{slug}', 'TradeBlocController@show');
+    Route::get('blocs/{slug}/corridors', 'TradeBlocController@corridors');
+
+    // Trade Requests (RFQ)
+    Route::group(['middleware' => 'auth:api'], function () {
+        Route::get('requests', 'TradeRequestController@index');
+        Route::post('requests', 'TradeRequestController@store');
+        Route::get('requests/{id}', 'TradeRequestController@show');
+        Route::get('requests/received', 'TradeRequestController@received');
+        Route::post('requests/{id}/quotes', 'TradeRequestQuoteController@store');
+        Route::get('requests/{id}/quotes', 'TradeRequestQuoteController@index');
+        Route::post('quotes/{id}/accept', 'TradeRequestQuoteController@accept');
+        Route::post('quotes/{id}/reject', 'TradeRequestQuoteController@reject');
+        Route::post('documents/upload', 'TradeDocumentController@upload');
+        Route::get('requests/{id}/documents', 'TradeDocumentController@index');
     });
-    Route::get('vehicle/extra_charge', 'ConfigController@extra_charge');
-    Route::get('get-vehicles', 'ConfigController@get_vehicles');
-    Route::get('get-parcel-cancellation-reasons', 'ConfigController@parcel_cancellation_reason');
 
-    Route::get('get-page-meta-data', [ConfigController::class, 'getPageMetaData']);
+    // Trade Contracts & Escrow
+    Route::group(['middleware' => 'auth:api'], function () {
+        Route::post('contracts/create', 'TradeFinanceController@createContract');
+        Route::post('contracts/{id}/deposit', 'TradeFinanceController@deposit');
+        Route::post('contracts/{id}/confirm-delivery', 'TradeFinanceController@confirmDelivery');
+        Route::post('contracts/{id}/verify-documents', 'TradeFinanceController@verifyDocuments');
+        Route::post('contracts/{id}/release', 'TradeFinanceController@releaseFunds');
+        Route::post('contracts/{id}/refund', 'TradeFinanceController@refund');
+        Route::get('contracts/{id}/summary', 'TradeFinanceController@summary');
+        Route::get('contracts/{id}', 'TradeFinanceController@view');
+    });
 
-});
+    // Trade Assurance
+    Route::group(['middleware' => 'auth:api'], function () {
+        Route::post('assurance/{id}/request', 'TradeAssuranceController@request');
+        Route::post('assurance/{id}/inspect', 'TradeAssuranceController@recordInspection');
+        Route::get('assurance/{id}/status', 'TradeAssuranceController@status');
+    });
+
+    // Bulk Trade
+    Route::get('bulk-items/{itemId}/tiers', 'BulkTradeController@itemTiers');
+    Route::post('bulk-items/{itemId}/calculate-price', 'BulkTradeController@calculateBulkPrice');
+    Route::group(['middleware' => 'auth:api'], function () {
+        Route::post('standing-orders', 'BulkTradeController@createStandingOrder');
+        Route::get('standing-orders', 'BulkTradeController@listStandingOrders');
+        Route::post('standing-orders/{id}/cancel', 'BulkTradeController@cancelStandingOrder');
+        Route::get('standing-orders/due', 'BulkTradeController@dueStandingOrders');
+    });
+
+    // Buyer Sourcing
+    Route::group(['middleware' => 'auth:api'], function () {
+        Route::post('sourcing', 'BuyerSourcingController@create');
+        Route::get('sourcing', 'BuyerSourcingController@index');
+        Route::get('sourcing/{id}/match-sellers', 'BuyerSourcingController@matchSellers');
+        Route::get('sourcing/my-requests', 'BuyerSourcingController@myRequests');
+    });
+
+    // Seller Dashboard
+    Route::group(['middleware' => 'auth:api'], function () {
+        Route::get('seller/dashboard', 'SellerDashboardController@index');
+        Route::post('seller/rfq/{id}/respond', 'SellerDashboardController@respondToRfq');
+        Route::post('seller/upgrade-gold', 'SellerDashboardController@upgradeGoldSupplier');
+    });
+
+    // Reports
+    Route::get('reports/corridors', 'TradeBlocController@reportCorridors');
+    Route::get('reports/commodities', 'TradeBlocController@reportCommodities');
+    Route::get('reports/countries', 'TradeBlocController@reportCountries');
+
+    // Integrations
+    Route::post('integrations/freight/webhook', 'IntegrationController@freightWebhook');
+    Route::post('integrations/customs/submit', 'IntegrationController@customsSubmit');
+    Route::post('integrations/bank/payout', 'IntegrationController@bankPayout');
+    Route::post('integrations/payment/webhook/{gateway}', 'IntegrationController@paymentWebhook');
+    Route::get('integrations/gateways', 'IntegrationController@supportedGateways');
+    
+    // Simple items endpoint for marketplace
+    Route::get('items/simple', 'ItemController@get_simple_items');
+    });    // Close trade group
+
+    Route::group(['prefix' => 'bogo'], function () {
+        Route::get('home', fn () => response()->json(['is_live' => false, 'offers' => [], 'items' => [], 'stores' => []], 200));
+        Route::get('offers', fn () => response()->json(['items' => [], 'stores' => [], 'data' => [], 'total_size' => 0], 200));
+        Route::get('store-offers', fn () => response()->json(['items' => [], 'stores' => [], 'data' => [], 'total_size' => 0], 200));
+    });
+
+    Route::group(['prefix' => 'bundle'], function () {
+        Route::get('/', fn () => response()->json(['bundles' => [], 'data' => [], 'total_size' => 0], 200));
+        Route::get('home', fn () => response()->json(['bundles' => [], 'data' => [], 'total_size' => 0], 200));
+        Route::get('list', fn () => response()->json(['bundles' => [], 'data' => [], 'total_size' => 0], 200));
+        Route::get('store-bundles', fn () => response()->json(['bundles' => [], 'data' => [], 'total_size' => 0], 200));
+    });
+
+    Route::group(['prefix' => 'happy-hour'], function () {
+        Route::get('running', fn () => response()->json(['is_running' => false, 'happy_hour' => null], 200));
+        Route::get('stores', fn () => response()->json(['stores' => [], 'data' => [], 'total_size' => 0], 200));
+    });
+});    // Close outer Route::group
+
+WebSocketsRouter::webSocket('/delivery-man/live-location', DMLocationSocketHandler::class);

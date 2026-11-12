@@ -70,7 +70,7 @@
             </div>
 
             <div class="col-lg-9">
-                <form action="{{getEnvMode()!='demo'?route('vendor.profile.update'):'javascript:'}}" method="post" enctype="multipart/form-data" id="vendor-settings-form">
+                <form action="{{env('APP_MODE')!='demo'?route('vendor.profile.update'):'javascript:'}}" method="post" enctype="multipart/form-data" id="vendor-settings-form">
                 @csrf
                 <!-- Card -->
                     <div class="card mb-3 mb-lg-5" id="generalDiv">
@@ -86,7 +86,7 @@
                             for="avatarUploader">
                             <img id="viewer"
                                  data-onerror-image="{{asset('public/assets/admin/img/160x160/img1.jpg')}}"
-                                 class="avatar-img onerror-image w-100"
+                                 class="avatar-img onerror-image"
                                  src="{{ \App\CentralLogics\Helpers::get_loggedin_user()?->image_full_url ?? asset('public/assets/admin/img/160x160/img1.jpg') }}"
                                  alt="Image">
 
@@ -132,12 +132,11 @@
 
                             <!-- Form Group -->
                             <div class="row form-group">
-                                <label for="phoneLabel" class="col-sm-3 col-form-label input-label">{{translate('messages.phone')}}
-                                    {{-- <span class="input-label-secondary">({{translate('messages.optional')}})</span> --}}
-                                    </label>
+                                <label for="phoneLabel" class="col-sm-3 col-form-label input-label">{{translate('messages.phone')}} <span
+                                        class="input-label-secondary">({{translate('messages.optional')}})</span></label>
 
                                 <div class="col-sm-9">
-                                    <input type="tel" class="js-masked-input form-control" name="phone" id="phoneLabel"
+                                    <input type="text" class="js-masked-input form-control" name="phone" id="phoneLabel"
                                            placeholder="+x(xxx)xxx-xx-xx" aria-label="+(xxx)xx-xxx-xxxxx"
                                            value="{{auth('vendor')->check()?auth('vendor')->user()->phone:auth('vendor_employee')->user()->phone}}"
                                            data-hs-mask-options='{
@@ -158,7 +157,7 @@
                             </div>
 
                             <div class="d-flex justify-content-end">
-                                <button type="button" data-id="vendor-settings-form" data-message="{{ translate('you_want_to_update_user_info') }}" class="btn btn-primary {{getEnvMode()!='demo'?'form-alert':'call-demo'}}">{{ translate('messages.Save_changes') }}</button>
+                                <button type="button" data-id="vendor-settings-form" data-message="{{ translate('you_want_to_update_user_info') }}" class="btn btn-primary {{env('APP_MODE')!='demo'?'form-alert':'call-demo'}}">{{ translate('messages.Save_changes') }}</button>
                             </div>
 
                             <!-- End Form -->
@@ -171,95 +170,63 @@
                 <!-- Card -->
                 <div id="passwordDiv" class="card mb-3 mb-lg-5">
                     <div class="card-header">
-                        <h4 class="card-title">{{ translate('messages.change_your_password') }}</h4>
+                        <h2 class="card-title h4">
+                            <i class="tio-lock"></i>
+                            <span>{{translate('messages.change_your_password')}}</span>
+                        </h2>
                     </div>
 
                     <!-- Body -->
                     <div class="card-body">
                         <!-- Form -->
-                        <form id="changePasswordForm"
-                            action="{{ getEnvMode() != 'demo' ? route('vendor.profile.settings-password') : 'javascript:' }}"
-                            method="post" enctype="multipart/form-data">
-                            @csrf
+                        <form id="changePasswordForm" action="{{env('APP_MODE')!='demo'?route('vendor.profile.settings-password'):'javascript:'}}" method="post"
+                              enctype="multipart/form-data">
+                        @csrf
 
-                            <!-- Form Group -->
+                        <!-- Form Group -->
                             <div class="row form-group">
-                                <label for="newPassword"
-                                    class="col-sm-3 col-form-label input-label">{{ translate('messages.new_password') }}<span
-                                        class="form-label-secondary" data-toggle="tooltip" data-placement="right"
-                                        data-original-title="{{ translate('messages.Must_contain_at_least_one_number_and_one_uppercase_and_lowercase_letter_and_symbol,_and_at_least_8_or_more_characters') }}"><img
-                                            src="{{ asset('/public/assets/admin/img/info-circle.svg') }}"
-                                            alt="{{ translate('messages.Must_contain_at_least_one_number_and_one_uppercase_and_lowercase_letter_and_symbol,_and_at_least_8_or_more_characters') }}"></span></label>
+                                <label for="newPassword" class="col-sm-3 col-form-label input-label">{{translate('messages.new_password')}}<span class="form-label-secondary" data-toggle="tooltip" data-placement="right"
+        data-original-title="{{ translate('messages.Must_contain_at_least_one_number_and_one_uppercase_and_lowercase_letter_and_symbol,_and_at_least_8_or_more_characters') }}"><img src="{{ asset('/public/assets/admin/img/info-circle.svg') }}" alt="{{ translate('messages.Must_contain_at_least_one_number_and_one_uppercase_and_lowercase_letter_and_symbol,_and_at_least_8_or_more_characters') }}"></span></label>
 
                                 <div class="col-sm-9">
+                                    <input type="password" class="js-pwstrength form-control" name="password"
+                                           id="newPassword" pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}" title="{{ translate('messages.Must_contain_at_least_one_number_and_one_uppercase_and_lowercase_letter_and_symbol,_and_at_least_8_or_more_characters') }}"
+                                           placeholder="{{ translate('messages.password_length_placeholder', ['length' => '8+']) }}"
+                                           aria-label="8+ characters required"
+                                           data-hs-pwstrength-options='{
+                                           "ui": {
+                                             "container": "#changePasswordForm",
+                                             "viewports": {
+                                               "progress": "#passwordStrengthProgress",
+                                               "verdict": "#passwordStrengthVerdict"
+                                             }
+                                           }
+                                         }' required>
 
+                                    <p id="passwordStrengthVerdict" class="form-text mb-2"></p>
 
-
-                                    <div class="js-form-message form-group mb-0">
-
-                                        <div class="input-group input-group-merge">
-                                            <input type="password" class="js-toggle-password form-control"
-                                                name="password" id="signupSrPassword"
-                                                pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
-                                                title="{{ translate('messages.Must_contain_at_least_one_number_and_one_uppercase_and_lowercase_letter_and_symbol,_and_at_least_8_or_more_characters') }}"
-                                                placeholder="{{ translate('Minimum 8 characters') }}"
-                                                aria-label="8+ characters required" required
-                                                data-msg="Your password is invalid. Please try again."
-                                                data-hs-toggle-password-options='{
-                                            "target": [".js-toggle-password-target-1", ".js-toggle-password-target-2"],
-                                            "defaultClass": "tio-hidden-outlined",
-                                            "showClass": "tio-visible-outlined",
-                                            "classChangeTarget": ".js-toggle-passowrd-show-icon-1"
-                                            }'>
-                                            <div class="js-toggle-password-target-1 input-group-append">
-                                                <a class="input-group-text" href="javascript:">
-                                                    <i class="js-toggle-passowrd-show-icon-1 tio-visible-outlined"></i>
-                                                </a>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <div id="passwordStrengthProgress"></div>
                                 </div>
                             </div>
                             <!-- End Form Group -->
 
                             <!-- Form Group -->
                             <div class="row form-group">
-                                <label for="confirmNewPasswordLabel"
-                                    class="col-sm-3 col-form-label input-label">{{ translate('messages.confirm_password') }}</label>
+                                <label for="confirmNewPasswordLabel" class="col-sm-3 col-form-label input-label">{{translate('messages.confirm_password')}}</label>
 
                                 <div class="col-sm-9">
                                     <div class="mb-3">
-                                        <div class="js-form-message form-group mb-0">
-                                            <div class="input-group input-group-merge">
-                                                <input type="password" class="js-toggle-password form-control"
-                                                    name="confirm_password" id="signupSrConfirmPassword"
-                                                    pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
-                                                    title="{{ translate('messages.Must_contain_at_least_one_number_and_one_uppercase_and_lowercase_letter_and_symbol,_and_at_least_8_or_more_characters') }}"
-                                                    placeholder="{{ translate('Minimum 8 characters') }}"
-                                                    aria-label="8+ characters required" required
-                                                    data-msg="Password does not match the confirm password."
-                                                    data-hs-toggle-password-options='{
-                                                "target": [".js-toggle-password-target-1", ".js-toggle-password-target-2"],
-                                                "defaultClass": "tio-hidden-outlined",
-                                                "showClass": "tio-visible-outlined",
-                                                "classChangeTarget": ".js-toggle-passowrd-show-icon-2"
-                                                }'>
-                                                <div class="js-toggle-password-target-2 input-group-append">
-                                                    <a class="input-group-text" href="javascript:">
-                                                        <i class="js-toggle-passowrd-show-icon-2 tio-visible-outlined"></i>
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        </div>
+                                        <input type="password" class="form-control" name="confirm_password"
+                                               id="confirmNewPasswordLabel" pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}" title="{{ translate('messages.Must_contain_at_least_one_number_and_one_uppercase_and_lowercase_letter_and_symbol,_and_at_least_8_or_more_characters') }}"
+                                               placeholder="{{ translate('messages.password_length_placeholder', ['length' => '8+']) }}"
+                                               aria-label="8+ characters required" required>
                                     </div>
                                 </div>
                             </div>
                             <!-- End Form Group -->
 
                             <div class="d-flex justify-content-end">
-                                <button type="button" data-id="changePasswordForm"
-                                    data-message="{{ translate('messages.want_to_update_admin_password') }}"
-                                    class="btn btn-primary {{ getEnvMode() != 'demo' ? 'form-alert' : 'call-demo' }}">{{ translate('messages.save') }}</button>
+                                <button type="button" data-id="changePasswordForm" data-message="{{translate('messages.want_to_update_password')}}" class="btn btn-primary {{env('APP_MODE')!='demo'?'form-alert':'call-demo'}}">{{translate('messages.Save_changes')}}</button>
                             </div>
                         </form>
                         <!-- End Form -->

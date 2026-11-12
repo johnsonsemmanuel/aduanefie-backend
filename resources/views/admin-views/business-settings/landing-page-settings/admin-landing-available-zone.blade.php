@@ -22,7 +22,7 @@
             </div>
         </div>
     </div>
-    <div class="mb-20 mt-2">
+    <div class="mb-4 mt-2">
         <div class="js-nav-scroller hs-nav-scroller-horizontal">
             @include('admin-views.business-settings.landing-page-settings.top-menu-links.admin-landing-page-links')
         </div>
@@ -36,7 +36,7 @@
     @php($language = $language->value ?? null)
     @php($defaultLang = str_replace('_', '-', app()->getLocale()))
 
-    <form id="zone-setup-form" action="{{ route('admin.business-settings.admin-landing-page-settings-update', 'available-zone-section') }}" method="POST" enctype="multipart/form-data">
+    <form id="zone-setup-form" action="{{ route('admin.business-settings.admin-landing-page-settings', 'available-zone-section') }}" method="POST" enctype="multipart/form-data">
         @csrf
         <div class="card mb-3">
             <div class="card-body">
@@ -102,12 +102,8 @@
                                         ({{ translate('messages.Default') }})<span class="form-label-secondary" data-toggle="tooltip" data-placement="right" data-original-title="{{ translate('Write_the_title_within_50_characters') }}">
                                                 <img src="{{asset('public/assets/admin/img/info-circle.svg')}}" alt="">
                                             </span>
-                                        <span class="form-label-secondary text-danger"
-                                              data-toggle="tooltip" data-placement="right"
-                                              data-original-title="{{ translate('messages.Required.')}}"> *
-                                                </span>
                                     </label>
-                                    <input required type="text" name="available_zone_title[]" id="default_title" maxlength="50"
+                                    <input type="text" name="available_zone_title[]" id="default_title" maxlength="50"
                                            class="form-control" placeholder="{{ translate('messages.title') }}" value="{{$available_zone_title?->getRawOriginal('value')}}"
                                     >
                                 </div>
@@ -187,40 +183,30 @@
             </div>
             <div class="col-md-6">
                 <div class="card h-100">
-                    <div class="card-body">
-                        <div class="text-center mb-3">
-                            <label class="text-dark d-block mb-2">
-                                <strong>{{ translate('Related Image') }}</strong>
-                                <small class="text-danger">* {{ translate('( Ratio 1:1 )') }}</small>
-                                <div class="fs-12 opacity-70">
-                                    {{ translate(IMAGE_FORMAT.' ' . 'Less Than 2MB') }}
-                                </div>
-                            </label>
-
-                        </div>
-                        <div class="text-center">
-                            <label class="position-relative d-inline-block">
-                                <img class="img--110 min-height-170px min-width-170px onerror-image image--border"
-                                     id="viewer"
-                                     data-onerror-image="{{ asset('public/assets/admin/img/upload.png') }}"
-                                     src="{{ \App\CentralLogics\Helpers::get_full_url('available_zone_image', $available_zone_image?->value ?? '', $available_zone_image?->storage[0]?->value ?? 'public','upload_image')}}"
-                                     alt="logo image">
-
-                                <div class="icon-file-group">
-                                    <div class="icon-file">
-                                        <i class="tio-edit"></i>
+                    <div class="card-body d-flex flex-column justify-content-center">
+                        <div>
+                            <div class="d-flex justify-content-center">
+                                <label class="text-dark d-block mb-4">
+                                    <strong>{{ translate('Related Image') }}</strong>
+                                    <small class="text-danger">* {{ translate('( Ratio 1:1 )') }}</small>
+                                </label>
+                            </div>
+                            <div class="d-flex justify-content-center">
+                                <label class="text-center position-relative">
+                                    <img class="img--110 min-height-170px min-width-170px onerror-image image--border" id="viewer"
+                                         data-onerror-image="{{ asset('public/assets/admin/img/upload.png') }}"
+                                         src="{{\App\CentralLogics\Helpers::get_full_url('available_zone_image', $available_zone_image?->value?? '', $available_zone_image?->storage[0]?->value ?? 'public','upload_image')}}"
+                                         alt="logo image" />
+                                    <div class="icon-file-group">
+                                        <div class="icon-file">
+                                            <i class="tio-edit"></i>
+                                            <input type="file" name="image" id="customFileEg1" class="custom-file-input"
+                                                   accept=".webp, .jpg, .png, .jpeg, .gif, .bmp, .tif, .tiff|image/*" >
+                                        </div>
                                     </div>
-                                </div>
-
-                                <input type="file"
-                                       name="image"
-                                       id="customFileEg1"
-                                       class="upload-file__input single_file_input"
-                                       accept="{{ IMAGE_EXTENSION }}"
-                                       hidden>
-                            </label>
+                                </label>
+                            </div>
                         </div>
-
                     </div>
                 </div>
             </div>

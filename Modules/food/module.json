@@ -1,0 +1,13 @@
+{
+    "name": "Food",
+    "alias": "food",
+    "description": "Processed foods module - value-added agricultural products, packaged foods, and ready-to-eat items from local processors.",
+    "keywords": ["food", "processed", "packaged", "agriculture"],
+    "priority": 20,
+    "providers": [
+        "Modules\\Food\\Providers\\FoodServiceProvider"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": []
+}

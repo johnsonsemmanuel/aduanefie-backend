@@ -20,7 +20,7 @@
             <img class="img-responsive initial--30 onerror-image"
             src="{{ $product['image_full_url'] ?? asset('public/assets/admin/img/160x160/img2.jpg') }}"
                 data-onerror-image="{{ asset('public/assets/admin/img/160x160/img2.jpg') }}"
-                data-zoom="{{ asset('storage/product') }}/{{ $product['image'] }}" alt="Product image"
+                data-zoom="{{ asset('storage/app/public/product') }}/{{ $product['image'] }}" alt="Product image"
                 width="">
             <div class="cz-image-zoom-pane"></div>
         </div>
@@ -230,7 +230,7 @@
                                     for="addon{{ $key }}">{{ Str::limit($add_on->name, 20, '...') }} <br>
                                     {{ \App\CentralLogics\Helpers::format_currency($add_on->price) }}</label>
                                 <label
-                                    class="input-group addon-quantity-input mx-1 shadow-lg border bg-white rounded px-1" @if (in_array($add_on->id, $cart_item['add_ons'])) style="visibility:visible;" @endif
+                                    class="input-group addon-quantity-input mx-1 shadow bg-white rounded px-1" @if (in_array($add_on->id, $cart_item['add_ons'])) style="visibility:visible;" @endif
                                     for="addon{{ $key }}">
                                     <button class="btn btn-sm h-100 text-dark px-0 decrease-button" data-id="{{ $add_on->id }}"  type="button"
                                         ><i
@@ -279,6 +279,7 @@
         </div>
     </div>
 </div>
+<script src="{{asset('public/assets/admin')}}/js/view-pages/common.js"></script>
 <script type="text/javascript">
     "use strict";
     getVariantPrice();
@@ -286,3 +287,4 @@
         getVariantPrice();
     });
 </script>
+

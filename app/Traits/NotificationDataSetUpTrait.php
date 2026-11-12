@@ -744,70 +744,7 @@ trait NotificationDataSetUpTrait
             'push_notification_status' => 'active',
             'sub_title' => 'Sent_notification_on_loyalty_point_earning',
         ];
-        $data []=[
-            'title' => 'customer_delivery_verification_otp',
-            'key' => 'customer_delivery_verification_otp',
-            'type' => 'customer',
-            'mail_status' => 'disable',
-            'sms_status' => 'inactive',
-            'push_notification_status' => 'disable',
-            'sub_title' => 'Sent_customer_delivery_verification_otp',
-        ];
 
-        $data []=[
-            'title' => 'deliveryman_withdraw_approve',
-            'key' => 'deliveryman_withdraw_approve',
-            'type' => 'deliveryman',
-            'mail_status' => 'active',
-            'sms_status' => 'disable',
-            'push_notification_status' => 'active',
-            'sub_title' => 'Sent_notification_on_deliveryman_withdraw_approve',
-        ];
-        $data []=[
-            'title' => 'deliveryman_withdraw_rejaction',
-            'key' => 'deliveryman_withdraw_rejaction',
-            'type' => 'deliveryman',
-            'mail_status' => 'active',
-            'sms_status' => 'disable',
-            'push_notification_status' => 'active',
-            'sub_title' => 'Sent_notification_on_deliveryman_withdraw_rejaction',
-        ];
-        $data []=[
-            'title' => 'deliveryman_loyalty_point_transaction',
-            'key' => 'deliveryman_loyalty_point_transaction',
-            'type' => 'deliveryman',
-            'mail_status' => 'disable',
-            'sms_status' => 'disable',
-            'push_notification_status' => 'active',
-            'sub_title' => 'Sent_notification_on_deliveryman_loyalty_point_transaction',
-        ];
-        $data []=[
-            'title' => 'deliveryman_referral_notification',
-            'key' => 'deliveryman_referral_notification',
-            'type' => 'deliveryman',
-            'mail_status' => 'disable',
-            'sms_status' => 'disable',
-            'push_notification_status' => 'active',
-            'sub_title' => 'Sent_notification_on_deliveryman_referral_notification',
-        ];
-        $data []=[
-            'title' => 'deliveryman_referral_bonus',
-            'key' => 'deliveryman_referral_bonus',
-            'type' => 'deliveryman',
-            'mail_status' => 'disable',
-            'sms_status' => 'disable',
-            'push_notification_status' => 'active',
-            'sub_title' => 'Sent_notification_on_deliveryman_referral_bonus',
-        ];
-        $data []=[
-            'title' => 'deliveryman_withdraw_request',
-            'key' => 'dm_withdraw_request',
-            'type' => 'admin',
-            'mail_status' => 'active',
-            'sms_status' => 'disable',
-            'push_notification_status' => 'disable',
-            'sub_title' => 'Sent_notification_on_withdraw_request',
-        ];
 
             self::checkAndUpdateAdminNotificationData($data);
             self::deleteAdminNotificationSetupData();

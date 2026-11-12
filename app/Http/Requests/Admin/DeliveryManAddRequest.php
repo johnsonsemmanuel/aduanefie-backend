@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Admin;
 
-use App\Models\DeliveryMan;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Carbon;
@@ -49,23 +48,12 @@ class DeliveryManAddRequest extends FormRequest
             'zone_id' => 'required',
             'earning' => 'required',
             'vehicle_id' => 'required',
-            'password' => ['required', Password::min(8)->mixedCase()->letters()->numbers()->symbols(),
+            'password' => ['required', Password::min(8)->mixedCase()->letters()->numbers()->symbols()->uncompromised(),
                 function ($attribute, $value, $fail) {
                     if (strpos($value, ' ') !== false) {
                         $fail('The :attribute cannot contain white spaces.');
                     }
                 },
-            ],
-            'referral_code' => [
-                'nullable',
-                function ($attribute, $value, $fail) {
-                    if ($value) {
-                        $referer = DeliveryMan::where('ref_code', $value)->first();
-                        if (!$referer || !$referer->status) {
-                            $fail(translate('referer_code_not_found'));
-                        }
-                    }
-                }
             ],
         ];
     }

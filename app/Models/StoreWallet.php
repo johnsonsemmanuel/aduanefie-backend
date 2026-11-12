@@ -14,7 +14,7 @@ class StoreWallet extends Model
      *
      * @var array
      */
-    protected $guarded = ['id'];
+    protected $fillable = ['vendor_id'];
 
     public function getBalanceAttribute()
     {

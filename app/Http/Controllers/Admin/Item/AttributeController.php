@@ -12,7 +12,6 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use App\Exports\AttributesExport;
-use App\Http\Requests\Admin\AttributeUpdateRequest;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\View\View;
@@ -61,7 +60,7 @@ class AttributeController extends BaseController
         return view(AttributeViewPath::UPDATE[VIEW], compact('attribute','language','defaultLang'));
     }
 
-    public function update(AttributeUpdateRequest $request, $id): RedirectResponse
+    public function update(AttributeAddRequest $request, $id): RedirectResponse
     {
         $attribute = $this->attributeRepo->update(id: $id ,data: $this->attributeService->getAddData(request: $request));
         $this->translationRepo->updateByModel(request: $request, model: $attribute, modelPath: 'App\Models\Attribute', attribute: 'name');

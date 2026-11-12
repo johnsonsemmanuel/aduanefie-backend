@@ -125,9 +125,11 @@
                                         <td class="px-4">
                                             <div>
 
-                                                <span class="d-block text-dark">{{translate('messages.price')}} : <strong>{{\App\CentralLogics\Helpers::format_currency($campaign['price'])}}</strong>
+                                                <span class="d-block text-dark">Price : <strong>{{\App\CentralLogics\Helpers::format_currency($campaign['price'])}}</strong>
                                                 </span>
-
+                                                <span class="d-block text-dark">{{translate('messages.tax')}} :
+                                                    <strong>{{\App\CentralLogics\Helpers::format_currency(\App\CentralLogics\Helpers::tax_calculate($campaign,$campaign['price']))}}</strong>
+                                                </span>
                                                 <span class="d-block text-dark">{{translate('messages.discount')}} :
                                                     <strong>{{\App\CentralLogics\Helpers::format_currency(\App\CentralLogics\Helpers::discount_calculate($campaign,$campaign['price']))}}</strong>
                                                 </span>
@@ -279,12 +281,9 @@
                             </td>
                             <td>{{date('d M Y',strtotime($order->order['created_at']))}}</td>
                             <td>
-                                @php($delivery_address = $order->order ? (is_array($order->order->delivery_address) ? $order->order->delivery_address : json_decode($order->order->delivery_address, true)) : null)
-                                @if($order->order && $order->order->customer)
+                                @if($order->order->customer)
                                     <a class="text-body text-capitalize"
                                        href="{{route('admin.customer.view',[$order->order['user_id']])}}">{{$order->order->customer['f_name'].' '.$order->order->customer['l_name']}}</a>
-                                @elseif (!empty($delivery_address['contact_person_name']))
-                                    <strong>{{$delivery_address['contact_person_name']}}</strong>
                                 @else
                                     <label class="badge badge-danger">{{translate('messages.invalid_customer_data')}}</label>
                                 @endif

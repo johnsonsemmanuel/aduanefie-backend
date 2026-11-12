@@ -81,11 +81,11 @@
             <!-- Header -->
             <div class="card-header py-2  border-0">
                 <div class="search--button-wrapper justify-content-end">
-                    <form class="search-form">
+                    <form id="search-form" class="search-form">
                     @csrf
                         <!-- Search -->
                         <div class="input-group input--group">
-                            <input id="" type="search" name="search" value="{{ request()?->search ?? null }}" class="form-control" placeholder="{{translate('messages.ex_search_name')}}" aria-label="{{translate('messages.search_here')}}">
+                            <input id="datatableSearch" type="search" name="search" class="form-control" placeholder="{{translate('messages.ex_search_name')}}" aria-label="{{translate('messages.search_here')}}">
                             <button type="submit" class="btn btn--secondary"><i class="tio-search"></i></button>
                         </div>
                         <!-- End Search -->
@@ -105,9 +105,9 @@
                 <table id="datatable" class="table table-borderless table-thead-bordered table-nowrap table-align-middle card-table"
                     data-hs-datatables-options='{
                         "columnDefs": [{
-                            "targets": [1],
+                            "targets": [],
                             "width": "5%",
-                            "orderable": false,
+                            "orderable": false
                         }],
                         "order": [],
                         "info": {
@@ -127,17 +127,8 @@
                             @if ($store_data->module->module_type != 'food')
                             <th class="border-0 w-20p">{{translate('messages.quantity')}}</th>
                             @endif
-                            <th class="border-0">
-                                {{translate('messages.monthly recurring')}}
-                                <span class="form-label-secondary m-0" data-toggle="tooltip" data-placement="right" data-original-title="{{ translate('customer selected monthly repeat for this item') }}">
-                                    <i class="tio-info text-light-gray fs-14"></i>
-                                </span>
-                            </th>
                             <th class="border-0">{{translate('messages.price')}}</th>
                             <th class="border-0 text-center">{{translate('messages.Recommended')}}</th>
-                             @if ($productWiseTax)
-                            <th  class="border-0 ">{{ translate('messages.Vat/Tax') }}</th>
-                            @endif
                             <th class="border-0 text-center">{{translate('messages.status')}}</th>
                             <th class="border-0 text-center">{{translate('messages.action')}}</th>
                         </tr>
@@ -162,14 +153,11 @@
                             @if ($store_data->module->module_type != 'food')
                             <td>
                                 <div class="d-flex align-items-center gap-2">
-                                    <h5 class="text-hover-primary fw-medium mb-0">{{ max((int) $item->stock, 0) }}</h5>
+                                    <h5 class="text-hover-primary fw-medium mb-0">{{$item->stock}}</h5>
                                     <span data-toggle="modal"  data-id="{{ $item->id }}"  data-target="#update-quantity" class="text-primary tio-add-circle fs-22 cursor-pointer update-quantity"></span>
                                 </div>
                             </td>
                             @endif
-                            <td class="text-center">
-                                455
-                            </td>
                             <td>
                                 <div class="mw--85px">
                                     {{\App\CentralLogics\Helpers::format_currency($item['price'])}}
@@ -187,24 +175,6 @@
                                     </div>
                                 </div>
                             </td>
-
-                              @if ($productWiseTax)
-                                <td>
-                                    <span class="d-block font-size-sm text-body">
-                                        @forelse ($item?->taxVats?->pluck('tax.name', 'tax.tax_rate')->toArray() as $key => $tax)
-                                            <span> {{ $tax }} : <span class="font-bold">
-                                                    ({{ $key }}%)
-                                                </span> </span>
-                                            <br>
-                                        @empty
-                                            <span> {{ translate('messages.no_tax') }} </span>
-                                        @endforelse
-                                    </span>
-                                </td>
-                                @endif
-
-
-
                             <td>
                                 <label class="toggle-switch toggle-switch-sm" for="stocksCheckbox{{$item->id}}">
                                     <input type="checkbox" data-url="{{route('vendor.item.status',[$item['id'],$item->status?0:1])}}" class="toggle-switch-input redirect-url" id="stocksCheckbox{{$item->id}}" {{$item->status?'checked':''}}>
@@ -303,9 +273,42 @@
           }
         });
 
+        $('#datatableSearch').on('mouseup', function (e) {
+          let $input = $(this),
+            oldValue = $input.val();
 
+          if (oldValue == "") return;
 
+          setTimeout(function(){
+            let newValue = $input.val();
 
+            if (newValue == ""){
+              // Gotcha
+              datatable.search('').draw();
+            }
+          }, 1);
+        });
+
+        $('#toggleColumn_index').change(function (e) {
+          datatable.columns(0).visible(e.target.checked)
+        })
+        $('#toggleColumn_name').change(function (e) {
+          datatable.columns(1).visible(e.target.checked)
+        })
+
+        $('#toggleColumn_type').change(function (e) {
+          datatable.columns(2).visible(e.target.checked)
+        })
+
+        $('#toggleColumn_status').change(function (e) {
+          datatable.columns(4).visible(e.target.checked)
+        })
+        $('#toggleColumn_price').change(function (e) {
+          datatable.columns(3).visible(e.target.checked)
+        })
+        $('#toggleColumn_action').change(function (e) {
+          datatable.columns(5).visible(e.target.checked)
+        })
 
 
             // INITIALIZATION OF SELECT2
@@ -341,33 +344,33 @@
             }
         });
 
-        // $('#search-form').on('submit', function (e) {
-        //     e.preventDefault();
-        //     let formData = new FormData(this);
-        //     $.ajaxSetup({
-        //         headers: {
-        //             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-        //         }
-        //     });
-        //     $.post({
-        //         url: '{{route('vendor.item.search')}}',
-        //         data: formData,
-        //         cache: false,
-        //         contentType: false,
-        //         processData: false,
-        //         beforeSend: function () {
-        //             $('#loading').show();
-        //         },
-        //         success: function (data) {
-        //             $('#set-rows').html(data.view);
-        //             $('#itemCount').html(data.count);
-        //             $('.page-area').hide();
-        //         },
-        //         complete: function () {
-        //             $('#loading').hide();
-        //         },
-        //     });
-        // });
+        $('#search-form').on('submit', function (e) {
+            e.preventDefault();
+            let formData = new FormData(this);
+            $.ajaxSetup({
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                }
+            });
+            $.post({
+                url: '{{route('vendor.item.search')}}',
+                data: formData,
+                cache: false,
+                contentType: false,
+                processData: false,
+                beforeSend: function () {
+                    $('#loading').show();
+                },
+                success: function (data) {
+                    $('#set-rows').html(data.view);
+                    $('#itemCount').html(data.count);
+                    $('.page-area').hide();
+                },
+                complete: function () {
+                    $('#loading').hide();
+                },
+            });
+        });
 
         $('.update-quantity').on('click', function (){
         let val = $(this).data('id');

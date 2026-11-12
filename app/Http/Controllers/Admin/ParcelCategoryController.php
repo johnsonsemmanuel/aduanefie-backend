@@ -21,17 +21,12 @@ class ParcelCategoryController extends Controller
     public function index(Request $request)
     {
         $module_id = Config::get('module.current_module_id');
-        $taxData = Helpers::getTaxSystemType(getTaxVatList: true, tax_payer: 'parcel');
-        $categoryWiseTax = $taxData['categoryWiseTax'];
         $parcel_categories = ParcelCategory::
         when($module_id, function($query)use($module_id){
             $query->Module($module_id);
         })
-        ->with($categoryWiseTax ? ['taxVats.tax'] : [])
         ->orderBy('name')->paginate(config('default_pagination'));
-        $taxVats = $taxData['taxVats'];
-
-        return view('admin-views.parcel.category.index',compact('parcel_categories','categoryWiseTax','taxVats'));
+        return view('admin-views.parcel.category.index',compact('parcel_categories'));
     }
 
     /**
@@ -62,10 +57,10 @@ class ParcelCategoryController extends Controller
             'parcel_per_km_shipping_charge'=>'required_with:parcel_minimum_shipping_charge',
             'parcel_minimum_shipping_charge'=>'required_with:parcel_per_km_shipping_charge',
             'name.0' => 'required',
-            'description.0' => 'required',
+            'description.0' => 'required',               
         ],[
             'name.0.required'=>translate('default_name_is_required'),
-            'description.0.required'=>translate('default_description_is_required'),
+            'description.0.required'=>translate('default_description_is_required'), 
         ]);
 
         $parcel_category = new ParcelCategory;
@@ -76,25 +71,6 @@ class ParcelCategoryController extends Controller
         $parcel_category->parcel_per_km_shipping_charge = $request->parcel_per_km_shipping_charge;
         $parcel_category->parcel_minimum_shipping_charge = $request->parcel_minimum_shipping_charge;
         $parcel_category->save();
-
-        if(addon_published_status('TaxModule')){
-                $SystemTaxVat= \Modules\TaxModule\Entities\SystemTaxSetup::where('is_active',1)->where('tax_payer','parcel')->where('is_default',1)->first();
-                if($SystemTaxVat?->tax_type == 'category_wise'){
-
-                    foreach($request['tax_ids'] ?? [] as $tax_ids){
-                        \Modules\TaxModule\Entities\Taxable::create(
-                                    [
-                                        'taxable_type' => ParcelCategory::class,
-                                        'taxable_id' => $parcel_category->id,
-                                        'system_tax_setup_id' => $SystemTaxVat->id
-                                        ,'tax_id' => $tax_ids
-                                    ],
-                                );
-                    }
-
-                }
-            }
-
         $data = [];
         $default_lang = str_replace('_', '-', app()->getLocale());
         foreach ($request->lang as $index => $key) {
@@ -168,12 +144,7 @@ class ParcelCategoryController extends Controller
     public function edit($id)
     {
         $parcel_category= ParcelCategory::withoutGlobalScope('translate')->findOrFail($id);
-
-        $taxData = Helpers::getTaxSystemType(getTaxVatList: true, tax_payer: 'parcel');
-        $categoryWiseTax = $taxData['categoryWiseTax'];
-        $taxVats = $taxData['taxVats'];
-        $taxVatIds =  $categoryWiseTax ? $parcel_category->taxVats()->pluck('tax_id')->toArray(): [];
-        return view('admin-views.parcel.category.edit',compact('parcel_category','categoryWiseTax','taxVats','taxVatIds'));
+        return view('admin-views.parcel.category.edit',compact('parcel_category'));
     }
 
     /**
@@ -193,10 +164,10 @@ class ParcelCategoryController extends Controller
             'parcel_per_km_shipping_charge'=>'required_with:parcel_minimum_shipping_charge',
             'parcel_minimum_shipping_charge'=>'required_with:parcel_per_km_shipping_charge',
             'name.0' => 'required',
-            'description.0' => 'required',
+            'description.0' => 'required',               
         ],[
             'name.0.required'=>translate('default_name_is_required'),
-            'description.0.required'=>translate('default_description_is_required'),
+            'description.0.required'=>translate('default_description_is_required'), 
         ]);
 
         $parcel_category = ParcelCategory::findOrFail($id);
@@ -207,29 +178,7 @@ class ParcelCategoryController extends Controller
         $parcel_category->parcel_per_km_shipping_charge = $request->parcel_per_km_shipping_charge;
         $parcel_category->parcel_minimum_shipping_charge = $request->parcel_minimum_shipping_charge;
         $parcel_category->save();
-       if(addon_published_status('TaxModule') && $parcel_category['position'] == 0){
-            $taxVatIds = $parcel_category->taxVats()->pluck('tax_id')->toArray() ?? [];
-            $newTaxVatIds =  array_map('intval', $request['tax_ids'] ?? []);
-            sort($newTaxVatIds);
-            sort($taxVatIds);
-                if( $newTaxVatIds != $taxVatIds ){
-                    $parcel_category->taxVats()->delete();
-                $SystemTaxVat= \Modules\TaxModule\Entities\SystemTaxSetup::where('is_active',1)->where('tax_payer','parcel')->where('is_default',1)->first();
-                    if($SystemTaxVat?->tax_type == 'category_wise'){
-                        foreach($request['tax_ids'] ?? [] as $tax_ids){
-                            \Modules\TaxModule\Entities\Taxable::create(
-                                        [
-                                            'taxable_type' =>ParcelCategory::class,
-                                            'taxable_id' => $parcel_category->id,
-                                            'system_tax_setup_id' => $SystemTaxVat->id
-                                            ,'tax_id' => $tax_ids
-                                        ],
-                                    );
-                        }
 
-                    }
-                }
-            }
         $default_lang = str_replace('_', '-', app()->getLocale());
 
         foreach ($request->lang as $index => $key) {
@@ -303,9 +252,10 @@ class ParcelCategoryController extends Controller
         $parcel_category = ParcelCategory::findOrFail($id);
         if($parcel_category->image)
         {
+     
             Helpers::check_and_delete('parcel_category/' , $parcel_category['image']);
+            
         }
-        $parcel_category?->taxVats()->delete();
         $parcel_category->translations()->delete();
         $parcel_category->delete();
         Toastr::success(translate('messages.parcel_category_deleted_successfully'));

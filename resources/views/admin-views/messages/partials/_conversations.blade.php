@@ -3,11 +3,10 @@
     <div class="card-header justify-content-between">
         <div class="chat-user-info w-100 d-flex align-items-center">
             <div class="chat-user-info-img">
-                @include('partials._user-avatar', [
-                    'imageUrl'  => $user['image_full_url'],
-                    'proStatus' => $user['pro_status'] ?? false,
-                    'size'      => 55,
-                ])
+                <img class="avatar-img onerror-image"
+                src="{{ $user['image_full_url'] }}"
+                    data-onerror-image="{{asset('public/assets/admin')}}/img/160x160/img1.jpg"
+                    alt="Image Description">
             </div>
             <div class="chat-user-info-content">
                 <h5 class="mb-0 text-capitalize">
@@ -19,19 +18,11 @@
             <button class="btn shadow-none" data-toggle="dropdown">
                 <img src="{{asset('/public/assets/admin/img/ellipsis.png')}}" alt="">
             </button>
-            @if($user->user_id)
             <ul class="dropdown-menu conv-dropdown-menu">
                 <li>
                     <a href="{{ route('admin.users.customer.view', [$user->user->id]) }}">{{ translate('View_Details') }}</a>
                 </li>
             </ul>
-            @elseif($user->deliveryman_id)
-                <ul class="dropdown-menu conv-dropdown-menu">
-                    <li>
-                        <a href="{{ route('admin.users.delivery-man.preview', [$user->deliveryman_id]) }}">{{ translate('View_Details') }}</a>
-                    </li>
-                </ul>
-            @endif
         </div>
     </div>
 
@@ -153,7 +144,6 @@
         <form action="javascript:" method="post" id="reply-form" enctype="multipart/form-data" class="conv-txtarea">
             @csrf
             <div class="quill-custom_">
-                <input type="hidden" name="user_type" value="{{ $user->user_id ? 'customer' : 'deliveryman' }}">
                 <!-- <label for="msg" class="layer-msg"></label> -->
                 <textarea id="conv-textarea" class="form-control pr--180" id="msg" rows = "1" name="reply" placeholder="{{translate('Start a new message')}}"></textarea>
                 <div class="upload__box">
@@ -178,6 +168,7 @@
     </div>
 </div>
 
+<script src="{{asset('public/assets/admin')}}/js/view-pages/common.js"></script>
 <!-- Emoji Conv -->
 <script>
     "use strict";
@@ -316,7 +307,7 @@
                 }
             });
             $.post({
-                url: '{{ route('admin.message.store', [$user->user_id ?? $user->deliveryman_id]) }}',
+                url: '{{ route('admin.message.store', [$user->user_id]) }}',
                 data: $('reply-form').serialize(),
                 data: formData,
                 cache: false,

@@ -50,24 +50,4 @@ if (!function_exists('getWebConfig')) {
 
         return $config;
     }
-
-    if (!function_exists('getDemoModeFormButton')) {
-        function getDemoModeFormButton($type = ''): string
-        {
-            $result = '';
-            if ($type == 'class') {
-                $result = getEnvMode() != 'demo' ? '' : 'call-demo';
-            } elseif ($type == 'button') {
-                $result = getEnvMode() != 'demo' ? 'submit' : 'button';
-            }
-            return $result;
-        }
-    }
-
-    if (!function_exists('showDemoModeInputValue')) {
-        function showDemoModeInputValue($value = null): string
-        {
-            return getEnvMode() != 'demo' ? $value : '';
-        }
-    }
 }

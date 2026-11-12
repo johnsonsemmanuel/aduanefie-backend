@@ -1,7 +1,7 @@
 <div class="modal-header p-0">
     <h4 class="modal-title product-title">
     </h4>
-    <button class="close call-when-done bg-modal-btn w-30px h-30 rounded-circle m-2 z-2" type="button" data-dismiss="modal" aria-label="Close">
+    <button class="close call-when-done" type="button" data-dismiss="modal" aria-label="Close">
         <span aria-hidden="true">&times;</span>
     </button>
 </div>
@@ -24,7 +24,7 @@
 
 
                 data-onerror-image="{{ asset('public/assets/admin/img/160x160/img2.jpg') }}"
-                data-zoom="{{ asset('storage/product') }}/{{ $product['image'] }}" alt="Product image"
+                data-zoom="{{ asset('storage/app/public/product') }}/{{ $product['image'] }}" alt="Product image"
                 width="">
             <div class="cz-image-zoom-pane"></div>
         </div>
@@ -220,7 +220,7 @@
                                     class="d-flex align-items-center btn btn-sm check-label mx-1 addon-input text-break"
                                     for="addon{{ $key }}">{{ Str::limit($add_on->name, 20, '...') }} <br>
                                     {{ \App\CentralLogics\Helpers::format_currency($add_on->price) }}</label>
-                                <label class="input-group addon-quantity-input mx-1 shadow-lg border bg-white rounded px-1"
+                                <label class="input-group addon-quantity-input mx-1 shadow bg-white rounded px-1"
                                     for="addon{{ $key }}">
                                     <button class="btn btn-sm h-100 text-dark px-0 decrease-button" data-id="{{ $add_on->id }}" type="button"
                                        ><i
@@ -278,6 +278,7 @@
         </div>
     </div>
 </div>
+<script src="{{asset('public/assets/admin')}}/js/view-pages/common.js"></script>
 <script type="text/javascript">
     // "use strict";
     getVariantPrice();

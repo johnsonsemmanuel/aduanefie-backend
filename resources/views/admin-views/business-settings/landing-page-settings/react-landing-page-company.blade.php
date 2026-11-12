@@ -22,7 +22,7 @@
             </div>
         </div>
     </div>
-    <div class="mb-20 mt-2">
+    <div class="mb-4 mt-2">
         <div class="js-nav-scroller hs-nav-scroller-horizontal">
             @include('admin-views.business-settings.landing-page-settings.top-menu-links.react-landing-page-links')
         </div>
@@ -55,7 +55,7 @@
     @endif
     <div class="tab-content">
         <div class="tab-pane fade show active">
-            <form action="{{ route('admin.business-settings.react-landing-page-settings-update', 'company-section') }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ route('admin.business-settings.react-landing-page-settings', 'company-section') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <h5 class="card-title mb-3 mt-3">
                     <div class="d-flex justify-content-between align-items-center w-100">
@@ -229,7 +229,7 @@
                                 <div class="form-group">
                                     <label for="company_button_name" class="form-label text-capitalize">
                                         {{translate('Button Name')}}
-                                        <span class="input-label-secondary text--title" data-toggle="tooltip" data-placement="right" data-original-title="{{ translate('messages.The call-to-action label shown on the landing page button.') }}">
+                                        <span class="input-label-secondary text--title" data-toggle="tooltip" data-placement="right" data-original-title="Lorem ipsum">
                                             <i class="tio-info-outined"></i>
                                         </span>
                                     </label>
@@ -250,7 +250,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="btn--container justify-content-end mt-20">
+                <div class="btn--container justify-content-end mt-3">
                     <button type="reset" class="btn btn--reset mb-2">{{translate('Reset')}}</button>
                     <button type="submit"   class="btn btn--primary mb-2">{{translate('Save Information')}}</button>
                 </div>

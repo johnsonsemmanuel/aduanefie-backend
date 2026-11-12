@@ -108,7 +108,7 @@ active
                                 <div class="col-sm-6 col-lg-4 col-xl-5">
                                     <div class="pr-xl-4">
                                         <label class="form-label">{{ translate('Type_Message') }}</label>
-                                        <input type="text" name="subscription_deadline_warning_message" value="{{ data_get($settings, 'subscription_deadline_warning_message')   }}" class="form-control" maxlength="254" placeholder="{{ translate('Your subscription ending soon.') }} " required>
+                                        <input type="text" name="subscription_deadline_warning_message" value="{{ data_get($settings, 'subscription_deadline_warning_message')   }}" class="form-control" maxlength="254" placeholder="{{ translate('Your subscription ending soon.') }} ">
                                     </div>
                                 </div>
                                 <div class="col-lg-4 col-xl-2">

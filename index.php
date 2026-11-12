@@ -1,7 +1,5 @@
 <?php
 
-use Illuminate\Foundation\Application;
-use Illuminate\Http\Request;
 /**
  * Laravel - A PHP Framework For Web Artisans
  *
@@ -10,10 +8,6 @@ use Illuminate\Http\Request;
  */
 
 define('LARAVEL_START', microtime(true));
-
-if (file_exists($maintenance = __DIR__.'/storage/framework/maintenance.php')) {
-    require $maintenance;
-}
 
 /*
 |--------------------------------------------------------------------------
@@ -40,7 +34,7 @@ require __DIR__.'/vendor/autoload.php';
 | the responses back to the browser and delight our users.
 |
 */
-/** @var Application $app */
+
 $app = require_once __DIR__.'/bootstrap/app.php';
 
 /*
@@ -55,5 +49,12 @@ $app = require_once __DIR__.'/bootstrap/app.php';
 |
 */
 
-$app->handleRequest(Request::capture());
+$kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
 
+$response = $kernel->handle(
+    $request = Illuminate\Http\Request::capture()
+);
+
+$response->send();
+
+$kernel->terminate($request, $response);

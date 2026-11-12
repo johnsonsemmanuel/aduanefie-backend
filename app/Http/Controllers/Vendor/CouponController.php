@@ -6,17 +6,27 @@ use App\Http\Controllers\Controller;
 use App\Models\Coupon;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use App\CentralLogics\Helpers;
+use App\Models\Translation;
 
 class CouponController extends Controller
 {
     public function add_new(Request $request)
     {
-        $coupons = Coupon::latest()->where('created_by', 'vendor')->where('store_id',Helpers::get_store_id())
-        ->search(keywords:$request['search'], mainCol:['title', 'code'])
+        $key = explode(' ', $request['search']);
+        $coupons = Coupon::latest()->where('created_by', 'vendor' )->where('store_id',Helpers::get_store_id())
+        ->when( isset($key) , function($query) use($key){
+            $query->where(function ($q) use ($key) {
+                foreach ($key as $value) {
+                    $q->orWhere('title', 'like', "%{$value}%")
+                    ->orWhere('code', 'like', "%{$value}%");
+                }
+            });
+        }
+        )
         ->paginate(config('default_pagination'));
-        $language = getWebConfig('language');
-        return view('vendor-views.coupon.index', compact('coupons', 'language'));
+        return view('vendor-views.coupon.index', compact('coupons'));
     }
 
     public function store(Request $request)
@@ -26,8 +36,7 @@ class CouponController extends Controller
             'title' => 'required|max:191',
             'start_date' => 'required',
             'expire_date' => 'required',
-            'discount' => 'required_if:coupon_type,default',
-            'min_purchase' => 'required|numeric|min:1',
+            'discount' => 'required',
             'coupon_type' => 'required|in:free_delivery,default',
             'title.0' => 'required',
         ],[
@@ -53,8 +62,33 @@ class CouponController extends Controller
         $coupon->module_id =Helpers::get_store_data()->module_id;
         $coupon->customer_id = json_encode($customer_id);
         $coupon->save();
+        $data = [];
+        $default_lang = str_replace('_', '-', app()->getLocale());
+        foreach ($request->lang as $index => $key) {
+            if($default_lang == $key && !($request->title[$index])){
+                if ($key != 'default') {
+                    array_push($data, array(
+                        'translationable_type' => 'App\Models\Coupon',
+                        'translationable_id' => $coupon->id,
+                        'locale' => $key,
+                        'key' => 'title',
+                        'value' => $coupon->title,
+                    ));
+                }
+            }else{
+                if ($request->title[$index] && $key != 'default') {
+                    array_push($data, array(
+                        'translationable_type' => 'App\Models\Coupon',
+                        'translationable_id' => $coupon->id,
+                        'locale' => $key,
+                        'key' => 'title',
+                        'value' => $request->title[$index],
+                    ));
+                }
+            }
+        }
 
-        Helpers::add_or_update_translations(request: $request, key_data:'title' , name_field:'title' , model_name: 'Coupon' ,data_id: $coupon->id,data_value: $coupon->title);
+        Translation::insert($data);
 
         Toastr::success(translate('messages.coupon_added_successfully'));
         return back();
@@ -63,8 +97,8 @@ class CouponController extends Controller
     public function edit($id)
     {
         $coupon = Coupon::withoutGlobalScope('translate')->where(['id' => $id])->where('created_by', 'vendor' )->first();
-        $language = getWebConfig('language');
-        return view('vendor-views.coupon.edit', compact('coupon', 'language'));
+        // dd(json_decode($coupon->data));
+        return view('vendor-views.coupon.edit', compact('coupon'));
     }
 
     public function update(Request $request, $id)
@@ -74,8 +108,7 @@ class CouponController extends Controller
             'title' => 'required|max:191',
             'start_date' => 'required',
             'expire_date' => 'required',
-            'discount' => 'required_if:coupon_type,default',
-            'min_purchase' => 'required|numeric|min:1',
+            'discount' => 'required',
             'coupon_type' => 'required|in:free_delivery,default',
             'title.0' => 'required',
         ],[
@@ -97,8 +130,35 @@ class CouponController extends Controller
         $coupon->discount_type = $request->discount_type??'';
         $coupon->customer_id = json_encode($customer_id);
         $coupon->save();
-        Helpers::add_or_update_translations(request: $request, key_data:'title' , name_field:'title' , model_name: 'Coupon' ,data_id: $coupon->id,data_value: $coupon->title);
+        $default_lang = str_replace('_', '-', app()->getLocale());
+        foreach ($request->lang as $index => $key) {
+            if($default_lang == $key && !($request->title[$index])){
+                if ($key != 'default') {
+                    Translation::updateOrInsert(
+                        [
+                            'translationable_type' => 'App\Models\Coupon',
+                            'translationable_id' => $coupon->id,
+                            'locale' => $key,
+                            'key' => 'title'
+                        ],
+                        ['value' => $coupon->title]
+                    );
+                }
+            }else{
 
+                if ($request->title[$index] && $key != 'default') {
+                    Translation::updateOrInsert(
+                        [
+                            'translationable_type' => 'App\Models\Coupon',
+                            'translationable_id' => $coupon->id,
+                            'locale' => $key,
+                            'key' => 'title'
+                        ],
+                        ['value' => $request->title[$index]]
+                    );
+                }
+            }
+        }
 
         Toastr::success(translate('messages.coupon_updated_successfully'));
         return redirect()->route('vendor.coupon.add-new');
@@ -121,14 +181,17 @@ class CouponController extends Controller
         return back();
     }
 
-    public function viewCoupon($id){
-
-        $coupon = Coupon::withoutGlobalScope('translate')->where(['id' => $id])->where('created_by', 'vendor' )->first();
-        $selectedCustomers='all';
-
-          return response()->json([
-            'view' => view('vendor-views.coupon._view', compact('coupon','selectedCustomers'))->render(),
-        ]);
-    }
-
+    // public function search(Request $request){
+    //     $key = explode(' ', $request['search']);
+    //     $coupons=Coupon::where(function ($q) use ($key) {
+    //         foreach ($key as $value) {
+    //             $q->orWhere('title', 'like', "%{$value}%")
+    //             ->orWhere('code', 'like', "%{$value}%");
+    //         }
+    //     })->where('store_id',Helpers::get_store_id())->limit(50)->get();
+    //     return response()->json([
+    //         'view'=>view('vendor-views.coupon.partials._table',compact('coupons'))->render(),
+    //         'count'=>$coupons->count()
+    //     ]);
+    // }
 }

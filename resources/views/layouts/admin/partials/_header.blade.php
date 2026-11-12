@@ -20,7 +20,6 @@
                 <!-- Navbar -->
                 <ul class="navbar-nav align-items-center flex-row flex-grow-1 __navbar-nav">
 
-                    @if (\App\CentralLogics\Helpers::admin_can_access_workspace('users'))
                     <li class="nav-item __nav-item">
                         <a href="{{ route('admin.users.dashboard')}}" id="tourb-6"
                            class="__nav-link {{ Request::is('admin/users*') ? 'active' : '' }}">
@@ -28,9 +27,7 @@
                             <span>{{ translate('Users')}}</span>
                         </a>
                     </li>
-                    @endif
 
-                    @if (\App\CentralLogics\Helpers::admin_can_access_workspace('finance') || \App\CentralLogics\Helpers::admin_can_access_workspace('reports'))
                     <li class="nav-item __nav-item">
                         <a href="{{ route('admin.transactions.store.withdraw_list')}}" id="tourb-7"
                            class="__nav-link {{ Request::is('admin/transactions*') ? 'active' : '' }}">
@@ -39,16 +36,14 @@
                             <span>{{ translate('Transactions & Reports')}}</span>
                         </a>
                     </li>
-                    @endif
 
-                    @if (\App\CentralLogics\Helpers::admin_can_access_workspace('settings'))
                     <li class="nav-item __nav-item">
-                        <a href="{{ \App\CentralLogics\Helpers::settings_workspace_landing_url() }}" id="tourb-3"
+                        <a href="{{ route('admin.business-settings.business-setup') }}" id="tourb-3"
                            class="__nav-link {{ Request::is('admin/business-settings*') ? 'active' : '' }}">
                             <img src="{{asset('/public/assets/admin/img/new-img/setting-icon.svg')}}" alt="public/img">
                             <span>{{ translate('messages.Settings') }}</span>
                             <svg width="14" viewBox="0 0 14 14" fill="none">
-                                <path d="M2.33325 5.25L6.99992 9.91667L11.6666 5.25" stroke="#006161" stroke-width="1.5"
+                                <path d="M2.33325 5.25L6.99992 9.91667L11.6666 5.25" stroke="#67513A" stroke-width="1.5"
                                       stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
                         </a>
@@ -96,10 +91,20 @@
                                             </a>
                                         </li>
                                     @endif
-
+{{--                                    @if (\App\CentralLogics\Helpers::module_permission_check('settings') && (auth('admin')->user()->role_id == 1))--}}
+{{--                                        <li>--}}
+{{--                                            <a href="{{ route('admin.business-settings.external-system.drivemond-configuration') }}"--}}
+{{--                                               class="next-tour">--}}
+{{--                                                <img--}}
+{{--                                                    src="{{asset('/public/assets/admin/img/navbar-setting-icon/external-configuration.svg')}}"--}}
+{{--                                                    alt="">--}}
+{{--                                                <span>{{translate('messages.Ride_Share_Setup_&_Integration')}}</span>--}}
+{{--                                            </a>--}}
+{{--                                        </li>--}}
+{{--                                    @endif--}}
                                     @if (\App\CentralLogics\Helpers::module_permission_check('settings'))
                                         <li>
-                                            <a href="{{ route('admin.business-settings.third-party.sms-module') }}"
+                                            <a href="{{ route('admin.business-settings.third-party.payment-method') }}"
                                                class="next-tour">
                                                 <img
                                                     src="{{asset('/public/assets/admin/img/navbar-setting-icon/third-party.svg')}}"
@@ -125,7 +130,6 @@
                             </div>
                         </div>
                     </li>
-                    @endif
                     @if (\App\CentralLogics\Helpers::module_permission_check('order'))
                         <li class="nav-item __nav-item">
                             <a href="{{ route('admin.dispatch.dashboard')}}" id="tourb-8"
@@ -136,23 +140,8 @@
                         </li>
                     @endif
 
-
-                    <li class="nav-item max-sm-m-0 w-xxl-200px ml-auto flex-grow-0">
-                        <button type="button" id="modalOpener" class="title-color bg--secondary border-0 rounded justify-content-between w-100 align-items-center py-2 px-2 px-md-3 d-flex gap-1" data-toggle="modal" data-target="#staticBackdrop">
-                            <div class="align-items-center d-flex flex-grow-1 gap-1 justify-content-between">
-                                <span class="align-items-center d-none d-xxl-flex gap-2 text-muted">{{translate('Search_or')}}
-
-                                    <span class="bg-E7E6E8 border ctrlplusk d-md-block d-none font-bold fs-12 fw-bold lh-1 ms-1 px-1 rounded text-muted">Ctrl+K</span>
-
-                                </span>
-                                <img width="14" class="h-auto" src="{{asset('/public/assets/admin/img/new-img/search.svg')}}" class="svg" alt="">
-                            </div>
-                        </button>
-                    </li>
-
-                    @if(\App\CentralLogics\Helpers::module_permission_check('customer_management'))
-                    <li class="nav-item max-sm-m-0  mr-lg-3">
-                        <a class="btn btn-icon rounded-circle nav-msg-icon p-0 h-100 w-100 d-flex justify-content-center"
+                    <li class="nav-item max-sm-m-0 ml-auto mr-lg-3">
+                        <a class="btn btn-icon rounded-circle nav-msg-icon"
                            href="{{route('admin.message.list')}}">
                             <img src="{{asset('/public/assets/admin/img/new-img/message-icon.svg')}}" alt="public/img">
                             @php($message=\App\Models\Conversation::whereUserType('admin')->whereHas('last_message', function($query) {
@@ -163,33 +152,17 @@
                             @endif
                         </a>
                     </li>
-                    @endif
-                    @if(addon_published_status('RideShare') && \App\CentralLogics\Helpers::module_permission_check('fleet_view'))
-                        <li class="nav-item max-sm-m-0  mr-lg-3">
-                            @php($safetyAlert=\Modules\RideShare\Entities\TripManagement\RideSafetyAlert::where('status', 'pending'))
-                            @php($safety=$safetyAlert->count())
-                            @php($latestSafetyAlert=$safetyAlert->latest()->first())
-                            <a id="v1-safety-link" class="btn btn-icon rounded-circle nav-msg-icon p-0 h-100 w-100 d-flex justify-content-center @if($latestSafetyAlert) safety-alert-header-icon @endif"
-                            @if($latestSafetyAlert) data-user-id="{{ $latestSafetyAlert->sent_by }}" @endif
-                            href="{{route('admin.ride-share.safety-alerts',['module_id'=>\App\Models\Module::where('module_type','ride-share')->first()->id ?? 0])}}">
-                                <img src="{{asset('/public/assets/admin/img/new-img/shield-check.svg')}}" class="d-block" alt="public/img">
-                                @if($safety!=0)
-                                    <span class="btn-status btn-status-danger" id="v1-safety-badge">{{ $safety }}</span>
-                                @endif
-                            </a>
-                        </li>
-                    @endif
                     <li class="nav-item max-sm-m-0">
                         <div class="hs-unfold">
                             <div>
                                 @php( $local = session()->has('local')?session('local'): null)
-                                @php($lang  = \App\CentralLogics\Helpers::get_business_settings('system_language'))
+                                @php($lang = \App\Models\BusinessSetting::where('key', 'system_language')->first())
                                 @if ($lang)
                                     <div
                                         class="topbar-text dropdown disable-autohide text-capitalize d-flex">
                                         <a class="topbar-link dropdown-toggle d-flex align-items-center title-color"
                                            href="#" data-toggle="dropdown">
-                                            @foreach($lang  as $data)
+                                            @foreach(json_decode($lang['value'],true) as $data)
                                                 @if($data['code']==$local)
                                                     <i class="tio-globe"></i> {{$data['code']}}
 
@@ -199,7 +172,7 @@
                                             @endforeach
                                         </a>
                                         <ul class="dropdown-menu lang-menu">
-                                            @foreach($lang as $key =>$data)
+                                            @foreach(json_decode($lang['value'],true) as $key =>$data)
                                                 @if($data['status']==1)
                                                     <li>
                                                         <a class="dropdown-item py-1"
@@ -215,16 +188,16 @@
                             </div>
                         </div>
                     </li>
-                    @php($mod = \App\Models\Module::with('storage')->find(Config::get('module.current_module_id')))
+                    @php($mod = \App\Models\Module::find(Config::get('module.current_module_id')))
                     <div class="nav-item __nav-item">
                         <a href="javascript:void(0)" class="__nav-link module--nav-icon" id="tourb-0">
                             @if ($mod)
                                 <img src="{{ $mod->icon_full_url }}"
-                                     class="onerror-image flex-shrink-0"
+                                     class="onerror-image"
                                      data-onerror-image="{{asset('/public/assets/admin/img/new-img/module-icon.svg')}}"
                                      width="20px" alt="public/img">
                             @else
-                                <img src="{{asset('/public/assets/admin/img/new-img/module-icon.svg')}}" class="flex-shrink-0"
+                                <img src="{{asset('/public/assets/admin/img/new-img/module-icon.svg')}}"
                                      alt="public/img">
                             @endif
                             <span class="text-white">{{ $mod ? $mod->module_name : translate('modules') }}</span>
@@ -247,7 +220,29 @@
                                                     {{translate('Select Module & Monitor your business module wise')}}
                                                 </p>
                                             </div>
-
+{{--                                            @if((\App\Models\ExternalConfiguration::where('key','activation_mode')->first()->value ?? 0) && (auth('admin')->user()->role_id == 1))--}}
+{{--                                                @php($drivemondBaseUrl = \App\Models\ExternalConfiguration::where('key', 'drivemond_base_url')->first()->value ?? null)--}}
+{{--                                                @php($drivemondBusinessName = \App\Models\ExternalConfiguration::where('key', 'drivemond_business_name')->first()->value ?? "DriveMond")--}}
+{{--                                                @php($drivemondBusinessLogo = \App\Models\ExternalConfiguration::where('key', 'drivemond_business_logo')->first()->value ?? null)--}}
+{{--                                                <div class="col-6">--}}
+{{--                                                    <form method="POST"--}}
+{{--                                                          action="{{url($drivemondBaseUrl."/admin/auth/external-login-from-mart")}}"--}}
+{{--                                                          target="_blank">--}}
+{{--                                                        <input type="hidden" name="mart_token"--}}
+{{--                                                               value="{{\App\Models\ExternalConfiguration::where('key','system_self_token')->first()->value ?? null}}">--}}
+{{--                                                        <input type="hidden" name="mart_base_url" value="{{url('/')}}">--}}
+{{--                                                        <input type="hidden" name="drivemond_token"--}}
+{{--                                                               value="{{\App\Models\ExternalConfiguration::where('key','drivemond_token')->first()->value ?? null}}">--}}
+{{--                                                        <button type="submit" id="tourb-8"--}}
+{{--                                                                class="__nav-module-item set-module __nav-module-item-drivemond">--}}
+{{--                                                            <img--}}
+{{--                                                                src="{{asset('/public/assets/admin/img/how-it-works/ride-sharing.svg')}}"--}}
+{{--                                                                alt="public/img">--}}
+{{--                                                            <span>{{ ($drivemondBusinessName?? "DriveMond"). ' '. translate('Admin Panel')}}</span>--}}
+{{--                                                        </button>--}}
+{{--                                                    </form>--}}
+{{--                                                </div>--}}
+{{--                                            @endif--}}
                                         </div>
                                     </div>
                                 </div>
@@ -304,75 +299,18 @@
 <div id="headerFluid" class="d-none"></div>
 <div id="headerDouble" class="d-none"></div>
 
-<div class="modal fade removeSlideDown" id="staticBackdrop" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered max-w-520">
-        <div class="modal-content modal-content__search border-0">
-            <div class="d-flex flex-column gap-3 rounded-20 bg-card py-2 px-3">
-                <div class="d-flex gap-2 align-items-center position-relative">
-                    <form class="flex-grow-1" id="searchForm" action="{{ route('admin.search.routing') }}">
-                        @csrf
-                        <div class="d-flex align-items-center global-search-container">
-                            <input  autocomplete="off" class="form-control flex-grow-1 rounded-10 search-input" id="searchInput" maxlength="255" name="search" type="search" placeholder="{{ translate('Search_by_keyword') }}" aria-label="Search" autofocus>
-                        </div>
-                    </form>
-                    <div class="position-absolute right-0 pr-2">
-                        <button class="border-0 rounded px-2 py-1" type="button" data-dismiss="modal">{{ translate('Esc') }}</button>
-                    </div>
-                </div>
-                <div class="min-h-350">
-                    <div class="search-result" id="searchResults">
-                        <div class="text-center text-muted py-5">{{translate('It appears that you have not yet searched.')}}.</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-
-
 <div class="toggle-tour">
-    <button type="button" class="tour-guide_btn w-40px h-40px border-0 bg-white d-flex align-items-center justify-content-center ">
-        <span class="w-32 h-32px  min-w-32 d-flex align-items-center justify-content-center  bg-primary rounded-8"><img src="{{ asset('public/assets/admin/img/solar_multiple-forward-right-line-duotone.svg') }}" alt=""></span>
-    </button>
-    <div class="d-flex flex-column">
- 
-        @if (Request::isAny([
-            'taxvat*',
-            'admin/business-settings/seo-settings/page-meta-data*',
-            'admin/business-settings/pages/react-landing-page-settings/meta-data*',
-            'admin/business-settings/pages/admin-landing-page-settings/meta-data*',
-            'admin/business-settings/business-setup*',
-            'admin/store/view/*/meta-data'
-        ]))
-
-
-            <div class="tour-guide-items offcanvas-trigger text-capitalize fs-14 text-title cursor-pointer"
-                data-target="#global_guideline_offcanvas">{{ translate('Guideline') }}</div>
-    @endif
-
-        <div class="tour-guide-items">
-            <a href="https://youtube.com/playlist?list=PLLFMbDpKMZBxgtX3n3rKJvO5tlU8-ae2Y" target="_blank"
-               class="d-flex align-items-center gap-10px">
-                <span class="text-capitalize fs-14 text-title">{{ translate('Turotial') }}</span>
-            </a>
-        </div>
-        <div class="tour-guide-items d-flex cursor-pointer align-items-center gap-10px restart-Tour">
-            <span class="text-capitalize fs-14 text-title">{{ translate('Tour') }}</span>
-        </div>
-        @if ( getEnvMode() == 'demo')
-        <div class="tour-guide-items text-capitalize d-flex align-items-center gap-3 fs-14 text-title">
-            {{ translate('Toggle RTL') }}
-            <label class="toggle-switch toggle-switch-sm" for="rtl_toggle">
-                <input type="checkbox" class="toggle-switch-input" id="rtl_toggle">
-                <span class="toggle-switch-label">
-                    <span class="toggle-switch-indicator"></span>
-                </span>
-            </label>
-        </div>
-        @endif
+    <a href="https://youtube.com/playlist?list=PLLFMbDpKMZBxgtX3n3rKJvO5tlU8-ae2Y" target="_blank"
+       class="d-flex align-items-center gap-10px">
+        <img src="{{ asset('public/assets/admin/img/tutorial.svg') }}" alt="">
+        <span>
+            <span class="text-capitalize">{{ translate('Turotial') }}</span>
+        </span>
+    </a>
+    <div class="d-flex align-items-center gap-10px restart-Tour">
+        <img src="{{ asset('public/assets/admin/img/tour.svg') }}" alt="">
+        <span>
+            <span class="text-capitalize">{{ translate('Tour') }}</span>
+        </span>
     </div>
 </div>
-
-
-

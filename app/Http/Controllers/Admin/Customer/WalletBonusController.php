@@ -10,6 +10,7 @@ use App\Http\Requests\Admin\WalletBonusAddRequest;
 use App\Http\Requests\Admin\WalletBonusUpdateRequest;
 use App\Services\WalletBonusService;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Brian2694\Toastr\Facades\Toastr;
@@ -34,7 +35,6 @@ class WalletBonusController extends BaseController
     private function getAddView(): View
     {
         $bonuses = $this->bonusRepo->getListWhere(
-             searchValue: request()['search'],
             dataLimit: config('default_pagination')
         );
         $language = getWebConfig('language');
@@ -77,6 +77,19 @@ class WalletBonusController extends BaseController
         return back();
     }
 
+
+    public function getSearchList(Request $request): JsonResponse
+    {
+        $bonuses = $this->bonusRepo->getSearchedList(
+            searchValue: $request['search'],
+            dataLimit: 50
+        );
+
+        return response()->json([
+            'view'=>view(WalletBonusViewPath::SEARCH[VIEW],compact('bonuses'))->render(),
+            'count'=>$bonuses->count()
+        ]);
+    }
 
     public function updateStatus(Request $request): RedirectResponse
     {

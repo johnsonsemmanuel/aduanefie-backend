@@ -1,8 +1,7 @@
-<?php $panel = $panel ?? 'admin'; ?>
 <div class="modal-header p-0">
     <h4 class="modal-title product-title">
     </h4>
-    <button class="close call-when-done bg-modal-btn w-30px h-30 rounded-circle m-2 z-2" type="button" data-dismiss="modal" aria-label="Close">
+    <button class="close call-when-done" type="button" data-dismiss="modal" aria-label="Close">
         <span aria-hidden="true">&times;</span>
     </button>
 </div>
@@ -13,13 +12,13 @@
             <img class="img-responsive initial--20 onerror-image"
             src="{{ $product['image_full_url'] }}"
                 data-onerror-image="{{ asset('public/assets/admin/img/160x160/img2.jpg') }}"
-                data-zoom="{{ asset('storage/product') }}/{{ $product['image'] }}" alt="Product image"
+                data-zoom="{{ asset('storage/app/public/product') }}/{{ $product['image'] }}" alt="Product image"
                 width="">
             <div class="cz-image-zoom-pane"></div>
         </div>
         <!-- Product details-->
         <div class="details pl-2">
-            <a href="{{ route($panel . '.item.view', $product->id) }}" class="h3 mb-2 product-title">{{ $product->name }}</a>
+            <a href="{{ route('admin.item.view', $product->id) }}" class="h3 mb-2 product-title">{{ $product->name }}</a>
             @if (isset($product->module_id) && $product->module->module_type == 'food')
             <div class="mb-3 text-dark">
                 <span class="h3 font-weight-normal text-accent mr-1">
@@ -93,28 +92,7 @@
 
 
 
-            <?php
-            $moduleType = $product->module?->module_type;
-            $moduleHasStock = (bool) data_get(config('module.' . $moduleType), 'stock', false);
-            $isFoodWithVariations = $moduleType == 'food' && $product->food_variations;
-            $stockMap = [];
-            if ($moduleHasStock && !$isFoodWithVariations) {
-                $variationsArr = $product->variations ? (json_decode($product->variations, true) ?: []) : [];
-                foreach ($variationsArr as $vr) {
-                    if (isset($vr['type'])) {
-                        $stockMap[$vr['type']] = (int) ($vr['stock'] ?? 0);
-                    }
-                }
-            }
-            $itemStock = $moduleHasStock ? (int) ($product->stock ?? 0) : null;
-            $hasVariationMatrix = $moduleHasStock && !$isFoodWithVariations && count($stockMap) > 0;
-            $initiallyOutOfStock = $moduleHasStock && !$hasVariationMatrix && $itemStock !== null && $itemStock <= 0;
-            ?>
-            <form id="add-to-cart-form" class="mb-2"
-                data-module-has-stock="{{ $moduleHasStock ? 1 : 0 }}"
-                data-item-stock="{{ $itemStock !== null ? $itemStock : '' }}"
-                data-has-variation-matrix="{{ $hasVariationMatrix ? 1 : 0 }}"
-                data-variation-stock='@json($stockMap)'>
+            <form id="add-to-cart-form" class="mb-2">
                 @csrf
                 <input type="hidden" name="id" value="{{ $product->id }}">
                 <input type="hidden" name="order_id" value="{{ $order_id }}">
@@ -165,7 +143,7 @@
                         @endforeach
                     @endif
                 @else
-                    @foreach ((json_decode($product->choice_options) ?: []) as $key => $choice)
+                    @foreach (json_decode($product->choice_options) as $key => $choice)
                         <div class="h3 p-0 pt-2">{{ $choice->title }}
                         </div>
 
@@ -205,31 +183,29 @@
                         </div>
                     </div>
                 </div>
-                <?php $add_ons = $product->add_ons ? (json_decode($product->add_ons) ?: []) : []; ?>
+                @php($add_ons = json_decode($product->add_ons))
                 @if (count($add_ons) > 0 && $add_ons[0])
                     <div class="h3 p-0 pt-2">{{ translate('messages.addon') }}
                     </div>
 
                     <div class="d-flex justify-content-left flex-wrap">
                         @foreach (\App\Models\AddOn::withoutGlobalScope(\App\Scopes\StoreScope::class)->whereIn('id', $add_ons)->active()->get() as $key => $add_on)
-                             <div class="flex-column pb-2">
+                            <div class="flex-column pb-2">
                                 <input type="hidden" name="addon-price{{ $add_on->id }}"
                                     value="{{ $add_on->price }}">
                                 <input class="btn-check addon-chek addon_quantity_input_toggle" type="checkbox" id="addon{{ $key }}" name="addon_id[]"
-                                    value="{{ $add_on->id }}"   autocomplete="off">
+                                    value="{{ $add_on->id }}" autocomplete="off">
                                 <label class="d-flex align-items-center btn btn-sm check-label mx-1 addon-input"
                                     for="addon{{ $key }}">{{ Str::limit($add_on->name, 20, '...') }} <br>
                                     {{ \App\CentralLogics\Helpers::format_currency($add_on->price) }}</label>
-                                <label
-                                    class="input-group addon-quantity-input mx-1 shadow bg-white rounded px-1  visiblity-visible d-none "
+                                <label class="input-group addon-quantity-input mx-1 shadow bg-white rounded px-1"
                                     for="addon{{ $key }}">
-                                    <button class="btn btn-sm h-100 text-dark px-0 addon-stepdown " type="button"><i
+                                    <button class="btn btn-sm h-100 text-dark px-0 addon-stepup" type="button"><i
                                             class="tio-remove  font-weight-bold"></i></button>
                                     <input type="number" name="addon-quantity{{ $add_on->id }}"
                                         class="form-control text-center border-0 h-100" placeholder="1"
-                                        value="1" min="1"
-                                        max="100" readonly>
-                                    <button class="btn btn-sm h-100 text-dark px-0 addon-stepup" type="button"><i
+                                        value="1" min="1" max="100" readonly>
+                                    <button class="btn btn-sm h-100 text-dark px-0 addon-stepdown" type="button"><i
                                             class="tio-add  font-weight-bold"></i></button>
                                 </label>
                             </div>
@@ -247,11 +223,8 @@
                     </div>
                 </div>
 
-                <div id="stock-warning" class="text-danger small mt-2 {{ $initiallyOutOfStock ? '' : 'd-none' }}">
-                    {{ translate('messages.out_of_stock') }}
-                </div>
                 <div class="d-flex justify-content-center mt-2">
-                    <button class="btn btn--primary h--45px update_order_item" type="button" id="add-to-cart-btn" {{ $initiallyOutOfStock ? 'disabled' : '' }}>
+                <button class="btn btn--primary h--45px update_order_item" type="button">
                         <i class="tio-shopping-cart"></i>
                         {{ translate('messages.add_to_cart') }}
                     </button>
@@ -261,82 +234,17 @@
     </div>
 </div>
 
+<script src="{{asset('public/assets/admin')}}/js/view-pages/common.js"></script>
 <script type="text/javascript">
     cartQuantityInitialize();
     getVariantPrice();
-
-    function checkAddToCartStock() {
-        var $form = $('#add-to-cart-form');
-        var hasStock = parseInt($form.data('module-has-stock')) === 1;
-        var $btn = $('#add-to-cart-btn');
-        var $warn = $('#stock-warning');
-        if (!hasStock) {
-            $btn.prop('disabled', false);
-            $warn.addClass('d-none');
-            return;
-        }
-        var qty = parseInt($form.find('input[name="quantity"]').val()) || 1;
-        var hasMatrix = parseInt($form.data('has-variation-matrix')) === 1;
-        var availableStock = null;
-        if (hasMatrix) {
-            var stockMap = $form.data('variation-stock') || {};
-            var parts = [];
-            $form.find('input[type="radio"]:checked').each(function () {
-                parts.push(($(this).val() || '').replace(/\s+/g, ''));
-            });
-            var key = parts.join('-');
-            if (key in stockMap) {
-                availableStock = parseInt(stockMap[key]);
-            }
-        } else {
-            var raw = $form.data('item-stock');
-            if (raw !== '' && raw !== null && typeof raw !== 'undefined') {
-                availableStock = parseInt(raw);
-            }
-        }
-        if (availableStock !== null && !isNaN(availableStock)) {
-            if (availableStock <= 0 || qty > availableStock) {
-                $btn.prop('disabled', true);
-                $warn.removeClass('d-none').text(availableStock <= 0
-                    ? "{{ translate('messages.out_of_stock') }}"
-                    : "{{ translate('messages.requested_quantity_exceeds_stock') }}");
-                return;
-            }
-        }
-        $btn.prop('disabled', false);
-        $warn.addClass('d-none');
-    }
-    checkAddToCartStock();
-
-    // Update price when input changes (like variant selection)
-    $('#add-to-cart-form input').on('change', function () {
-        getVariantPrice();
-        checkAddToCartStock();
-    });
-
-    // Handle "plus" (step up)
-    $('.addon-stepup').on('click', function () {
-        const input = this.parentNode.querySelector('input[type=number]');
-        input.stepUp();
-        input.dispatchEvent(new Event('change')); // manually trigger change
+    $('#add-to-cart-form input').on('change', function() {
         getVariantPrice();
     });
-     document.querySelectorAll('.addon-chek').forEach(checkbox => {
-        checkbox.addEventListener('change', function () {
-            const id = this.getAttribute('id'); // e.g., addon3
-            const qtyLabel = document.querySelector(`label.addon-quantity-input[for="${id}"]`);
-            if (qtyLabel) {
-                qtyLabel.classList.toggle('d-none', !this.checked);
-            }
-        });
-         getVariantPrice();
+    $('.addon-stepup').on('change', function() {
+        this.parentNode.querySelector('input[type=number]').stepDown(), getVariantPrice()
     });
-
-    // Handle "minus" (step down)
-    $('.addon-stepdown').on('click', function () {
-        const input = this.parentNode.querySelector('input[type=number]');
-        input.stepDown();
-        input.dispatchEvent(new Event('change'));
-        getVariantPrice();
+    $('.addon-stepdown').on('change', function() {
+        this.parentNode.querySelector('input[type=number]').stepUp(), getVariantPrice()
     });
 </script>

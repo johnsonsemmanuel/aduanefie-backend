@@ -2,7 +2,7 @@
 
 return [
     'module_type'=>[
-        'grocery', 'food', 'pharmacy', 'ecommerce','parcel','rental','ride-share','farm_inputs'
+        'grocery', 'food', 'pharmacy', 'ecommerce', 'parcel', 'rental', 'service'
     ],
 
     'grocery'=>[
@@ -25,7 +25,7 @@ return [
         'allergy'=>true,
         'basic'=>false,
         'halal'=>true,
-        'brand'=>true,
+        'brand'=>false,
         'generic_name'=>false,
         'description'=>'In this type, You can set delivery slot start after x minutes from current time, No available time for items and has stock for items.',
         'is_rental'=>false,
@@ -155,20 +155,21 @@ return [
         'basic'=>false,
         'halal'=>false,
         'brand'=>false,
-        'generic_name'=>false,
+        'generic _name'=>false,
         'description'=>'',
         'is_rental'=>true,
     ],
-    'ride-share'=>[
-        'order_status'=>['accepted'=>false],
-        'order_place_to_schedule_interval'=>false,
+
+    'service'=>[
+        'order_status'=>['accepted'=>true],
+        'order_place_to_schedule_interval'=>true,
         'add_on'=>false,
         'stock'=>false,
         'veg_non_veg'=>false,
-        'unit'=>false,
+        'unit'=>true,
         'order_attachment'=>false,
-        'always_open'=>false,
-        'all_zone_service'=>false,
+        'always_open'=>true,
+        'all_zone_service'=>true,
         'item_available_time'=>false,
         'show_restaurant_text'=>false,
         'is_parcel'=>false,
@@ -181,32 +182,8 @@ return [
         'halal'=>false,
         'brand'=>false,
         'generic_name'=>false,
-        'description'=>'',
-        'is_rental'=>true,
-    ],
-    'farm_inputs'=>[
-        'order_status'=>['accepted'=>false],
-        'order_place_to_schedule_interval'=>false,
-        'add_on'=>false,
-        'stock'=>true,
-        'veg_non_veg'=>false,
-        'unit'=>true,
-        'order_attachment'=>false,
-        'always_open'=>true,
-        'all_zone_service'=>false,
-        'item_available_time'=>false,
-        'show_restaurant_text'=>false,
-        'is_parcel'=>false,
-        'organic'=>true,
-        'cutlery'=>false,
-        'common_condition'=>false,
-        'nutrition'=>false,
-        'allergy'=>false,
-        'basic'=>false,
-        'halal'=>false,
-        'brand'=>true,
-        'generic_name'=>false,
-        'description'=>'Farm inputs module — seeds, fertilizers, tools, small equipment.',
+        'description'=>'In this type, verified agro-service providers offer mechanization, spraying, harvesting, irrigation, and skilled farm labor without physical product inventory, managed as scheduled service bookings.',
         'is_rental'=>false,
+        'is_service'=>true,
     ],
 ];

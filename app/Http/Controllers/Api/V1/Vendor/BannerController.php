@@ -23,7 +23,7 @@ class BannerController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-
+            'title' => 'required',
             'image' => 'required|mimes:webp,jpg,jpeg,png,bmp,tiff|max:2048',
         ]);
 
@@ -61,20 +61,12 @@ class BannerController extends Controller
         return response()->json(['message' => translate('messages.banner_added_successfully')], 200);
     }
 
-    public function edit($id)
-    {
-        $banner = Banner::withoutGlobalScope('translate')->with('translations')->find($id);
-
-        if ($banner) {
-            return response()->json($banner, 200);
-        }
-        return response()->json(['message' => translate('messages.banner_not_found.')], 400);
-    }
 
     public function update(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'id' => 'required',
+            'title' => 'required',
             'image' => 'max:2048',
         ]);
 

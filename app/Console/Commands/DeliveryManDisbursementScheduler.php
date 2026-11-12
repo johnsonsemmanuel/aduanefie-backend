@@ -2,7 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Models\BusinessSetting;
 use Illuminate\Console\Command;
+use Illuminate\Console\Scheduling\Schedule;
 
 class DeliveryManDisbursementScheduler extends Command
 {
@@ -17,11 +19,6 @@ class DeliveryManDisbursementScheduler extends Command
     public function handle()
     {
         app('App\Http\Controllers\Admin\DeliveryManDisbursementController')->generate_disbursement();
-
-        if (addon_published_status('RideShare') ) {
-           app(\Modules\RideShare\Http\Controllers\Web\Admin\RiderManagement\RiderDisbursementController::class)->generate_disbursement();
-        }
-
         $this->info('DeliveryMan disbursement scheduler executed successfully.');
     }
 }

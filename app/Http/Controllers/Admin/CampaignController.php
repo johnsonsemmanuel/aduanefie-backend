@@ -15,22 +15,20 @@ use App\CentralLogics\Helpers;
 use Illuminate\Support\Facades\DB;
 use App\Exports\ItemCampaignExport;
 use App\Exports\BasicCampaignExport;
-use App\Exports\BasicCampaignStoresExport;
 use App\Http\Controllers\Controller;
+use App\Models\ItemCampaignCampaign;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Support\Facades\Mail;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class CampaignController extends Controller
 {
     function index($type)
     {
-        $taxData = Helpers::getTaxSystemType();
-        $productWiseTax = $taxData['productWiseTax'];
-        $taxVats = $taxData['taxVats'];
-        return view('admin-views.campaign.'.$type.'.index', compact('productWiseTax', 'taxVats'));
+        return view('admin-views.campaign.'.$type.'.index');
     }
 
     function list(Request $request, $type)
@@ -45,7 +43,7 @@ class CampaignController extends Controller
                         $q->orWhere('title', 'like', "%{$value}%");
                     }
                 });
-            })->withCount('stores')
+            })
             ->latest()->paginate(config('default_pagination'));
         }
         else{
@@ -57,17 +55,10 @@ class CampaignController extends Controller
                     }
                 });
             })
-            ->when($request->store_id && is_Numeric($request->store_id), function ($q) {
-                $q->where('store_id', request('store_id'));
-            })
             ->latest()->paginate(config('default_pagination'));
         }
 
-        $taxData = Helpers::getTaxSystemType();
-        $productWiseTax = $taxData['productWiseTax'];
-        $taxVats = $taxData['taxVats'];
-        $store = Store::where('id', $request['store_id'])->first()?? null;
-        return view('admin-views.campaign.'.$type.'.list', compact('campaigns','productWiseTax', 'taxVats', 'store'));
+        return view('admin-views.campaign.'.$type.'.list', compact('campaigns'));
     }
 
     public function storeBasic(Request $request)
@@ -443,24 +434,6 @@ class CampaignController extends Controller
             $campaign->generic()->sync($generic_ids);
         }
 
-
-        if (addon_published_status('TaxModule')) {
-            $SystemTaxVat = \Modules\TaxModule\Entities\SystemTaxSetup::where('is_active', 1)->where('is_default', 1)->first();
-            if ($SystemTaxVat?->tax_type == 'product_wise') {
-                foreach ($request['tax_ids'] ?? [] as $tax_id) {
-                    \Modules\TaxModule\Entities\Taxable::create(
-                        [
-                            'taxable_type' => ItemCampaign::class,
-                            'taxable_id' => $campaign->id,
-                            'system_tax_setup_id' => $SystemTaxVat->id,
-                            'tax_id' => $tax_id
-                        ],
-                    );
-                }
-            }
-        }
-
-
         $data = [];
         $default_lang = str_replace('_', '-', app()->getLocale());
         foreach ($request->lang as $index => $key) {
@@ -710,23 +683,6 @@ class CampaignController extends Controller
         }
         $default_lang = str_replace('_', '-', app()->getLocale());
 
-        if (addon_published_status('TaxModule')) {
-            $SystemTaxVat = \Modules\TaxModule\Entities\SystemTaxSetup::where('is_active', 1)->where('is_default', 1)->first();
-            if ($SystemTaxVat?->tax_type == 'product_wise') {
-                $campaign->taxVats()->delete();
-                foreach ($request['tax_ids'] ?? [] as $tax_id) {
-                    \Modules\TaxModule\Entities\Taxable::create(
-                        [
-                            'taxable_type' => ItemCampaign::class,
-                            'taxable_id' => $campaign->id,
-                            'system_tax_setup_id' => $SystemTaxVat->id,
-                            'tax_id' => $tax_id
-                        ],
-                    );
-                }
-            }
-        }
-
         foreach ($request->lang as $index => $key) {
             if($default_lang == $key && !($request->title[$index])){
                 if ($key != 'default') {
@@ -797,7 +753,7 @@ class CampaignController extends Controller
         {
             $campaign = ItemCampaign::withoutGlobalScope('translate')->findOrFail($campaign);
             $temp = $campaign->category;
-            if($temp?->position)
+            if($temp->position)
             {
                 $sub_category = $temp;
                 $category = $temp->parent;
@@ -807,12 +763,7 @@ class CampaignController extends Controller
                 $category = $temp;
                 $sub_category = null;
             }
-
-        $taxData = Helpers::getTaxSystemType();
-        $productWiseTax = $taxData['productWiseTax'];
-        $taxVats = $taxData['taxVats'];
-        $taxVatIds = $productWiseTax ? $campaign->taxVats()->pluck('tax_id')->toArray() : [];
-            return view('admin-views.campaign.'.$type.'.edit', compact('campaign','sub_category','category','taxVats', 'productWiseTax', 'taxVatIds'));
+            return view('admin-views.campaign.'.$type.'.edit', compact('campaign','sub_category','category'));
         }
 
     }
@@ -821,12 +772,12 @@ class CampaignController extends Controller
     {
         if($type=='basic')
         {
-            $campaign = Campaign::where('id',$campaign)->withCount('stores')->first();
+            $campaign = Campaign::Running()->where('id',$campaign)->first();
             if(!$campaign){
                 Toastr::error(translate('messages.campaign_is_expired'));
                 return back();
             }
-            $stores = $campaign->stores()->search(request()->search)->paginate(config('default_pagination'));
+            $stores = $campaign->stores()->paginate(config('default_pagination'));
             $store_ids = [];
             foreach($campaign->stores as $store)
             {
@@ -865,7 +816,7 @@ class CampaignController extends Controller
         $campaign->translations()->delete();
         $campaign->delete();
         Toastr::success(translate('messages.campaign_deleted_successfully'));
-        return redirect()->route('admin.campaign.list', 'basic');
+        return back();
     }
     public function delete_item(ItemCampaign $campaign)
     {
@@ -873,7 +824,6 @@ class CampaignController extends Controller
         Helpers::check_and_delete('campaign/' , $campaign->image);
 
         $campaign->translations()->delete();
-        $campaign?->taxVats()->delete();
         $campaign?->carts()?->delete();
         $campaign->delete();
         Toastr::success(translate('messages.campaign_deleted_successfully'));
@@ -912,7 +862,7 @@ class CampaignController extends Controller
                 }
 
             if(config('mail.status') && Helpers::get_mail_status('campaign_deny_mail_status_store') == '1' &&  Helpers::getNotificationStatusData('store','store_campaign_join_rejaction','mail_status',$store->id )) {
-                Mail::to($store->vendor?->getRawOriginal('email'))->send(new \App\Mail\VendorCampaignRequestMail($store->name,'denied'));
+                Mail::to($store->vendor->email)->send(new \App\Mail\VendorCampaignRequestMail($store->name,'denied'));
             }
         }
         catch(\Exception $e)
@@ -924,7 +874,7 @@ class CampaignController extends Controller
     }
     public function addstore(Request $request, Campaign $campaign)
     {
-        $campaign->stores()->attach($request->store_id,['campaign_status' => 'confirmed','updated_at' => now(),'created_at' => now()]);
+        $campaign->stores()->attach($request->store_id,['campaign_status' => 'confirmed']);
         $campaign->save();
         Toastr::success(translate('messages.store_added_to_campaign'));
         return back();
@@ -933,7 +883,7 @@ class CampaignController extends Controller
     public function store_confirmation($campaign,$store_id,$status)
     {
         $campaign = Campaign::findOrFail($campaign);
-        $campaign->stores()->updateExistingPivot($store_id,['campaign_status' => $status,'updated_at' => now()]);
+        $campaign->stores()->updateExistingPivot($store_id,['campaign_status' => $status]);
         $campaign->save();
         try
         {
@@ -973,11 +923,11 @@ class CampaignController extends Controller
 
 
             if(config('mail.status') && Helpers::get_mail_status('campaign_deny_mail_status_store') == '1' && $status == 'rejected' &&  Helpers::getNotificationStatusData('store','store_campaign_join_rejaction','mail_status',$store->id )) {
-                Mail::to($store->vendor?->getRawOriginal('email'))->send(new \App\Mail\VendorCampaignRequestMail($store->name,'denied'));
+                Mail::to($store->vendor->email)->send(new \App\Mail\VendorCampaignRequestMail($store->name,'denied'));
             }
 
             if(config('mail.status') && Helpers::get_mail_status('campaign_approve_mail_status_store') == '1' && $status == 'confirmed' &&  Helpers::getNotificationStatusData('store','store_campaign_join_approval','mail_status',$store->id )) {
-                Mail::to($store->vendor?->getRawOriginal('email'))->send(new \App\Mail\VendorCampaignRequestMail($store->name,'approved'));
+                Mail::to($store->vendor->email)->send(new \App\Mail\VendorCampaignRequestMail($store->name,'approved'));
             }
         }
         catch(\Exception $e)
@@ -1005,24 +955,6 @@ class CampaignController extends Controller
         }
         return Excel::download(new BasicCampaignExport($campaigns,$request['search']), 'Campaign.xlsx');
     }
-
-    public function basic_campaign_store_export(Request $request){
-
-        $campaign = Campaign::where('id',$request->id)->withCount('stores')->first();
-            if(!$campaign){
-                Toastr::error(translate('messages.campaign_is_expired'));
-                return back();
-            }
-            $stores = $campaign->stores()->search(request()->search)->get();
-
-            $data = ['stores' => $stores, 'campaign' => $campaign, 'search' => $request['search']];
-
-        if($request->type == 'csv'){
-            return Excel::download(new BasicCampaignStoresExport($data), 'CampaignVendors.csv');
-        }
-        return Excel::download(new BasicCampaignStoresExport($data), 'CampaignVendors.xlsx');
-    }
-
 
     public function item_campaign_export(Request $request){
         $key = explode(' ', $request['search']);

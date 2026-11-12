@@ -92,7 +92,6 @@
                                 <small>{{translate('*By Turning OFF mail configuration, all your mailing services will be off.')}}</small>
                             </div>
                         </form>
-                        @php($currentProvider = $data['provider'] ?? 'custom')
                         <form action="javascript:"
                             method="post" id="mail-config-form" enctype="multipart/form-data">
                             @csrf
@@ -101,92 +100,64 @@
                                 <div class="row g-3">
                                     <div class="col-sm-12">
                                         <div class="form-group mb-0">
-                                            <label class="form-label fw-bold">{{ translate('messages.provider') }}</label><br>
-                                            <div class="d-flex gap-3 flex-wrap mt-2">
-                                                <div class="form-check form-check-inline border rounded px-3 py-2 mail-provider-option {{ $currentProvider == 'custom' ? 'border-primary bg-light' : '' }}" style="cursor:pointer">
-                                                    <input class="form-check-input" type="radio" name="provider" id="provider-custom" value="custom" {{ $currentProvider == 'custom' ? 'checked' : '' }}>
-                                                    <label class="form-check-label" for="provider-custom">{{ translate('Custom SMTP') }}</label>
-                                                </div>
-                                                <div class="form-check form-check-inline border rounded px-3 py-2 mail-provider-option {{ $currentProvider == 'brevo' ? 'border-primary bg-light' : '' }}" style="cursor:pointer">
-                                                    <input class="form-check-input" type="radio" name="provider" id="provider-brevo" value="brevo" {{ $currentProvider == 'brevo' ? 'checked' : '' }}>
-                                                    <label class="form-check-label" for="provider-brevo">{{ translate('Brevo (Sendinblue)') }} <span class="text--primary ml-1" style="font-size:0.8em">FREE 300/day</span></label>
-                                                </div>
-                                                <div class="form-check form-check-inline border rounded px-3 py-2 mail-provider-option {{ $currentProvider == 'gmail' ? 'border-primary bg-light' : '' }}" style="cursor:pointer">
-                                                    <input class="form-check-input" type="radio" name="provider" id="provider-gmail" value="gmail" {{ $currentProvider == 'gmail' ? 'checked' : '' }}>
-                                                    <label class="form-check-label" for="provider-gmail">{{ translate('Gmail SMTP') }} <span class="text--primary ml-1" style="font-size:0.8em">FREE 500/day</span></label>
-                                                </div>
-                                            </div>
-                                            <small class="text-muted d-block mt-1" id="provider-help-text">
-                                                @if($currentProvider == 'brevo')
-                                                    ⚠️ You need a Brevo API key (starts with xkeysib-), NOT the SMTP key. Go to Brevo → Settings → SMTP & API → API Keys → Generate.
-                                                @elseif($currentProvider == 'gmail')
-                                                    Enable 2FA on your Google account, then generate an App Password at myaccount.google.com/apppasswords.
-                                                @else
-                                                    Enter your custom SMTP server details below.
-                                                @endif
-                                            </small>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-12">
-                                        <div class="form-group mb-0">
                                             <label for="name" class="form-label">{{ translate('messages.mailer_name') }}</label><br>
-                                            <input id="name" type="text" placeholder="{{ translate('messages.Ex:') }} Aduanefie" class="form-control" name="name"
-                                                value="{{ getEnvMode() != 'demo' ? $data['name'] ?? '' : '' }}" required>
+                                            <input id="name" type="text" placeholder="{{ translate('messages.Ex:') }} Alex" class="form-control" name="name"
+                                                value="{{ env('APP_MODE') != 'demo' ? $data['name'] ?? '' : '' }}" required>
                                         </div>
                                     </div>
                                     <div class="col-md-4">
                                         <div class="form-group mb-0">
                                             <label for="host" class="form-label">{{ translate('messages.host') }}</label><br>
-                                            <input id="host" type="text" class="form-control" name="host" placeholder="{{translate('messages.Ex_:_mail.example.com')}}"
-                                                value="{{ getEnvMode() != 'demo' ? $data['host'] ?? '' : '' }}" required>
+                                            <input id="host" type="text" class="form-control" name="host" placeholder="{{translate('messages.Ex_:_mail.6am.one')}}"
+                                                value="{{ env('APP_MODE') != 'demo' ? $data['host'] ?? '' : '' }}" required>
                                         </div>
                                     </div>
                                     <div class="col-md-4">
                                         <div class="form-group mb-0">
                                             <label for="driver" class="form-label">{{ translate('messages.driver') }}</label><br>
                                             <input id="driver" type="text" class="form-control" name="driver" placeholder="{{translate('messages.Ex : smtp')}}"
-                                                value="{{ getEnvMode() != 'demo' ? $data['driver'] ?? 'smtp' : 'smtp' }}" required>
+                                                value="{{ env('APP_MODE') != 'demo' ? $data['driver'] ?? '' : '' }}" required>
                                         </div>
                                     </div>
                                     <div class="col-md-4">
                                         <div class="form-group mb-0">
                                             <label for="port" class="form-label">{{ translate('messages.port') }}</label><br>
                                             <input id="port" type="text" class="form-control" name="port" placeholder="{{translate('messages.Ex : 587')}}"
-                                                value="{{ getEnvMode() != 'demo' ? $data['port'] ?? '' : '' }}" required>
+                                                value="{{ env('APP_MODE') != 'demo' ? $data['port'] ?? '' : '' }}" required>
                                         </div>
                                     </div>
                                     <div class="col-sm-12">
                                         <div class="form-group mb-0">
                                             <label for="username" class="form-label">{{ translate('messages.username') }}</label><br>
                                             <input id="username" type="text" placeholder="{{ translate('messages.Ex:') }} ex@yahoo.com" class="form-control" name="username"
-                                                value="{{ getEnvMode() != 'demo' ? $data['username'] ?? '' : '' }}" required>
+                                                value="{{ env('APP_MODE') != 'demo' ? $data['username'] ?? '' : '' }}" required>
                                         </div>
                                     </div>
                                     <div class="col-md-4">
                                         <div class="form-group mb-0">
                                             <label for="email" class="form-label">{{ translate('messages.email_id') }}</label><br>
                                             <input id="email" type="text" placeholder="{{ translate('messages.Ex:') }} ex@yahoo.com" class="form-control" name="email"
-                                                value="{{ getEnvMode() != 'demo' ? $data['email_id'] ?? '' : '' }}" required>
+                                                value="{{ env('APP_MODE') != 'demo' ? $data['email_id'] ?? '' : '' }}" required>
                                         </div>
                                     </div>
                                     <div class="col-md-4">
                                         <div class="form-group mb-0">
                                             <label for="encryption" class="form-label">{{ translate('messages.encryption') }}</label><br>
                                             <input id="encryption" type="text" placeholder="{{ translate('messages.Ex:') }} tls" class="form-control" name="encryption"
-                                                value="{{ getEnvMode() != 'demo' ? $data['encryption'] ?? '' : '' }}" required>
+                                                value="{{ env('APP_MODE') != 'demo' ? $data['encryption'] ?? '' : '' }}" required>
                                         </div>
                                     </div>
                                     <div class="col-md-4">
                                         <div class="form-group mb-0">
-                                            <label for="password" class="form-label" id="password-label">{{ translate('messages.password') }}</label><br>
+                                            <label for="password" class="form-label">{{ translate('messages.password') }}</label><br>
                                             <input id="password" type="text" class="form-control" name="password" placeholder="{{translate('messages.Ex : 5+ Characters')}}"
-                                                value="{{ getEnvMode() != 'demo' ? $data['password'] ?? '' : '' }}" required>
+                                                value="{{ env('APP_MODE') != 'demo' ? $data['password'] ?? '' : '' }}" required>
                                         </div>
                                     </div>
                                     <div class="col-sm-12">
                                         <div class="btn--container justify-content-end">
                                             <button type="reset" class="btn btn--reset">{{translate('messages.reset')}}</button>
-                                            <button type="{{ getEnvMode() != 'demo' ? 'submit' : 'button' }}"
+                                            <button type="{{ env('APP_MODE') != 'demo' ? 'submit' : 'button' }}"
                                             class="btn btn--primary call-demo"
                                             >{{ translate('messages.save') }}</button>
                                         </div>
@@ -366,48 +337,6 @@
         $('#mail-config-disable').on('change', function(){
             disableMailConf()
         })
-
-        const providerPresets = {
-            brevo: {
-                host: 'smtp-relay.brevo.com',
-                driver: 'smtp',
-                port: '587',
-                encryption: 'tls',
-                helpText: '⚠️ You need a Brevo API key (starts with xkeysib-), NOT the SMTP key. Go to Brevo → Settings → SMTP & API → API Keys → Generate.',
-                passwordLabel: 'API Key',
-                passwordPlaceholder: 'xkeysib-...'
-            },
-            gmail: {
-                host: 'smtp.gmail.com',
-                driver: 'smtp',
-                port: '587',
-                encryption: 'tls',
-                helpText: 'Enable 2FA on your Google account, then generate an App Password at myaccount.google.com/apppasswords.',
-                passwordLabel: 'App Password',
-                passwordPlaceholder: 'abcdefghijklmnop'
-            },
-            custom: {
-                helpText: 'Enter your custom SMTP server details below.',
-                passwordLabel: 'Password',
-                passwordPlaceholder: '5+ Characters'
-            }
-        };
-
-        $(document).on('change', 'input[name="provider"]', function(){
-            var provider = $(this).val();
-            var preset = providerPresets[provider];
-            $('.mail-provider-option').removeClass('border-primary bg-light');
-            $(this).closest('.mail-provider-option').addClass('border-primary bg-light');
-            if (provider !== 'custom') {
-                $('#host').val(preset.host);
-                $('#driver').val(preset.driver);
-                $('#port').val(preset.port);
-                $('#encryption').val(preset.encryption);
-            }
-            $('#provider-help-text').text(preset.helpText);
-            $('#password-label').text(preset.passwordLabel);
-            $('#password').attr('placeholder', preset.passwordPlaceholder);
-        });
 
         $('#mail-config-form').submit(function(){
             $.ajaxSetup({

@@ -8,7 +8,6 @@ use App\Models\EmailVerifications;
 use App\Models\ExternalConfiguration;
 use App\Models\Item;
 use App\Models\PhoneVerification;
-use App\Models\ProCustomerSubscription;
 use App\Models\User;
 use App\Models\UserInfo;
 use App\Models\Zone;
@@ -20,133 +19,19 @@ use App\CentralLogics\Helpers;
 use App\Models\OrderReference;
 use Illuminate\Support\Carbon;
 use App\Models\CustomerAddress;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Models\BusinessSetting;
-use App\Models\UserFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Modules\Gateways\Traits\SmsGateway;
 use MatanYadaev\EloquentSpatial\Objects\Point;
-use Modules\RideShare\Entities\ReviewModule\RideReview;
 
 class CustomerController extends Controller
 {
-    /**
-     * Host scope tuple. Mobile API V1 only serves host customers; all
-     * aux-table reads/writes here pin to (0, 0) so they don't pick up
-     * storefront-scoped rows after the per-storefront migration.
-     */
-    private const HOST_SCOPE = ['tenant_id' => 0, 'sub_tenant_id' => 0];
-
-    public function save_prescription_files(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'saved_images' => 'required|array|min:1',
-            'saved_images.*' => 'required|file|mimes:' . IMAGE_FORMAT_FOR_VALIDATION . '|max:'.MAX_FILE_SIZE * 1024,
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => Helpers::error_processor($validator)], 403);
-        }
-
-        $user = $request->user();
-        if (!$user) {
-            return response()->json([
-                'errors' => [
-                    ['code' => 'unauthorized', 'message' => translate('messages.unauthorized')]
-                ]
-            ], 401);
-        }
-
-        if (!$request->hasFile('saved_images')) {
-            return response()->json([
-                'errors' => [
-                    ['code' => 'saved_images', 'message' => translate('messages.file_required')]
-                ]
-            ], 403);
-        }
-
-        $incomingFiles = array_values(array_filter(Arr::wrap($request->file('saved_images'))));
-        $existingPrescriptionFiles = UserFile::where('type', 'prescription')
-            ->where('user_id', $user->id)
-            ->count();
-
-        if (($existingPrescriptionFiles + count($incomingFiles)) > 20) {
-            return response()->json([
-                'errors' => [
-                    ['code' => 'saved_images', 'message' => translate('You can save maximum 20 prescription files')]
-                ]
-            ], 403);
-        }
-
-        $savedFiles = [];
-        try {
-            foreach ($incomingFiles as $file) {
-                $fileName = Helpers::upload('order/saved_files/', 'png', $file);
-
-                $savedFile = UserFile::create([
-                    'user_id' => $user->id,
-                    'file_name' => $fileName,
-                    'storage' => Helpers::getDisk(),
-                    'mime_type' => $file->getMimeType(),
-                    'type' => 'prescription',
-                ]);
-
-                $savedFiles[] = [
-                    'id' => $savedFile->id,
-                    'file_name' => $savedFile->file_name,
-                    'image_full_url' => $savedFile->image_full_url,
-                ];
-            }
-
-            return response()->json([
-                'message' => translate('messages.successfully_added'),
-                'files' => $savedFiles,
-            ], 200);
-        } catch (\Throwable $e) {
-            info('CustomerController@save_prescription_files', [
-                $e->getFile(),
-                $e->getLine(),
-                $e->getMessage(),
-            ]);
-
-            return response()->json([
-                'errors' => [
-                    ['code' => 'file_upload_failed', 'message' => translate('messages.something_went_wrong')]
-                ]
-            ], 500);
-        }
-    }
-
-    public function delete_all_prescription_files(Request $request)
-    {
-        $user = $request->user();
-        if (!$user) {
-            return response()->json([
-                'errors' => [
-                    ['code' => 'unauthorized', 'message' => translate('messages.unauthorized')]
-                ]
-            ], 401);
-        }
-
-        $files = UserFile::where('type', 'prescription')->where('user_id', $user->id)->get();
-        foreach ($files as $file) {
-            Helpers::check_and_delete('order/saved_files/', $file->file_name);
-        }
-
-        UserFile::where('type', 'prescription')->where('user_id', $user->id)->delete();
-
-        return response()->json([
-            'message' => translate('messages.deleted_successfully'),
-        ], 200);
-    }
-
     public function address_list(Request $request)
     {
         $limit = $request['limit'] ?? 10;
@@ -293,7 +178,7 @@ class CustomerController extends Controller
         if (!$request->hasHeader('X-localization')) {
 
             $errors = [];
-            $errors[] = ['code' => 'current_language_key', 'message' => translate('messages.current_language_key_required')];
+            array_push($errors, ['code' => 'current_language_key', 'message' => translate('messages.current_language_key_required')]);
             return response()->json([
                 'errors' => $errors
             ], 200);
@@ -315,117 +200,11 @@ class CustomerController extends Controller
         $data['discount_amount'] = (float)data_get($discount_data, 'discount_amount');
         $data['discount_amount_type'] = data_get($discount_data, 'discount_amount_type');
         $data['validity'] = (string)data_get($discount_data, 'validity');
-        $data['pro_subscription'] = ProCustomerSubscription::where('user_id', $user->id)->first() ?? null;
-
-
-        if(addon_published_status('RideShare')) {
-            $reviews = RideReview::where('review_for', CUSTOMER)
-                ->where('received_by', $user->id)
-                ->select(DB::raw('AVG(rating) as average_rating'), DB::raw('COUNT(id) as total_review'))
-                ->first();
-            $data['average_rating'] = $reviews->average_rating ? round($reviews->average_rating, 2) : 0;
-            $data['total_review'] = $reviews->total_review ?? 0;
-        } else {
-            $data['average_rating'] = 0;
-            $data['total_review'] = 0;
-        }
 
         unset($data['orders']);
         return response()->json($data, 200);
     }
 
-    public function saved_files(Request $request)
-    {
-        $user = $request->user();
-        if (!$user) {
-            return response()->json([
-                'errors' => [
-                    ['code' => 'unauthorized', 'message' => translate('messages.unauthorized')]
-                ]
-            ], 401);
-        }
-
-        $data = UserFile::where('user_id', $user->id)
-            ->latest()
-            ->get(['file_name', 'storage'])
-            ->map(fn ($file) => [
-                'file_name' => $file->file_name,
-                'image_full_url' => $file->image_full_url,
-            ])
-            ->values();
-
-        return response()->json([
-            'saved_files' => $data,
-        ], 200);
-    }
-
-    public function orderPaymentFailed(Request $request)
-    {
-        $user_id = $request->user ? $request->user->id : $request->input('guest_id');
-        $orderId = $request->input('order_id');
-
-        if ($orderId) {
-            $unpaidOrder = Order::where('id', $orderId)->first();
-        }
-        else {
-            $unpaidOrder = Order::where('user_id', $user_id)
-                ->where('created_at', '>=', now()->subMonths(1))
-                ->whereIn('order_status', ['pending','failed'])
-                ->whereNotIn('payment_method', ['cash_on_delivery', 'wallet'])
-                ->where(function ($q) {
-                    // CASE 1: partial_payments
-                    $q->where(function ($q2) {
-                        $q2->where('payment_method', 'partial_payment')
-                            ->whereHas('payments', function ($p) {
-                                $p->where('payment_status', 'unpaid')
-                                    ->whereNotIn('payment_method', ['cash_on_delivery', 'wallet']);
-                            });
-                    })
-                    // CASE 2: offline_payment
-                    ->orWhere(function ($q3) {
-                        $q3->where('payment_method', 'offline_payment')
-                            ->whereDoesntHave('offline_payments');
-                    })
-                    // CASE 3: other online methods
-                    ->orWhere(function ($q4) {
-                        $q4->whereNotIn('payment_method', [
-                            'cash_on_delivery', 'wallet', 'partial_payment', 'offline_payment'
-                        ]);
-                    });
-                })
-                ->first();
-        }
-
-        if (!$unpaidOrder) {
-            return response()->json([], 200);
-        }
-        $zone = $unpaidOrder->zone;
-        $module = $unpaidOrder->module;
-        $moduleZone = $module?->zones()?->where('zone_id', $zone->id)?->first();
-        $maxCodAmount = $moduleZone?->pivot?->maximum_cod_order_amount ?? 0;
-        $isCashOnDelivery = (Helpers::get_business_settings('cash_on_delivery')['status'] && $zone->cash_on_delivery) ?? false ;
-        $isDigitalPayment = (Helpers::get_business_settings('digital_payment')['status'] && $zone->digital_payment) ?? false ;
-        $isOfflinePayment = (Helpers::get_business_settings('offline_payment_status') == 1 && $zone->offline_payment) ?? false ;
-
-
-        $data = [
-            'cash_on_delivery'            => (bool) $isCashOnDelivery,
-            'digital_payment'             => (bool) $isDigitalPayment,
-            'offline_payment'             => (bool) $isOfflinePayment,
-            'maximum_cod_order_amount'    => $maxCodAmount,
-            'order_id'                    => $unpaidOrder->id,
-            'order_amount'                => $unpaidOrder->order_amount,
-            'partially_paid_amount'       => $unpaidOrder->partially_paid_amount,
-            'order_type'                  => $unpaidOrder->order_type,
-            'user_id'                     => $unpaidOrder->user_id,
-            'zone_id'                     => $unpaidOrder->zone_id,
-            'payment_status'              => $unpaidOrder->payment_status,
-            'payment_method'              => $unpaidOrder->payment_method,
-            'contact_person_number'       => json_decode($unpaidOrder->delivery_address)->contact_person_number,
-        ];
-
-        return response()->json($data, 200);
-    }
 
     public function update_interest(Request $request)
     {
@@ -439,7 +218,7 @@ class CustomerController extends Controller
 
         $user = User::where(['id' => $request->user()->id])->first();
         $module_ids = $user?->module_ids ? json_decode($user?->module_ids, true) : [];
-        array_push($module_ids, getModuleId($request->header('moduleId')));
+        array_push($module_ids, $request->header('moduleId'));
         $module_ids = array_unique($module_ids);
 
         $interest = $user?->interest ? json_decode($user?->interest, true) : [];
@@ -471,7 +250,15 @@ class CustomerController extends Controller
 
     public function get_suggested_item(Request $request)
     {
-       Helpers::setZoneIds($request);
+        if (!$request->hasHeader('zoneId')) {
+            $errors = [];
+            array_push($errors, ['code' => 'zoneId', 'message' => 'Zone id is required!']);
+            return response()->json([
+                'errors' => $errors
+            ], 403);
+        }
+
+
         $zone_id = $request->header('zoneId');
 
         $interest = $request->user()->interest;
@@ -507,20 +294,17 @@ class CustomerController extends Controller
 
     public function update_zone(Request $request)
     {
-        $longitude = (float)$request->header('longitude') ?? 0;
-        $latitude = (float)$request->header('latitude') ?? 0;
-
-        if ($longitude && $latitude) {
-            try {
-             $zoneId = Zone::where('status',1)->whereContains('coordinates', new Point($longitude, $latitude, POINT_SRID))
-            ->selectRaw('zones.*, ABS(ST_Area(coordinates)) as area')->orderBy('area', 'asc')->first()?->id;
-                $customer = $request->user();
-                $customer->zone_id = $zoneId;
-                $customer->save();
-
-            } catch (\Exception $e) {
-            }
+        if (!$request->hasHeader('zoneId') && is_numeric($request->header('zoneId'))) {
+            $errors = [];
+            array_push($errors, ['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]);
+            return response()->json([
+                'errors' => $errors
+            ], 403);
         }
+
+        $customer = $request->user();
+        $customer->zone_id = (integer)$request->header('zoneId');
+        $customer->save();
         return response()->json([], 200);
     }
 
@@ -579,17 +363,10 @@ class CustomerController extends Controller
     #handshake
     public function update_profile(Request $request)
     {
-        $authUserId = $request?->user()?->id;
-        $authUser   = $authUserId ? User::find($authUserId) : null;
-        if ($authUser && $authUser->is_phone_verified == 1) {
-            $request->merge(['phone' => $authUser->phone]);
-        }
-        $hostScope = fn ($q) => $q->where('tenant_id', 0)->where('sub_tenant_id', 0);
-
         $validator = Validator::make($request->all(), [
             'name' => 'required',
-            'email' => ['required', Rule::unique('users', 'email')->ignore($authUserId)->where($hostScope)],
-            'phone' => ['required', Rule::unique('users', 'phone')->ignore($authUserId)->where($hostScope)],
+            'email' => 'required|unique:users,email,' . $request?->user()?->id,
+            'phone' => 'required|unique:users,phone,' . $request?->user()?->id,
             'image' => 'nullable|max:2048',
             'password' => ['nullable', Password::min(8)],
         ]);
@@ -609,11 +386,11 @@ class CustomerController extends Controller
 
         $user = User::where(['id' => $request?->user()?->id])->with('userinfo')->first();
 
-        $login_settings = array_column(BusinessSetting::whereIn('key', ['email_verification_status', 'phone_verification_status', 'firebase_otp_verification', 'send_otp_via'])->get(['key', 'value'])->toArray(), 'value', 'key');
+        $login_settings = array_column(BusinessSetting::whereIn('key', ['email_verification_status', 'phone_verification_status', 'firebase_otp_verification'])->get(['key', 'value'])->toArray(), 'value', 'key');
 
         if($request->button_type != 'change_password' && !$request->otp ){
             if (  data_get($login_settings, 'phone_verification_status') == 1  && ($user->phone != $request->phone  || $request->button_type == 'phone' || (!$user->is_phone_verified  && !$request->button_type) )) {
-                if (data_get($login_settings, 'firebase_otp_verification') == 1 && data_get($login_settings, 'send_otp_via') == 'firebase') {
+                if (data_get($login_settings, 'firebase_otp_verification') == 1) {
                     return response()->json(['verification_on' => 'phone', 'verification_medium' => 'firebase', 'otp_send' => true, 'message' => translate('Otp_successfully_sent')], 200);
                 } else {
                     $verification_data =  $this->verification_check($request->phone);
@@ -689,18 +466,18 @@ class CustomerController extends Controller
     private function verification_check($phone)
     {
         $otp_interval_time = 60; //seconds
-        $verification_data = DB::table('phone_verifications')->where('phone', $phone)->where(self::HOST_SCOPE)->first();
+        $verification_data = DB::table('phone_verifications')->where('phone', $phone)->first();
         if (isset($verification_data) &&  \Carbon\Carbon::parse($verification_data->updated_at)->DiffInSeconds() < $otp_interval_time) {
-            $time = round($otp_interval_time - Carbon::parse($verification_data->updated_at)->DiffInSeconds());
+            $time = $otp_interval_time - Carbon::parse($verification_data->updated_at)->DiffInSeconds();
             return ['is_success' => false,  'message' => translate('messages.please_try_again_after_') . $time . ' ' . translate('messages.seconds'), 'code' => 403];
         }
 
         $otp = rand(100000, 999999);
-        if(getEnvMode() == 'test'){
+        if(env('APP_MODE') == 'test'){
             $otp = '123456';
         }
         DB::table('phone_verifications')->updateOrInsert(
-            ['phone' => $phone] + self::HOST_SCOPE,
+            ['phone' => $phone],
             [
                 'token' => $otp,
                 'otp_hit_count' => 0,
@@ -720,7 +497,7 @@ class CustomerController extends Controller
         } else {
             $response = SMS_module::send($phone, $otp);
         }
-        if (getEnvMode() != 'test' && $response !== 'success') {
+        if (env('APP_MODE') != 'test' && $response !== 'success') {
             return ['is_success' => false,  'message' => translate('failed_to_send_otp'), 'code' => 403];
         }
         return  ['is_success' => true,  'message' => translate('OTP_successfully_send'), 'code' => 200];
@@ -728,11 +505,11 @@ class CustomerController extends Controller
     private function verification_check_email($data)
     {
         $otp = rand(100000, 999999);
-        if(getEnvMode() == 'test'){
+        if(env('APP_MODE') == 'test'){
             $otp = '123456';
         }
         DB::table('email_verifications')->updateOrInsert(
-            ['email' => $data['email']] + self::HOST_SCOPE,
+            ['email' => $data['email']],
             [
                 'token' => $otp,
                 'created_at' => now(),
@@ -752,7 +529,7 @@ class CustomerController extends Controller
             info($ex->getMessage());
             $mailResponse = null;
         }
-        if (getEnvMode() != 'test' && $mailResponse !== 'success') {
+        if (env('APP_MODE') != 'test' && $mailResponse !== 'success') {
             return  ['is_success' => false,  'message' => translate('failed_to_send_mail'), 'code' => 403];
         }
         return  ['is_success' => true,  'message' => translate('OTP_successfully_send_to_mail'), 'code' => 200];
@@ -877,7 +654,7 @@ class CustomerController extends Controller
 
         if (isset($verification_data)) {
             if (isset($verification_data->temp_block_time) && Carbon::parse($verification_data->temp_block_time)->DiffInSeconds() <= $temp_block_time) {
-                $time = round($temp_block_time - Carbon::parse($verification_data->temp_block_time)->DiffInSeconds());
+                $time = $temp_block_time - Carbon::parse($verification_data->temp_block_time)->DiffInSeconds();
                 return  ['is_success' => false, 'verification_medium' => 'SMS', 'message' => translate('messages.please_try_again_after_') . CarbonInterval::seconds($time)->cascade()->forHumans(), 'code' => 403];
             }
 
@@ -1013,5 +790,89 @@ class CustomerController extends Controller
         return response()->json($data);
 
 
+    }
+
+    public function orderPaymentFailed(Request $request)
+    {
+        $user_id = $request->user ? $request->user->id : $request->input('guest_id');
+        $orderId = $request->input('order_id');
+
+        if (! $orderId && ! is_numeric($user_id)) {
+            return response()->json([], 200);
+        }
+
+        if ($orderId) {
+            $unpaidOrder = Order::with(['zone', 'module'])->where('id', (int) $orderId)->first();
+        } else {
+            $unpaidOrder = Order::with(['zone', 'module'])
+                ->where('user_id', (int) $user_id)
+                ->where('is_guest', $request->user ? 0 : 1)
+                ->where('created_at', '>=', now()->subMonths(1))
+                ->whereIn('order_status', ['pending', 'failed'])
+                ->whereNotIn('payment_method', ['cash_on_delivery', 'wallet'])
+                ->where(function ($q) {
+                    $q->where(function ($q2) {
+                        $q2->where('payment_method', 'partial_payment')
+                            ->whereHas('payments', function ($p) {
+                                $p->where('payment_status', 'unpaid')
+                                    ->whereNotIn('payment_method', ['cash_on_delivery', 'wallet']);
+                            });
+                    })
+                    ->orWhere(function ($q3) {
+                        $q3->where('payment_method', 'offline_payment')
+                            ->whereDoesntHave('offline_payments');
+                    })
+                    ->orWhere(function ($q4) {
+                        $q4->whereNotIn('payment_method', [
+                            'cash_on_delivery', 'wallet', 'partial_payment', 'offline_payment'
+                        ]);
+                    });
+                })
+                ->first();
+        }
+
+        if (! $unpaidOrder) {
+            return response()->json([], 200);
+        }
+
+        $zone = $unpaidOrder->zone;
+        $module = $unpaidOrder->module;
+        $moduleZone = ($module && $zone) ? $module->zones()->where('zone_id', $zone->id)->first() : null;
+        $maxCodAmount = $moduleZone?->pivot?->maximum_cod_order_amount ?? 0;
+
+        $codSetting = Helpers::cached_business_setting('cash_on_delivery');
+        $digitalSetting = Helpers::cached_business_setting('digital_payment');
+        $offlineSetting = Helpers::cached_business_setting('offline_payment_status');
+
+        $isCashOnDelivery = (bool) (($codSetting['status'] ?? false) && ($zone?->cash_on_delivery ?? false));
+        $isDigitalPayment = (bool) (($digitalSetting['status'] ?? false) && ($zone?->digital_payment ?? false));
+        $isOfflinePayment = (bool) ($offlineSetting == 1 && ($zone?->offline_payment ?? false));
+        $deliveryAddress = json_decode((string) $unpaidOrder->delivery_address);
+
+        return response()->json([
+            'cash_on_delivery' => $isCashOnDelivery,
+            'digital_payment' => $isDigitalPayment,
+            'offline_payment' => $isOfflinePayment,
+            'maximum_cod_order_amount' => $maxCodAmount,
+            'order_id' => $unpaidOrder->id,
+            'order_amount' => $unpaidOrder->order_amount,
+            'partially_paid_amount' => $unpaidOrder->partially_paid_amount,
+            'order_type' => $unpaidOrder->order_type,
+            'module_type' => $module?->module_type,
+            'user_id' => $unpaidOrder->user_id,
+            'zone_id' => $unpaidOrder->zone_id,
+            'payment_status' => $unpaidOrder->payment_status,
+            'payment_method' => $unpaidOrder->payment_method,
+            'contact_person_number' => $deliveryAddress->contact_person_number ?? null,
+        ], 200);
+    }
+
+    public function reels_list(Request $request)
+    {
+        return response()->json([
+            'total_size' => 0,
+            'reels' => [],
+            'data' => [],
+        ], 200);
     }
 }

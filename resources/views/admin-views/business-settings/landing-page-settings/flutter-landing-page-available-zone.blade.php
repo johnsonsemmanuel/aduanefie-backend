@@ -23,7 +23,7 @@
             </div>
         </div>
     </div>
-    <div class="mb-20 mt-2">
+    <div class="mb-4 mt-2">
         <div class="js-nav-scroller hs-nav-scroller-horizontal">
             @include('admin-views.business-settings.landing-page-settings.top-menu-links.flutter-landing-page-links')
         </div>
@@ -37,7 +37,7 @@
     @php($language = $language->value ?? null)
     @php($defaultLang = str_replace('_', '-', app()->getLocale()))
 
-    <form id="zone-setup-form" action="{{ route('admin.business-settings.flutter-landing-page-settings-update', 'available-zone-section') }}" method="POST" enctype="multipart/form-data">
+    <form id="zone-setup-form" action="{{ route('admin.business-settings.flutter-landing-page-settings', 'available-zone-section') }}" method="POST" enctype="multipart/form-data">
         @csrf
         <div class="card mb-3">
             <div class="card-body">

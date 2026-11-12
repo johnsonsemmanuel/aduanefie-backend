@@ -23,7 +23,13 @@ class RedirectIfAuthenticated
         switch ($guard) {
             case 'admin':
                 if (Auth::guard($guard)->check()) {
-                    return redirect()->route('admin.dashboard');
+                    // An admin session that has not passed the second factor must
+                    // not be treated as a finished login. End it here; the login
+                    // form is the only place that can restart the flow.
+                    if (app(\App\Services\AdminMfaService::class)->isVerifiedFor(Auth::guard($guard)->user())) {
+                        return redirect()->route('admin.dashboard');
+                    }
+                    Auth::guard($guard)->logout();
                 }
                 break;
             case 'vendor':

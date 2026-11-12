@@ -228,7 +228,7 @@ active
                             <br>
                             <label class="form-label">{{ translate('Upload Related Files') }}</label>
                             <div class="d-flex flex-wrap flex-sm-nowrap justify-content-center gap-3 border rounded p-3">
-                                <div class="d-flex flex-column align-items-center gap-3 flex-shrink-0">
+                                <div class="d-flex flex-column align-items-center gap-3">
                                     <p class="title-color mb-0">{{ translate('Profile Image') }} <span class="text-danger">({{ translate('Ratio - 1:1') }})</span></p>
 
                                     <div class="upload-file">
@@ -255,7 +255,7 @@ active
                                         <input type="file" class="cover_attachment js-upload-input"
                                             data-target="main-image" name="cover_image"
                                             accept=".webp, .png,.jpg,.jpeg,.gif, |image/*">
-                                        <div class="upload-file__img upload-file__img_banner aspect-2-1">
+                                        <div class="upload-file__img upload-file__img_banner">
                                             <img src="{{ $advertisement?->cover_image_full_url }}" data-src="{{asset('public/assets/admin/img/media/banner-upload-file.png')}}" alt="" >
                                         </div>
                                         <button class="remove-file-button" type="button">
@@ -279,7 +279,7 @@ active
                                 <div id="video-preview-box" class="video-preview-box">
                                     <div class="bg--secondary rounded">
                                         <div class="video h-200">
-                                            <video src="{{$advertisement?->video_attachment ? $advertisement?->video_attachment_full_url :'' }}" controls>
+                                            <video src="{{ $advertisement?->video_attachment_full_url }}" controls>
                                                 {{ translate('Your browser does not support the video tag.') }}
                                             </video>
                                         </div>
@@ -405,7 +405,6 @@ active
             });
 
         });
-
     </script>
 
 
@@ -439,7 +438,7 @@ active
             const videoEl = $(".video > video")
             let blobURL = "";
             // prev video attachment file
-            blobURL = "{{ $advertisement?->video_attachment ?  $advertisement?->video_attachment_full_url : '' }}";
+            blobURL = "{{ $advertisement?->video_attachment_full_url }}";
 
             videoEl.css('display', 'block');
             videoEl.attr('src', blobURL);
@@ -474,11 +473,7 @@ active
 
         $('.promotion_type').on('change', function () {
             handleUploadBox();
-
-            @if( $advertisement?->add_type == 'store_promotion')
-                $('.remove-file-button').click()
-            @endif
-
+            // $('.remove-file-button').click()
         })
 
 
@@ -607,7 +602,7 @@ active
             $(document).on('ready', function() {
                     $('.js-data-example-ajax').select2({
                         ajax: {
-                            url: '{{ route('admin.store.get-stores') }}',
+                            url: '{{ url('/') }}/admin/store/get-stores',
                             data: function(params) {
                                 return {
                                     q: params.term, // search term

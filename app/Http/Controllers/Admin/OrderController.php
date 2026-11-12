@@ -21,7 +21,6 @@ use App\Exports\OrderExport;
 use App\Mail\RefundRejected;
 use App\Models\ItemCampaign;
 use App\Models\RefundReason;
-use App\Traits\PlaceNewOrder;
 use Illuminate\Http\Request;
 use App\CentralLogics\Helpers;
 use App\Models\BusinessSetting;
@@ -37,16 +36,15 @@ use Maatwebsite\Excel\Facades\Excel;
 use Rap2hpoutre\FastExcel\FastExcel;
 use App\Exports\StoreOrderlistExport;
 use App\Models\OrderPayment;
-use App\Models\ParcelCancellationReason;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Storage;
 use MatanYadaev\EloquentSpatial\Objects\Point;
 
 class OrderController extends Controller
 {
-    use PlaceNewOrder;
-    use \App\Traits\EditsOrderFromCart;
     public function list($status, Request $request)
     {
+        // dd($status);
         $key = explode(' ', $request['search']);
         if (session()->has('zone_filter') == false) {
             session()->put('zone_filter', 0);
@@ -138,7 +136,6 @@ class OrderController extends Controller
             ->module(Config::get('module.current_module_id'))
             ->orderBy('schedule_at', 'desc')
             ->paginate(config('default_pagination'));
-
         $orderstatus = isset($request->orderStatus) ? $request->orderStatus : [];
         $scheduled = isset($request->scheduled) ? $request->scheduled : 0;
         $vendor_ids = isset($request->vendor) ? $request->vendor : [];
@@ -216,7 +213,7 @@ class OrderController extends Controller
 
     public function details(Request $request, $id)
     {
-        $order = Order::with(['details','offline_payments','refund','orderEditLogs', 'store' => function ($query) {
+        $order = Order::with(['details','offline_payments','refund', 'store' => function ($query) {
             return $query->withCount('orders');
         }, 'customer' => function ($query) {
             return $query->withCount('orders');
@@ -228,69 +225,25 @@ class OrderController extends Controller
             return $query->withoutGlobalScope(StoreScope::class);
         }])->where(['id' => $id])->first();
         if (isset($order)) {
-            $isUnpaid = false;
-
-            if (
-                in_array($order->order_status, ['pending','failed']) &&
-                !in_array($order->payment_method, ['cash_on_delivery', 'wallet'])
-            ) {
-                // CASE 1: partial payment
-                if ($order->payment_method == 'partial_payment') {
-                    if ($order->payment_method === 'partial_payment') {
-                        $isUnpaid = $order->payments()
-                            ->where('payment_status', 'unpaid')
-                            ->whereNotIn('payment_method', ['cash_on_delivery', 'wallet'])
-                            ->exists();
-                    }
-
-                }
-
-                // CASE 2: offline payment
-                elseif ($order->payment_method == 'offline_payment') {
-                    if ($order?->offline_payments?->count() == 0) {
-                        $isUnpaid = true;
-                    }
-                }
-
-                // CASE 3: other online payments
-                else {
-                    $isUnpaid = true;
-                }
-            }
-
-            $order->is_unpaid_order = $isUnpaid ? true : false;
-
-            if($order->order_type == 'parcel'){
-                return to_route('admin.parcel.order.details', $id);
-            }
-            $excludeDm = $order->delivery_man_id;
-
-            if ($order->store) {
-                $deliveryMen = $order->store->sub_self_delivery == 1
-                    ? []
-                    : DeliveryMan::where('zone_id', $order->store->zone_id)
-                        ->when($order->dm_vehicle_id != null, function ($query) use ($order) {
-                            $query->where(function ($query) use ($order) {
-                                $query->where('vehicle_id', $order->dm_vehicle_id)
-                                    ->orWhereNull('vehicle_id');
-                            });
-                        }, function ($query) {
-                            $query->whereNull('store_id');
-                        })
-                        ->where('id', '!=', $excludeDm)
-                        ->available()
-                        ->active()
-                        ->get();
+            if (isset($order->store)) {
+                $deliveryMen = DeliveryMan::where('zone_id', $order->store->zone_id)
+                ->where(function($query)use($order){
+                            $query->where('vehicle_id',$order->dm_vehicle_id)->orWhereNull('vehicle_id');
+                    })->available()->active()->get();
             } else {
-                $deliveryMen = DeliveryMan::whereNull('zone_id')
-                    ->where('id', '!=', $excludeDm)
-                    ->where('vehicle_id', $order->dm_vehicle_id)
-                    ->active()
-                    ->get();
+                // $deliveryMen = isset($order->zone_id) ? DeliveryMan::where('zone_id', $order->zone_id)->zonewise()->available()->active()->get() : [];
+
+                if($order->store !== null){
+                    $deliveryMen = isset($order->zone_id) ? DeliveryMan::where('zone_id', $order->store->zone_id)->where(function($query)use($order){
+                            $query->where('vehicle_id',$order->dm_vehicle_id)->orWhereNull('vehicle_id');
+                    })
+                    ->available()->active()->get():[];
+                } else{
+                    $deliveryMen = DeliveryMan::where('zone_id', '=', NULL)->where('vehicle_id',$order->dm_vehicle_id)->active()->get();
+                }
             }
-
-
             $category = $request->query('category_id', 0);
+            // $sub_category = $request->query('sub_category', 0);
             $categories = Category::active()->get();
             $keyword = $request->query('keyword', false);
             $key = explode(' ', $keyword);
@@ -307,69 +260,24 @@ class OrderController extends Controller
                         }
                     });
                 })
-                ->latest()->active()->paginate(10);
+                ->latest()->paginate(10);
             $editing = false;
-            $cart = collect([]);
             if ($request->session()->has('order_cart')) {
-                $sessionCart = session()->get('order_cart');
-                if (count($sessionCart) > 0 && $sessionCart[0]->order_id == $order->id) {
+                $cart = session()->get('order_cart');
+                if (count($cart) > 0 && $cart[0]->order_id == $order->id) {
                     $editing = true;
-                    $cart = $sessionCart;
                 } else {
                     session()->forget('order_cart');
                 }
             }
 
             $deliveryMen = Helpers::deliverymen_list_formatting($deliveryMen);
-            return view($order->order_type == 'parcel' ? 'admin-views.order.parcel-order-view' : 'admin-views.order.order-view', compact('order', 'deliveryMen', 'categories', 'products', 'category', 'keyword', 'editing', 'cart'));
+            return view('admin-views.order.order-view', compact('order', 'deliveryMen', 'categories', 'products', 'category', 'keyword', 'editing'));
         } else {
             Toastr::info(translate('messages.no_more_orders'));
             return back();
         }
     }
-    public function switch_to_cod($id){
-        $order = Order::where('id', $id)->first();
-        if($order){
-            if($order->payment_method == 'cash_on_delivery'){
-                Toastr::error(translate('messages.order_already_switched_to_cod'));
-                return back();
-            }
-
-            $order?->offline_payments()->delete();
-
-            if($order?->payment_method == 'partial_payment'){
-                $order?->payments()->where('payment_status','unpaid')->update([
-                    'payment_method'=> 'cash_on_delivery',
-                ]);
-            }
-
-            if($order?->store?->is_valid_subscription == 1 && $order?->store?->store_sub?->max_order != "unlimited" &&
-                $order?->store?->store_sub?->max_order > 0) {
-                $order?->store?->store_sub?->decrement('max_order' , 1);
-            }
-
-            Helpers::send_order_notification($order);
-
-            if($order->order_status != 'pending'){
-                $order->order_status = 'pending';
-            }
-
-            $order->payment_method = 'cash_on_delivery';
-            $order->save();
-
-            if($order?->is_guest == 0){
-                $this->sent_mail_on_offline_payment(status:'COD', name:$order?->customer?->f_name .' '.$order?->customer?->l_name,
-                    email:  $order?->customer?->email ,order_id: $order->id);
-            }
-
-            Toastr::success(translate('messages.order_switched_to_cod'));
-            return back();
-        }
-
-        Toastr::error(translate('messages.order_not_found'));
-        return back();
-    }
-
     public function all_details(Request $request, $id)
     {
         $order = Order::with(['details','offline_payments' ,'refund', 'store' => function ($query) {
@@ -409,19 +317,17 @@ class OrderController extends Controller
                 })
                 ->latest()->paginate(10);
             $editing = false;
-            $cart = collect([]);
             if ($request->session()->has('order_cart')) {
-                $sessionCart = session()->get('order_cart');
-                if (count($sessionCart) > 0 && $sessionCart[0]->order_id == $order->id) {
+                $cart = session()->get('order_cart');
+                if (count($cart) > 0 && $cart[0]->order_id == $order->id) {
                     $editing = true;
-                    $cart = $sessionCart;
                 } else {
                     session()->forget('order_cart');
                 }
             }
 
             $deliveryMen = Helpers::deliverymen_list_formatting($deliveryMen);
-            return view($order->order_type == 'parcel' ? 'admin-views.order.parcel-order-view' : 'admin-views.order.order-view', compact('order', 'deliveryMen', 'categories', 'products', 'category', 'keyword', 'editing', 'cart'));
+            return view('admin-views.order.order-view', compact('order', 'deliveryMen', 'categories', 'products', 'category', 'keyword', 'editing'));
         } else {
             Toastr::info(translate('messages.no_more_orders'));
             return back();
@@ -474,7 +380,7 @@ class OrderController extends Controller
             return back();
         }
 
-        if (in_array($order->order_status, ['refunded'])) {
+        if (in_array($order->order_status, ['refunded', 'failed'])) {
             Toastr::warning(translate('messages.you_can_not_change_the_status_of_a_completed_order'));
             return back();
         }
@@ -488,11 +394,13 @@ class OrderController extends Controller
             return back();
         }
 
-        if ($request->order_status == 'delivered' && $order['transaction_reference'] == null && !in_array($order['payment_method'], ['cash_on_delivery', 'wallet'])) {
+        if ($request->order_status == 'delivered' && $order['transaction_reference'] == null && $order['payment_method'] != 'cash_on_delivery') {
             Toastr::warning(translate('messages.add_your_paymen_ref_first'));
             return back();
         }
+
         if ($request->order_status == 'delivered') {
+
             if ($order->transaction  == null) {
                 $unpaid_payment = OrderPayment::where('payment_status','unpaid')->where('order_id',$order->id)->first()?->payment_method;
                 $unpaid_pay_method = 'digital_payment';
@@ -513,11 +421,6 @@ class OrderController extends Controller
                 if (!$ol) {
                     Toastr::warning(translate('messages.faield_to_create_order_transaction'));
                     return back();
-                } else {
-                    if($order->delivery_man_id){
-                        Helpers::deliverymanLoyaltyPointHistory(deliveryManId:$order->delivery_man_id, amount: $order->order_amount, transactionType:'earn_on_order_completion' ,pointConversionType :'credit', reference: $order->id);
-                    }
-
                 }
             } else if ($order->delivery_man_id) {
                 $order->transaction->update(['delivery_man_id' => $order->delivery_man_id]);
@@ -545,8 +448,7 @@ class OrderController extends Controller
 
             OrderLogic::update_unpaid_order_payment(order_id:$order->id, payment_method:$order->payment_method);
 
-        }
-        else if ($request->order_status == 'refunded' && BusinessSetting::where('key', 'refund_active_status')->first()->value == 1) {
+        } else if ($request->order_status == 'refunded' && BusinessSetting::where('key', 'refund_active_status')->first()->value == 1) {
             if ($order->payment_status == "unpaid") {
                 Toastr::warning(translate('messages.you_can_not_refund_a_cod_order'));
                 return back();
@@ -608,47 +510,32 @@ class OrderController extends Controller
 
 
                 if(config('mail.status') && $order?->customer?->email && Helpers::get_mail_status('refund_order_mail_status_user') == '1'  &&  Helpers::getNotificationStatusData('customer','customer_refund_request_approval','mail_status') ){
-                    Mail::to($order->customer?->getRawOriginal('email'))->send(new \App\Mail\RefundedOrderMail($order->id));
+                    Mail::to($order->customer->email)->send(new \App\Mail\RefundedOrderMail($order->id));
                 }
             } catch (\Throwable $th) {
                 info($th->getMessage());
                 Toastr::error(translate('messages.Failed_to_send_mail'));
             }
-        }
-        else if ($request->order_status == 'canceled') {
-            if (in_array($order->order_status, ['delivered', 'canceled', 'refund_requested', 'refunded'])) {
+        } else if ($request->order_status == 'canceled') {
+            if (in_array($order->order_status, ['delivered', 'canceled', 'refund_requested', 'refunded', 'failed'])) {
                 Toastr::warning(translate('messages.you_can_not_cancel_a_completed_order'));
                 return back();
             }
-
             $order->cancellation_reason = $request->reason;
             $order->canceled_by = 'admin';
 
             $order?->store ?   Helpers::increment_order_count($order?->store) : '';
 
-
-            $hasStock = config('module.' . $order->module->module_type)['stock'];
-            $hasFlashDiscount = $order->flash_admin_discount_amount > 0 && $order->flash_store_discount_amount > 0;
-
-            if ($hasStock || $hasFlashDiscount) {
+            if (config('module.' . $order->module->module_type)['stock']) {
                 foreach ($order->details as $detail) {
-
-                    $item = $detail->campaign ?? $detail->item;
-
-                    if ($hasStock) {
-                        $variant = json_decode($detail->variation, true);
-                        $variantType = !empty($variant) ? $variant[0]['type'] : null;
-                        ProductLogic::update_stock($item, -$detail->quantity, $variantType)?->save();
+                    $variant = json_decode($detail['variation'], true);
+                    $item = $detail->item;
+                    if ($detail->campaign) {
+                        $item = $detail->campaign;
                     }
-
-                    if ($hasFlashDiscount) {
-                        ProductLogic::update_flash_stock($detail->item, $detail->quantity, true)?->save();
-                    }
+                    ProductLogic::update_stock($item, -$detail->quantity, count($variant) ? $variant[0]['type'] : null)->save();
                 }
             }
-
-
-
             if ($order->delivery_man) {
                 $dm = $order->delivery_man;
                 $dm->current_orders = $dm->current_orders > 1 ? $dm->current_orders - 1 : 0;
@@ -658,9 +545,6 @@ class OrderController extends Controller
 
                 OrderLogic::refund_before_delivered($order);
             }
-        }
-        else if ( $order->order_type != 'parcel' && in_array($request->order_status, ['picked_up']) ) {
-            Helpers::sendOrderDeliveryVerificationOtp($order);
         }
         $order->order_status = $request->order_status;
         if($request->order_status == 'processing') {
@@ -695,11 +579,10 @@ class OrderController extends Controller
 
             $payments = $order->payments()->where('payment_method','cash_on_delivery')->exists();
             $cash_in_hand = $deliveryman?->wallet?->collected_cash ?? 0;
-            $cash_in_hand_overflow_status = BusinessSetting::where('key', 'cash_in_hand_overflow_delivery_man')->first()?->value;
             $dm_max_cash=BusinessSetting::where('key','dm_max_cash_in_hand')->first();
             $value=  $dm_max_cash?->value ?? 0;
 
-            if($cash_in_hand_overflow_status && ($order->payment_method == "cash_on_delivery" || $payments) && $cash_in_hand+$order->order_amount >= $value){
+            if(($order->payment_method == "cash_on_delivery" || $payments) && (($cash_in_hand+$order->order_amount) >= $value)){
                 return response()->json(['message'=> \App\CentralLogics\Helpers::format_currency($value) ." ".translate('max_cash_in_hand_exceeds')  ], 400);
             }
 
@@ -938,21 +821,10 @@ class OrderController extends Controller
     public function add_to_cart(Request $request)
     {
         if ($request->item_type == 'item') {
-            $product = Item::withoutGlobalScope(StoreScope::class)->find($request->id);
+            $product = Item::find($request->id);
         } else {
             $product = ItemCampaign::find($request->id);
         }
-
-        if (!$product) {
-            return response()->json([
-                'data' => 'variation_error',
-                'message' => translate('messages.item_not_found'),
-            ]);
-        }
-
-        $moduleType     = $product->module?->module_type;
-        $moduleHasStock = (bool) data_get(config('module.' . $moduleType), 'stock', false);
-        $requestedQty   = (int) ($request['quantity'] ?? 1);
 
         if (isset($product->module_id) && $product->module->module_type == 'food' && $product->food_variations) {
             $data = new OrderDetail();
@@ -971,7 +843,7 @@ class OrderController extends Controller
             $variation_price = 0;
 
             $product_variations = json_decode($product->food_variations, true);
-            if ($request->variations && $product_variations && count($product_variations)) {
+            if ($request->variations && count($product_variations)) {
                 foreach ($request->variations  as $key => $value) {
 
                     if ($value['required'] == 'on' &&  isset($value['values']) == false) {
@@ -1025,40 +897,12 @@ class OrderController extends Controller
 
             if (isset($request->cart_item_key)) {
                 $cart[$request->cart_item_key] = $data;
-
-               $this->setOrderEditCalculatedTax(store:$product->store, order_id:$request->order_id);
-
                 return response()->json([
                     'data' => 2
                 ]);
             } else {
-                $newVariationKey = $data['variation'];
-                $newAddonsKey    = $data['add_ons'];
-                $duplicateKey    = null;
-                foreach ($cart as $existingKey => $existingItem) {
-                    if (!$existingItem || !$existingItem['status']) {
-                        continue;
-                    }
-                    if ($existingItem['item_id'] != $product->id) {
-                        continue;
-                    }
-                    if ((string) $existingItem['variation'] === (string) $newVariationKey
-                        && (string) $existingItem['add_ons'] === (string) $newAddonsKey) {
-                        $duplicateKey = $existingKey;
-                        break;
-                    }
-                }
-                if ($duplicateKey !== null) {
-                    $cart[$duplicateKey]['quantity'] += $requestedQty;
-                    $request->session()->put('order_cart', $cart);
-                    $this->setOrderEditCalculatedTax(store: $product->store, order_id: $request->order_id);
-                    return response()->json(['data' => 0, 'cart_key' => $duplicateKey]);
-                }
                 $cart->push($data);
-              $this->setOrderEditCalculatedTax(store:$product->store, order_id:$request->order_id);
-
             }
-
         } else {
 
             $data = new OrderDetail();
@@ -1073,85 +917,49 @@ class OrderController extends Controller
             $price = 0;
             $addon_price = 0;
 
-            $choiceOptions = $product->choice_options ? (json_decode($product->choice_options) ?: []) : [];
             //Gets all the choice values of customer choice option and generate a string like Black-S-Cotton
-            foreach ($choiceOptions as $key => $choice) {
+            foreach (json_decode($product->choice_options) as $key => $choice) {
                 if ($str != null) {
-                    $str .= '-' . str_replace(' ', '', $request[$choice->name] ?? '');
+                    $str .= '-' . str_replace(' ', '', $request[$choice->name]);
                 } else {
-                    $str .= str_replace(' ', '', $request[$choice->name] ?? '');
+                    $str .= str_replace(' ', '', $request[$choice->name]);
                 }
             }
             $data['variant'] = json_encode([]);
             $data['variation'] = json_encode([]);
-
-            //Check the string and resolve variation price + stock
-            $resolvedStock = $moduleHasStock ? ($product->stock ?? null) : null;
-            if ($str != null) {
-                $productVariations = $product->variations ? (json_decode($product->variations) ?: []) : [];
-                $matched = false;
-                foreach ($productVariations as $vr) {
-                    if (isset($vr->type) && $vr->type == $str) {
-                        $price = $vr->price;
-                        $resolvedStock = isset($vr->stock) ? (int) $vr->stock : 0;
-                        $matched = true;
-                        break;
+            if ($request->session()->has('order_cart') && !isset($request->cart_item_key)) {
+                if (count($request->session()->get('order_cart')) > 0) {
+                    foreach ($request->session()->get('order_cart') as $key => $cartItem) {
+                        // dd($cartItem);
+                        if ($cartItem && $cartItem['item_id'] == $request['id'] && $cartItem['status'] == true) {
+                            if (count(json_decode($cartItem['variation'], true)) > 0) {
+                                if (json_decode($cartItem['variation'], true)[0]['type'] == $str) {
+                                    return response()->json([
+                                        'data' => 1
+                                    ]);
+                                }
+                            } else {
+                                return response()->json([
+                                    'data' => 1
+                                ]);
+                            }
+                        }
                     }
                 }
-                if ($matched) {
-                    $data['variation'] = json_encode([["type" => $str, "price" => $price, "stock" => $resolvedStock]]);
+            }
+            //Check the string and decreases quantity for the stock
+            if ($str != null) {
+                $count = count(json_decode($product->variations));
+                for ($i = 0; $i < $count; $i++) {
+                    if (json_decode($product->variations)[$i]->type == $str) {
+                        $vr = json_decode($product->variations);
+                        $price = $vr[$i]->price;
+                        $stock = isset($vr[$i]->stock) ? $vr[$i]->stock : 0;
+                    }
                 }
+                $data['variation'] = json_encode([["type" => $str, "price" => $price, "stock" => $stock]]);
             } else {
                 $price = $product->price;
-            }
-
-            if ($moduleHasStock && $resolvedStock !== null && $resolvedStock <= 0) {
-                return response()->json([
-                    'data' => 'stock_error',
-                    'message' => translate('messages.out_of_stock'),
-                ]);
-            }
-
-            $cart = $request->session()->get('order_cart', collect([]));
-            if (!isset($request->cart_item_key) && count($cart) > 0) {
-                foreach ($cart as $existingKey => $cartItem) {
-                    if (!$cartItem || !$cartItem['status']) {
-                        continue;
-                    }
-                    if ($cartItem['item_id'] != $request['id']) {
-                        continue;
-                    }
-                    $existingVariation = json_decode($cartItem['variation'], true) ?: [];
-                    $variationMatches = false;
-                    if (count($existingVariation) > 0) {
-                        if (($existingVariation[0]['type'] ?? null) == $str) {
-                            $variationMatches = true;
-                        }
-                    } else if ($str == '') {
-                        $variationMatches = true;
-                    }
-                    if (!$variationMatches) {
-                        continue;
-                    }
-                    $newQty = $cartItem['quantity'] + $requestedQty;
-                    if ($moduleHasStock && $resolvedStock !== null && $newQty > $resolvedStock) {
-                        return response()->json([
-                            'data' => 'stock_error',
-                            'message' => translate('messages.requested_quantity_exceeds_stock'),
-                        ]);
-                    }
-                    $cart[$existingKey]['quantity'] = $newQty;
-                    $request->session()->put('order_cart', $cart);
-                    $this->setOrderEditCalculatedTax(store: $product->store, order_id: $request->order_id);
-                    return response()->json(['data' => 0, 'cart_key' => $existingKey]);
-                }
-            }
-
-            if ($moduleHasStock && $resolvedStock !== null && $requestedQty > $resolvedStock) {
-                return response()->json([
-                    'data' => 'stock_error',
-                    'message' => translate('messages.requested_quantity_exceeds_stock'),
-                ]);
             }
 
             $data['quantity'] = $request['quantity'];
@@ -1174,124 +982,28 @@ class OrderController extends Controller
             $addon_data = Helpers::calculate_addon_price(\App\Models\AddOn::withoutGlobalScope(StoreScope::class)->whereIn('id', $add_ons)->get(), $add_on_qtys);
             $data['add_ons'] = json_encode($addon_data['addons']);
             $data['total_add_on_price'] = $addon_data['total_add_on_price'];
-
-
+            // dd($data);
             $cart = $request->session()->get('order_cart', collect([]));
             if (isset($request->cart_item_key)) {
                 $cart[$request->cart_item_key] = $data;
-                $this->setOrderEditCalculatedTax(store: $product->store, order_id: $request->order_id);
                 return response()->json([
                     'data' => 2
                 ]);
             } else {
-                $this->setOrderEditCalculatedTax(store: $product->store, order_id: $request->order_id);
                 $cart->push($data);
             }
         }
-
-        $this->setOrderEditCalculatedTax(store: $product->store, order_id: $request->order_id);
-
         return response()->json([
             'data' => 0
         ]);
     }
 
-    public function update_cart_quantity(Request $request)
-    {
-        $cart = $request->session()->get('order_cart', collect([]));
-        $key = $request->key;
-
-        if (!isset($cart[$key])) {
-            return response()->json([
-                'data' => 'not_found',
-                'message' => translate('messages.cart_item_not_found'),
-            ]);
-        }
-
-        $newQty = max(1, (int) $request->quantity);
-        $cartItem = $cart[$key];
-        $itemId = $cartItem['item_id'] ?? null;
-        $isPreexisting = isset($cartItem->id);
-
-        if ($isPreexisting) {
-            $cart[$key]['quantity'] = $newQty;
-            $request->session()->put('order_cart', $cart);
-            $product = $itemId ? Item::withoutGlobalScope(StoreScope::class)->with('store')->find($itemId) : null;
-            if ($product && $product->store) {
-                $this->setOrderEditCalculatedTax(store: $product->store, order_id: $cartItem['order_id'] ?? null);
-            }
-            return response()->json(['data' => 0, 'quantity' => $newQty]);
-        }
-
-        if (!$itemId) {
-            return response()->json([
-                'data' => 'not_found',
-                'message' => translate('messages.cart_item_not_found'),
-            ]);
-        }
-
-        $product = Item::withoutGlobalScope(StoreScope::class)->with(['module', 'store'])->find($itemId);
-        if (!$product || !$product->module) {
-            return response()->json([
-                'data' => 'not_found',
-                'message' => translate('messages.product_not_found'),
-            ]);
-        }
-
-        $moduleType = $product->module->module_type;
-        $moduleHasStock = (bool) data_get(config('module.' . $moduleType), 'stock', false);
-
-        if ($moduleHasStock) {
-            $variation = is_string($cartItem['variation']) ? (json_decode($cartItem['variation'], true) ?: []) : (is_array($cartItem['variation'] ?? null) ? $cartItem['variation'] : []);
-            $variantType = $variation[0]['type'] ?? null;
-            $availableStock = (int) ($product->stock ?? 0);
-            if ($variantType) {
-                $matrix = $product->variations ? (json_decode($product->variations, true) ?: []) : [];
-                foreach ($matrix as $v) {
-                    if (isset($v['type']) && $v['type'] === $variantType) {
-                        $availableStock = (int) ($v['stock'] ?? 0);
-                        break;
-                    }
-                }
-            }
-
-            if ($newQty > $availableStock) {
-                return response()->json([
-                    'data' => 'stock_error',
-                    'message' => translate('messages.requested_quantity_exceeds_stock'),
-                ]);
-            }
-        }
-
-        if ($product->maximum_cart_quantity && $newQty > $product->maximum_cart_quantity) {
-            return response()->json([
-                'data' => 'stock_error',
-                'message' => translate('messages.maximum_cart_quantity_limit_over'),
-            ]);
-        }
-
-        $cart[$key]['quantity'] = $newQty;
-        $request->session()->put('order_cart', $cart);
-
-        if ($product->store) {
-            $this->setOrderEditCalculatedTax(store: $product->store, order_id: $cartItem['order_id'] ?? null);
-        }
-
-        return response()->json(['data' => 0, 'quantity' => $newQty]);
-    }
-
     public function remove_from_cart(Request $request)
     {
         $cart = $request->session()->get('order_cart', collect([]));
-        $item_id = $cart[$request->key]['item_id'];
         $cart[$request->key]->status = false;
         $request->session()->put('order_cart', $cart);
 
-        $product = Item::withoutGlobalScope(StoreScope::class)->with('store')->find($item_id);
-
-        if ($product && $product->store) {
-            $this->setOrderEditCalculatedTax(store:$product->store,order_id: $request->order_id);
-        }
         return response()->json([], 200);
     }
 
@@ -1320,122 +1032,213 @@ class OrderController extends Controller
             $details['status'] = true;
             $cart->push($details);
         }
-        if($cart->isEmpty()){
-            Toastr::error(translate('messages.cart_is_empty'));
-            return back();
-        }
 
         if ($request->session()->has('order_cart')) {
-            $existing = session()->get('order_cart');
-            if (count($existing) > 0 && $existing[0]->order_id == $order->id) {
-                session()->put('open_edit_offcanvas', true);
-            } else {
-                session()->forget('order_cart');
-                $request->session()->put('order_cart', $cart);
-                $request->session()->put('open_edit_offcanvas', true);
-                $this->setOrderEditCalculatedTax(store:$order->store, order_id: $order->id);
-            }
+            session()->forget('order_cart');
         } else {
             $request->session()->put('order_cart', $cart);
-            $request->session()->put('open_edit_offcanvas', true);
-            $this->setOrderEditCalculatedTax(store:$order->store, order_id: $order->id);
         }
         return back();
     }
 
     public function update(Request $request, Order $order)
     {
-        $order = Order::with(['details', 'store.module', 'payments'])
-            ->where(['id' => $order->id])
-            ->StoreOrder()
-            ->first();
+        $order = Order::with(['details', 'store' => function ($query) {
+            return $query->withCount('orders');
+        }, 'customer' => function ($query) {
+            return $query->withCount('orders');
+        }, 'delivery_man' => function ($query) {
+            return $query->withCount('orders');
+        }, 'details.item' => function ($query) {
+            return $query->withoutGlobalScope(StoreScope::class);
+        }, 'details.campaign' => function ($query) {
+            return $query->withoutGlobalScope(StoreScope::class);
+        }])->where(['id' => $order->id])->StoreOrder()->first();
 
-        return $this->updateOrderFromCartRequest($request, $order, 'admin');
-    }
-
-    public function checkValidity($carts, $store, $request, $originalDetailQtys = [])
-    {
-        if ($carts->isEmpty()) {
-            return [
-                'status_code' => 403,
-                'code' => 'not_found',
-                'message' => translate('Cart is empty'),
-            ];
+        if (!$request->session()->has('order_cart')) {
+            Toastr::error(translate('messages.order_data_not_found'));
+            return back();
         }
-        foreach ($carts as $c) {
-            if (!isset($c['status']) || $c['status'] !== false) {
-                $cartId = $c['id'] ?? null;
-                if ($cartId && isset($originalDetailQtys[$cartId])) {
-                    continue;
-                }
-                if (isset($c['item_type']) && ($c['item_type'] === 'App\Models\ItemCampaign' || $c['item_type'] === 'AppModelsItemCampaign')) {
-                    $product = ItemCampaign::with('module')->active()->find($c['item_id']);
-                } else {
-                    $product = Item::with('module')->active()->find($c['item_id'] ?? $c['id']);
-                }
+        $cart = $request->session()->get('order_cart', collect([]));
+        $store = $order->store;
+        $coupon = null;
+        $total_addon_price = 0;
+        $product_price = 0;
+        $store_discount_amount = 0;
+        if ($order->coupon_code) {
+            $coupon = Coupon::where(['code' => $order->coupon_code])->first();
+        }
+        foreach ($cart as $c) {
+            try {
+                if ($c['status'] == true) {
+                    unset($c['status']);
+                    if ($c['item_campaign_id'] != null) {
+                        $product = ItemCampaign::find($c['item_campaign_id']);
+                        if ($product) {
 
-                if ($product) {
-                    if ($product->store_id != $store->id) {
-                        return [
-                            'status_code' => 403,
-                            'code' => 'different_stores',
-                            'message' => translate('messages.Please_select_items_from_the_same_store'),
-                        ];
-                    }
+                            $price = $c['price'];
 
-                    if ($product?->pharmacy_item_details?->is_prescription_required == '1' && empty($request->file('order_attachment'))) {
-                        return [
-                            'status_code' => 403,
-                            'code' => 'prescription',
-                            'message' => translate('messages.prescription_is_required_for_this_order'),
-                        ];
-                    }
+                            $product = Helpers::product_data_formatting($product);
 
-                    if ($product?->maximum_cart_quantity && $c['quantity'] > $product?->maximum_cart_quantity) {
-                        return [
-                            'status_code' => 403,
-                            'code' => 'quantity',
-                            'message' => translate('messages.maximum_cart_quantity_limit_over'),
-                        ];
-                    }
-
-                    if ($product?->module?->module_type != 'food') {
-                        if (
-                            is_array(json_decode($product['variations'], true)) && count(json_decode($product['variations'], true)) > 0 &&
-                            is_array($c['variation']) && count($c['variation']) > 0
-                        ) {
-                            $variant_data = Helpers::variation_price($product, json_encode($c['variation']));
-                            $stock = $variant_data['stock'];
-                        } else {
-                            $stock = $product?->stock;
-                        }
-
-                        if (config('module.' . $product->module->module_type)['stock']) {
-                            $cartId = $c['id'] ?? null;
-                            $alreadyReserved = ($cartId && isset($originalDetailQtys[$cartId])) ? (int) $originalDetailQtys[$cartId] : 0;
-                            if ($c['quantity'] > ($stock + $alreadyReserved)) {
-                                return [
-                                    'status_code' => 403,
-                                    'code' => 'stock',
-                                    'message' => $product?->name . ' ' . translate('messages.is_out_of_stock')
-                                ];
+                            $c->item_details = json_encode($product);
+                            $c->updated_at = now();
+                            if (isset($c->id)) {
+                                OrderDetail::where('id', $c->id)->update(
+                                    [
+                                        'item_id' => $c->item_id,
+                                        'item_campaign_id' => $c->item_campaign_id,
+                                        'item_details' => $c->item_details,
+                                        'quantity' => $c->quantity,
+                                        'price' => $c->price,
+                                        'tax_amount' => $c->tax_amount,
+                                        'discount_on_item' => $c->discount_on_item,
+                                        'discount_type' => $c->discount_type,
+                                        'variant' => $c->variant,
+                                        'variation' => $c->variation,
+                                        'add_ons' => $c->add_ons,
+                                        'total_add_on_price' => $c->total_add_on_price,
+                                        'updated_at' => $c->updated_at
+                                    ]
+                                );
+                            } else {
+                                $c->save();
                             }
+
+                            $total_addon_price += $c['total_add_on_price'];
+                            $product_price += $price * $c['quantity'];
+                            $store_discount_amount += $c['discount_on_item'] * $c['quantity'];
+                        } else {
+                            Toastr::error(translate('messages.item_not_found'));
+                            return back();
+                        }
+                    } else {
+                        unset($c['item']);
+                        unset($c['item_campaign']);
+                        $product = Item::find($c['item_id']);
+                        if ($product) {
+                            $price = $c['price'];
+
+                            $product = Helpers::product_data_formatting($product);
+
+                            $c->item_details = json_encode($product);
+                            $c->updated_at = now();
+                            if (isset($c->id)) {
+                                OrderDetail::where('id', $c->id)->update(
+                                    [
+                                        'item_id' => $c->item_id,
+                                        'item_campaign_id' => $c->item_campaign_id,
+                                        'item_details' => $c->item_details,
+                                        'quantity' => $c->quantity,
+                                        'price' => $c->price,
+                                        'tax_amount' => $c->tax_amount,
+                                        'discount_on_item' => $c->discount_on_item,
+                                        'discount_type' => $c->discount_type,
+                                        'variant' => $c->variant,
+                                        'variation' => $c->variation,
+                                        'add_ons' => $c->add_ons,
+                                        'total_add_on_price' => $c->total_add_on_price,
+                                        'updated_at' => $c->updated_at
+                                    ]
+                                );
+                            } else {
+                                $c->save();
+                            }
+
+                            $total_addon_price += $c['total_add_on_price'];
+                            $product_price += $price * $c['quantity'];
+                            $store_discount_amount += $c['discount_on_item'] * $c['quantity'];
+                        } else {
+                            Toastr::error(translate('messages.item_not_found'));
+                            return back();
                         }
                     }
                 } else {
-                    return[
-                        'status_code' => 403,
-                        'code' => 'not_found',
-                        'message' => translate('messages.product_not_found'),
-                    ];
+                    $c->delete();
                 }
+            } catch (\Throwable $th) {
+                info($th->getMessage());
             }
         }
-        return [
-            'status_code' => 200,
-            'code' => 'success',
-            'message' => translate('messages.order_updated_successfully'),
-        ];
+
+        $store_discount = Helpers::get_store_discount($store);
+        if (isset($store_discount)) {
+            if ($product_price + $total_addon_price < $store_discount['min_purchase']) {
+                $store_discount_amount = 0;
+            }
+
+            if ($store_discount_amount > $store_discount['max_discount'] && $store_discount_amount > $store_discount['max_discount']) {
+                $store_discount_amount = $store_discount['max_discount'];
+            }
+        }
+        $order->delivery_charge = $order->original_delivery_charge;
+        if ($coupon) {
+            if ($coupon->coupon_type == 'free_delivery') {
+                $order->delivery_charge = 0;
+                $coupon = null;
+            }
+        }
+
+        if ($order->store->free_delivery || $order->order_type == 'take_away') {
+            $order->delivery_charge = 0;
+        }
+
+        $coupon_discount_amount = $coupon ? CouponLogic::get_discount($coupon, $product_price + $total_addon_price - $store_discount_amount) : 0;
+        $total_price = $product_price + $total_addon_price - $store_discount_amount - $coupon_discount_amount;
+
+        $tax = $store->tax;
+
+
+        $order->tax_status = 'excluded';
+
+        $tax_included = BusinessSetting::where(['key' => 'tax_included'])->first() ?  BusinessSetting::where(['key' => 'tax_included'])->first()->value : 0;
+        if ($tax_included ==  1) {
+            $order->tax_status = 'included';
+        }
+
+        $total_tax_amount = Helpers::product_tax($total_price, $tax, $order->tax_status == 'included');
+
+        $total_tax_amount = $order->tax_status == 'included' ? 0 : $total_tax_amount;
+
+
+
+        // $total_tax_amount = ($tax > 0) ? (($total_price * $tax) / 100) : 0;
+        if ($store->minimum_order > $product_price + $total_addon_price) {
+            Toastr::error(translate('messages.you_need_to_order_at_least', ['amount' => $store->minimum_order . ' ' . Helpers::currency_code()]));
+            return back();
+        }
+
+        $free_delivery_over = BusinessSetting::where('key', 'free_delivery_over')->first()->value;
+        if (isset($free_delivery_over)) {
+            if ($free_delivery_over <= $product_price + $total_addon_price - $coupon_discount_amount - $store_discount_amount) {
+                $order->delivery_charge = 0;
+            }
+        }
+
+
+      //Added service charge
+        $additional_charge_status = BusinessSetting::where('key', 'additional_charge_status')->first()->value;
+        $additional_charge = BusinessSetting::where('key', 'additional_charge')->first()->value;
+        if ($additional_charge_status == 1) {
+            $order->additional_charge = $additional_charge ?? 0;
+        } else {
+            $order->additional_charge = 0;
+        }
+
+
+
+        $total_order_ammount = $total_price + $total_tax_amount + $order->delivery_charge + $order->additional_charge;
+        $adjustment = $order->order_amount - $total_order_ammount;
+
+        $order->coupon_discount_amount = $coupon_discount_amount;
+        $order->store_discount_amount = $store_discount_amount;
+        $order->total_tax_amount = $total_tax_amount;
+        $order->order_amount = $total_order_ammount;
+        $order->adjusment = $adjustment;
+        $order->edited = true;
+        $order->save();
+        session()->forget('order_cart');
+        Toastr::success(translate('messages.order_updated_successfully'));
+        return back();
     }
 
     public function quick_view(Request $request)
@@ -1444,11 +1247,10 @@ class OrderController extends Controller
         $product =  Item::findOrFail($request->product_id);
         $item_type = 'item';
         $order_id = $request->order_id;
-        $panel = 'admin';
 
         return response()->json([
             'success' => 1,
-            'view' => view('admin-views.order.partials._quick-view', compact('product', 'order_id', 'item_type', 'panel'))->render(),
+            'view' => view('admin-views.order.partials._quick-view', compact('product', 'order_id', 'item_type'))->render(),
         ]);
     }
 
@@ -1459,111 +1261,11 @@ class OrderController extends Controller
         $item_key = $request->key;
         $product = $cart_item->item ? $cart_item->item : $cart_item->campaign;
         $item_type = $cart_item->item ? 'item' : 'campaign';
-        $panel = 'admin';
 
         return response()->json([
             'success' => 1,
-            'view' => view('admin-views.order.partials._quick-view-cart-item', compact('order_id', 'product', 'cart_item', 'item_key', 'item_type', 'panel'))->render(),
+            'view' => view('admin-views.order.partials._quick-view-cart-item', compact('order_id', 'product', 'cart_item', 'item_key', 'item_type'))->render(),
         ]);
-    }
-
-    public function cart_list(Request $request)
-    {
-        $order = Order::with(['details', 'store.module'])->find($request->order_id);
-        if (!$order) {
-            return response()->json(['view' => '', 'count' => 0]);
-        }
-
-        $editing = false;
-        $cart = collect([]);
-        if ($request->session()->has('order_cart')) {
-            $sessionCart = session()->get('order_cart');
-            if (count($sessionCart) > 0 && $sessionCart[0]->order_id == $order->id) {
-                $editing = true;
-                $cart = $sessionCart;
-            }
-        }
-
-        return response()->json([
-            'view' => view('admin-views.order.partials._edit_cart_list', compact('order', 'editing', 'cart'))->render(),
-            'count' => $editing ? $cart->count() : $order->details->count(),
-        ]);
-    }
-
-    public function search_items(Request $request)
-    {
-        $products = Item::withoutGlobalScope(StoreScope::class)
-            ->with(['module', 'store.storeConfig'])
-            ->where('store_id', $request->store_id)
-            ->when($request->keyword, function ($query) use ($request) {
-                $keywords = array_filter(array_map('trim', explode(' ', $request->keyword)));
-                return $query->where(function ($q) use ($keywords) {
-                    foreach ($keywords as $word) {
-                        $q->where(function ($sub) use ($word) {
-                            $sub->where('name', 'like', "%{$word}%")
-                                ->orWhereHas('translations', function ($t) use ($word) {
-                                    $t->where('key', 'name')
-                                        ->where('locale', app()->getLocale())
-                                        ->where('value', 'like', "%{$word}%");
-                                });
-                        });
-                    }
-                });
-            })
-            ->active()->take(10)->get();
-
-        $items = $products->map(function ($p) {
-            $hasVariations = false;
-            if ($p->module && $p->module->module_type == 'food') {
-                $foodVars = $p->food_variations ? json_decode($p->food_variations, true) : [];
-                $hasVariations = is_array($foodVars) && count($foodVars) > 0;
-            } else {
-                $choiceOpts = $p->choice_options ? json_decode($p->choice_options, true) : [];
-                $hasVariations = is_array($choiceOpts) && count($choiceOpts) > 0;
-            }
-            $addons = $p->add_ons ? json_decode($p->add_ons, true) : [];
-            $hasAddons = is_array($addons) && count($addons) > 0 && !empty($addons[0]);
-
-            $isFood = $p->module && $p->module->module_type == 'food';
-            $moduleType = $p->module?->module_type;
-            $tracksStock = $moduleType ? (bool) data_get(config('module.' . $moduleType), 'stock', false) : false;
-            $stock = $tracksStock ? (int) $p->stock : null;
-            if ($tracksStock) {
-                $variationStocks = $p->variations ? json_decode($p->variations, true) : [];
-                if (is_array($variationStocks) && count($variationStocks) > 0) {
-                    $stock = (int) array_sum(array_map(fn ($v) => (int) ($v['stock'] ?? 0), $variationStocks));
-                }
-            }
-            $availableTime = ($p->available_time_starts && $p->available_time_ends)
-                ? date(config('timeformat'), strtotime($p->available_time_starts)) . ' - ' . date(config('timeformat'), strtotime($p->available_time_ends))
-                : null;
-            $isAvailable = $p->is_available_now;
-            if ($tracksStock && $stock <= 0) {
-                $isAvailable = false;
-            }
-            $showVeg = $isFood && (bool) config('toggle_veg_non_veg') && (bool) data_get(config('module.' . $moduleType), 'veg_non_veg', false);
-            $showHalal = $p->is_halal == 1
-                && (bool) data_get(config('module.' . $moduleType), 'halal', false)
-                && (bool) ($p->store?->storeConfig?->halal_tag_status ?? 0);
-
-            return [
-                'id'              => $p->id,
-                'name'            => $p->name,
-                'image'           => $p->image_full_url,
-                'formatted_price' => Helpers::format_currency($p->price - Helpers::product_discount_calculate($p, $p->price, $p->store)['discount_amount']),
-                'original_price'  => $p->discount > 0 ? Helpers::format_currency($p->price) : null,
-                'has_variations'  => $hasVariations,
-                'has_addons'      => $hasAddons,
-                'is_available'    => $isAvailable,
-                'available_time'  => $availableTime,
-                'tracks_stock'    => $tracksStock,
-                'stock'           => $stock,
-                'veg'             => $showVeg ? (int) $p->veg : null,
-                'is_halal'        => $showHalal,
-            ];
-        });
-
-        return response()->json(['items' => $items]);
     }
 
     public function export_orders($file_type, $status, $type, Request $request)
@@ -1582,7 +1284,7 @@ class OrderController extends Controller
 
         Order::where(['checked' => 0])->update(['checked' => 1]);
 
-        $orders = Order::with(['customer', 'store', 'orderProDiscount'])
+        $orders = Order::with(['customer', 'store'])
             ->when(isset($module_id), function ($query) use ($module_id) {
                 return $query->module($module_id);
             })
@@ -1683,6 +1385,12 @@ class OrderController extends Controller
         } else if ($file_type == 'csv') {
             return Excel::download(new OrderExport($data), 'Orders.csv');
         }
+        // if ($file_type == 'excel') {
+        //     return (new FastExcel(OrderLogic::format_export_data($orders, $type)))->download('Orders.xlsx');
+        // } else if ($file_type == 'csv') {
+        //     return (new FastExcel(OrderLogic::format_export_data($orders, $type)))->download('Orders.csv');
+        // }
+        return (new FastExcel(OrderLogic::format_export_data($orders, $type)))->download('Orders.xlsx');
     }
 
     public function store_order_search(Request $request)
@@ -1701,7 +1409,6 @@ class OrderController extends Controller
     public function store_order_export(Request $request)
     {
         $key = explode(' ', $request['search']);
-         $filter = $request?->filter;
         $orders = Order::where('store_id', $request->store_id)->Notpos()
             ->when(isset($key ), function ($q) use ($key){
                 $q->where(function ($q) use ($key) {
@@ -1710,20 +1417,6 @@ class OrderController extends Controller
                     }
                 });
             })
-            ->when(isset($filter) && $filter == 'scheduled_orders', function ($q) {
-                    $q->Scheduled();
-                })
-                ->when(isset($filter) && $filter == 'pending_orders', function ($q) {
-                    $q->where(['order_status' => 'pending'])->OrderScheduledIn(30);
-                })
-                ->when(isset($filter) && $filter == 'delivered_orders', function ($q) {
-                    $q->where(['order_status' => 'delivered']);
-                })
-                ->when(isset($filter) && $filter == 'canceled_orders', function ($q) {
-                    $q->where(['order_status' => 'canceled']);
-                })
-                ->StoreOrder()
-                ->Notpos()
             ->get();
         $store= Store::where('id', $request->store_id)->select(['id','zone_id'])->first();
         $data = [
@@ -1731,15 +1424,31 @@ class OrderController extends Controller
             'search'=>request()->search ?? null,
             'zone'=>Helpers::get_zones_name($store->zone_id) ,
             'store'=>  Helpers::get_stores_name($store->id),
-            'filter'=>$filter = $filter == 'all_orders' ? null : $filter
         ];
 
         if($request->type == 'csv'){
             return Excel::download(new StoreOrderlistExport($data), 'OrderList.csv');
         }
         return Excel::download(new StoreOrderlistExport($data), 'OrderList.xlsx');
+
+
+
+        // if ($type == 'excel') {
+        //     return (new FastExcel(OrderLogic::format_export_data($orders, $type)))->download('Orders.xlsx');
+        // } else if ($type == 'csv') {
+        //     return (new FastExcel(OrderLogic::format_export_data($orders, $type)))->download('Orders.csv');
+        // }
+        // return (new FastExcel(OrderLogic::format_export_data($orders, $type)))->download('Orders.xlsx');
     }
 
+
+    public function refund_settings()
+    {
+        $refund_active_status = BusinessSetting::where(['key' => 'refund_active_status'])->first();
+        $reasons = RefundReason::orderBy('id', 'desc')
+            ->paginate(config('default_pagination'));
+        return view('admin-views.refund.index', compact('refund_active_status', 'reasons'));
+    }
 
     public function refund_reason(Request $request)
     {
@@ -1753,22 +1462,36 @@ class OrderController extends Controller
         $reason = new RefundReason();
         $reason->reason = $request->reason[array_search('default', $request->lang)];
         $reason->save();
-         Helpers::add_or_update_translations(request: $request, key_data:'reason' , name_field:'reason' , model_name: 'RefundReason' ,data_id: $reason->id,data_value: $reason->reason);
+        $data = [];
+        $default_lang = str_replace('_', '-', app()->getLocale());
+        foreach ($request->lang as $index => $key) {
+            if($default_lang == $key && !($request->reason[$index])){
+                if ($key != 'default') {
+                    array_push($data, array(
+                        'translationable_type' => 'App\Models\RefundReason',
+                        'translationable_id' => $reason->id,
+                        'locale' => $key,
+                        'key' => 'reason',
+                        'value' => $reason->reason,
+                    ));
+                }
+            }else{
+                if ($request->reason[$index] && $key != 'default') {
+                    array_push($data, array(
+                        'translationable_type' => 'App\Models\RefundReason',
+                        'translationable_id' => $reason->id,
+                        'locale' => $key,
+                        'key' => 'reason',
+                        'value' => $request->reason[$index],
+                    ));
+                }
+            }
+        }
+        Translation::insert($data);
         Toastr::success(translate('Refund Reason Added Successfully'));
         return back();
     }
-
-    public function reasonEdit($id)
-    {
-        $reason =RefundReason::withoutGlobalScope('translate')->with('translations')->find($id);
-        $language = getWebConfig('language');
-        return response()->json([
-            'view' => view('admin-views.business-settings.settings.partials._refund_reason_edit', compact('reason','language'))->render(),
-        ]);
-    }
-
-
-    public function reasonUpdate(Request $request)
+    public function reason_edit(Request $request)
     {
         $request->validate([
             'reason' => 'required|max:191',
@@ -1776,11 +1499,39 @@ class OrderController extends Controller
         ],[
             'reason.0.required'=>translate('default_reason_is_required'),
         ]);
-        $reason = RefundReason::findOrFail($request->reason_id);
-        $reason->reason = $request->reason[array_search('default', $request->lang)];
-        $reason->save();
+        $refund_reason = RefundReason::findOrFail($request->reason_id);
+        $refund_reason->reason = $request->reason[array_search('default', $request->lang1)];
+        $refund_reason->save();
 
-        Helpers::add_or_update_translations(request: $request, key_data:'reason' , name_field:'reason' , model_name: 'RefundReason' ,data_id: $reason->id,data_value: $reason->reason);
+        $default_lang = str_replace('_', '-', app()->getLocale());
+        foreach ($request->lang1 as $index => $key) {
+            if($default_lang == $key && !($request->reason[$index])){
+                if ($key != 'default') {
+                    Translation::updateOrInsert(
+                        [
+                            'translationable_type' => 'App\Models\RefundReason',
+                            'translationable_id' => $refund_reason->id,
+                            'locale' => $key,
+                            'key' => 'reason'
+                        ],
+                        ['value' => $refund_reason->reason]
+                    );
+                }
+            }else{
+                if ($request->reason[$index] && $key != 'default') {
+                    Translation::updateOrInsert(
+                        [
+                            'translationable_type' => 'App\Models\RefundReason',
+                            'translationable_id' => $refund_reason->id,
+                            'locale' => $key,
+                            'key' => 'reason'
+                        ],
+                        ['value' => $request->reason[$index]]
+                    );
+                }
+            }
+        }
+
 
         Toastr::success(translate('Refund Reason Updated Successfully'));
         return back();
@@ -1843,7 +1594,7 @@ class OrderController extends Controller
             }
 
             if(config('mail.status') && $order?->customer?->email && Helpers::get_mail_status('refund_request_deny_mail_status_user') == '1' &&  Helpers::getNotificationStatusData('customer','customer_refund_request_rejaction','mail_status')){
-                Mail::to($order->customer?->getRawOriginal('email'))->send(new RefundRejected($order->id));
+                Mail::to($order->customer->email)->send(new RefundRejected($order->id));
             }
         } catch (\Throwable $th) {
             info($th->getMessage());
@@ -1931,9 +1682,9 @@ class OrderController extends Controller
                 }
 
             elseif($request->verify == 'switched_to_cod'){
-
-                $order->offline_payments()->delete();
-
+                $order->offline_payments()->update([
+                    'status'=> 'verified'
+                ]);
                 if($order->payment_method == 'partial_payment'){
                     $order->payments()->where('payment_status','unpaid')->update([
                         'payment_method'=> 'cash_on_delivery',
@@ -1946,7 +1697,6 @@ class OrderController extends Controller
 
                 Helpers::send_order_notification($order);
                 $order->payment_method = 'cash_on_delivery';
-                $order->save();
 
                 if($order->is_guest == 0){
                     $this->sent_mail_on_offline_payment(status:'COD', name:$order?->customer?->f_name .' '.$order?->customer?->l_name, email:  $order?->customer?->email ,order_id: $order->id);
@@ -2025,9 +1775,7 @@ class OrderController extends Controller
     public function offline_verification_list(Request $request, $status)
     {
         $key = explode(' ', $request['search']);
-        $orders = Order::with(['customer', 'store'])
-        ->where('payment_method', 'offline_payment')
-        ->whereHas('offline_payments')
+        $orders = Order::with(['customer', 'store'])->has('offline_payments')
             ->when(isset($key), function ($query) use ($key) {
                 return $query->where(function ($q) use ($key) {
                     foreach ($key as $value) {
@@ -2052,155 +1800,11 @@ class OrderController extends Controller
                     return $query->where('status', 'verified');
                 });
             })
-
-            ->when(Config::get('module.current_module_type') == 'parcel', function ($query) {
-                return $query->ParcelOrder();
-            } , function ($query) {
-                return $query->StoreOrder();
-            })
-
+            ->StoreOrder()
             ->module(Config::get('module.current_module_id'))
             ->orderBy('schedule_at', 'desc')
             ->paginate(config('default_pagination'));
 
         return view('admin-views.order.offline_verification_list', compact('orders', 'status'));
     }
-    public function parcelCancellationReason(Request $request)
-    {
-     $reasons = ParcelCancellationReason::where('status', 1)
-            ->select('id', 'reason', 'user_type', 'cancellation_type')
-            ->when($request->user_type, function ($query) use ($request) {
-                $query->where('user_type', $request->user_type);
-            })
-            ->when($request->cancellation_type, function ($query) use ($request) {
-                $query->where('cancellation_type', $request->cancellation_type);
-            })
-            ->limit(50)
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'id'                => $item->id,
-                    'reason'            => $item->reason,
-                    'user_type'         => $item->user_type,
-                    'cancellation_type' => $item->cancellation_type,
-                ];
-            });
-
-        return response()->json([
-            'view' => view('admin-views.order.partials._parcel_cancellation_reasons', compact('reasons'))->render()
-        ]);
-
-    }
-
-    public function CancelParcel(Request $request)
-    {
-        if($request->reason == null && $request->note == null){
-            Toastr::error(translate('messages.please_select_cancellation_reason_or_add_a_comment'));
-            return back();
-        }
-
-        $order = Order::findOrFail($request->order_id);
-        $cancel_parcel_order = OrderLogic::cancelParcelOrder($order, 'admin_for_'.$request->delivery_cancelled_by, $request);
-
-        if (data_get($cancel_parcel_order, 'status_code') != 200) {
-            Toastr::error(data_get($cancel_parcel_order, 'message'));
-        } else {
-            if (data_get($cancel_parcel_order, 'code')== 'wallet_failed'){
-                Toastr::success(translate('Parcel_canceled_successfully'));
-            }else{
-                Toastr::success(data_get($cancel_parcel_order, 'message'));
-            }
-        }
-        return back();
-    }
-
-    public function parcelRefund(Request $request)
-    {
-        $order = Order::with('parcelCancellation')->findOrFail($request->id);
-        $order->parcelCancellation()->update([
-            'is_refunded' => 1,
-            'refund_amount' => $request->refund_amount ?? $order->order_amount,
-        ]);
-
-        // $order->order_status = 'returned';
-        // $order->save();
-        OrderLogic::parcelRefundNotification($order,false);
-        Toastr::success(translate('Parcel_refunded_successfully'));
-        return back();
-    }
-    public function parcelReturn(Request $request)
-    {
-        $request->validate([
-            'id' => 'required',
-            'order_status' => 'required|in:returned',
-        ]);
-
-        $order = Order::with('parcelCancellation')->findOrFail($request->id);
-        if( $order && $order->order_status == 'canceled' && $order->order_type == 'parcel'){
-            if( in_array($order->parcelCancellation->cancel_by ,['deliveryman', 'admin_for_deliveryman']  )){
-                OrderLogic::deliveryManCancelParcelTransaction($order,'admin');
-            } else{
-                OrderLogic::create_transaction_parcel_cancel($order, $order->payment_status == 'paid' ? 'admin' : 'deliveryman', );
-            }
-
-            Toastr::success(translate('Parcel_returned_successfully'));
-            return back();
-        }
-            Toastr::error(translate('Order_not_found'));
-        return back();
-    }
-
-    public function getSearchedFoods(Request $request)
-    {
-        $order = Order::StoreOrder()->find($request->order_id);
-        if (!$order) {
-            return response()->json(['view' => '']);
-        }
-
-        $foods = Item::withoutGlobalScope(StoreScope::class)
-            ->where('store_id', $order->store_id)
-            ->active()
-            ->where('name', 'like', '%' . $request->search . '%')
-            ->paginate(10);
-
-        return response()->json([
-            'view' => view('admin-views.order.partials._searched_food_list', compact('foods'))->render(),
-        ]);
-    }
-
-    public function getSingleFoodPrice(Request $request)
-    {
-        $cart = session()->get('order_cart', collect([]));
-        $key  = $request->key;
-
-        if (!isset($cart[$key])) {
-            return response()->json(['data' => 'not_found', 'message' => translate('messages.item_not_found')], 404);
-        }
-
-        $item = $cart[$key];
-
-        $product = isset($item['item_campaign_id']) && $item['item_campaign_id']
-            ? ItemCampaign::withoutGlobalScope(StoreScope::class)->find($item['item_campaign_id'])
-            : Item::withoutGlobalScope(StoreScope::class)->find($item['item_id']);
-
-        if (!$product) {
-            return response()->json(['data' => 'not_found', 'message' => translate('messages.item_not_found')], 404);
-        }
-
-        if ($product->maximum_cart_quantity && $request->quantity > $product->maximum_cart_quantity) {
-            return response()->json([
-                'data'    => 'maximum_cart_quantity',
-                'message' => translate('messages.maximum_cart_quantity_for_this_item_is') . ' ' . $product->maximum_cart_quantity,
-            ], 203);
-        }
-
-        $cart[$key]->quantity = (int) $request->quantity;
-        session()->put('order_cart', $cart);
-
-        return response()->json([
-            'data'    => 0,
-            'message' => translate('messages.quantity_updated_successfully'),
-        ]);
-    }
-
 }

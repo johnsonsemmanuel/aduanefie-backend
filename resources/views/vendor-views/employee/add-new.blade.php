@@ -67,10 +67,8 @@
                             <div class="card h-100">
                                 <div class="card-body d-flex flex-column upload-img-3">
                                     <h5 class="form-label text-center mb-3">
-                                        {{ translate('messages.Image') }}
+                                        {{ translate('messages.employee_image') }}
                                         <span class="text-danger">{{ translate('messages.Ratio (1:1)') }}</span>
-                                        <br>
-                                        <small>{{ translate('Max Size (2 MB)') }}</small>
                                     </h5>
                                     <div class="text-center my-auto">
                                         <img class="store-banner onerror-image" id="viewer"
@@ -79,7 +77,8 @@
                                             alt="Employee thumbnail" />
                                     </div>
                                     <div class="form-group mt-3 mb-0">
-
+                                        <label class="form-label">{{ translate('messages.Employee image size max 2 MB') }}
+                                            <span class="text-danger">*</span></label>
                                         <div class="custom-file">
                                             <input type="file" name="image" id="customFileUpload"
                                                 class="custom-file-input read-url"
@@ -112,7 +111,7 @@
                                         <div class="col-md-4">
                                             <div class="js-form-message form-group mb-0">
                                                 <label class="input-label" for="signupSrPassword">{{translate('messages.password')}} <span class="form-label-secondary" data-toggle="tooltip" data-placement="right"
-                                                    data-original-title="{{ translate('messages.Must_contain_at_least_one_number_and_one_uppercase_and_lowercase_letter_and_symbol,_and_at_least_8_or_more_characters') }}"><img src="{{ asset('/public/assets/admin/img/info-circle.svg') }}" alt="{{ translate('messages.Must_contain_at_least_one_number_and_one_uppercase_and_lowercase_letter_and_symbol,_and_at_least_8_or_more_characters') }}"></span></label>
+        data-original-title="{{ translate('messages.Must_contain_at_least_one_number_and_one_uppercase_and_lowercase_letter_and_symbol,_and_at_least_8_or_more_characters') }}"><img src="{{ asset('/public/assets/admin/img/info-circle.svg') }}" alt="{{ translate('messages.Must_contain_at_least_one_number_and_one_uppercase_and_lowercase_letter_and_symbol,_and_at_least_8_or_more_characters') }}"></span></label>
 
                                                 <div class="input-group input-group-merge">
                                                     <input type="password" class="js-toggle-password form-control" name="password" id="signupSrPassword" pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}" title="{{ translate('messages.Must_contain_at_least_one_number_and_one_uppercase_and_lowercase_letter_and_symbol,_and_at_least_8_or_more_characters') }}"

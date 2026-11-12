@@ -21,22 +21,6 @@
     <form action="{{route('admin.business-settings.system-addon.activation')}}" method="post" id="customer_login_modal" autocomplete="off">
         @csrf
         <div class="form-group mb-4">
-            <label for="name">{{ translate('Name') }}</label>
-            <input
-                name="name" id="name"
-                class="form-control"
-                placeholder="{{translate('Ex: John Doe')}}" required
-            />
-        </div>
-        <div class="form-group mb-4">
-            <label for="email">{{ translate('Email') }}</label>
-            <input
-                type="email" name="email" id="email"
-                class="form-control"
-                placeholder="{{translate('Ex: john@example.com')}}" required
-            />
-        </div>
-        <div class="form-group mb-4">
             <label for="username">{{ translate('Codecanyon_usename') }}</label>
             <input
                 name="username" id="username"

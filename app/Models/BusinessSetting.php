@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\CentralLogics\Helpers;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Support\Facades\DB;
 
 class BusinessSetting extends Model
@@ -35,7 +36,6 @@ class BusinessSetting extends Model
     {
         parent::boot();
         static::saved(function ($model) {
-             Helpers::deleteCacheData('business_settings_all_data');
             $value = Helpers::getDisk();
 
             DB::table('storages')->updateOrInsert([
@@ -47,18 +47,6 @@ class BusinessSetting extends Model
                 'updated_at' => now(),
             ]);
         });
-
-        static::created(function () {
-            Helpers::deleteCacheData('business_settings_all_data');
-        });
-        static::deleted(function(){
-            Helpers::deleteCacheData('business_settings_all_data');
-        });
-
-        static::updated(function(){
-            Helpers::deleteCacheData('business_settings_all_data');
-        });
-
     }
 
 }

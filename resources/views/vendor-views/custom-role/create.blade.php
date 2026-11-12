@@ -20,6 +20,7 @@
     <!-- Page Heading -->
     @php($language=\App\Models\BusinessSetting::where('key','language')->first())
     @php($language = $language->value ?? null)
+    @php($defaultLang = str_replace('_', '-', app()->getLocale()))
     <!-- Content Row -->
     <div class="card">
         <div class="card-header">
@@ -68,414 +69,93 @@
                                 <input type="hidden" name="lang[]" value="default">
                             @endif
 
-                <div class="bg-light rounded p-3 mb-20">
-                    <div class="d-flex align-items-center mr-2 flex-wrap justify-content-between select--all-checkes">
-                        <h5 class="input-label m-0 text-capitalize">{{translate('messages.Module Wise Permission')}}</h5>
-                        <div class="check-item p-2 d-flex align-items-center gap-2 pb-0 w-auto cursor-pointer">
-                            <label for="select-all" class="fs-14 text-nowrap font-semibold text-title m-0">{{ translate('messages.All Module Permission') }}</label>
-                            <div class="form-group form-check form--check m-0 ml-2">
-                                <input type="checkbox" value="" class="form-check-input rounded position-relative rounded" id="select-all">
-                            </div>
+                <h5 class="text-capitalize">{{translate('messages.module_permission')}} : </h5>
+                <hr>
+                <div class="check--item-wrapper mx-0">
+                    <div class="check-item">
+                        <div class="form-group form-check form--check">
+                            <input type="checkbox" name="modules[]" value="item" class="form-check-input"
+                                    id="item">
+                            <label class="form-check-label input-label " for="item">{{translate('messages.items')}}</label>
                         </div>
                     </div>
-                    <div class="check--item-wrapper d-inline">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <div class="bg-white rounded select-subwrapper">
-                                    <div class="border-bottom p-3 d-flex align-items-center justify-content-between flex-wrap flex-xxl-nowrap gap-1">
-                                        <h5 class="m-0 font-medium">{{ translate('messages.General Management') }}</h5>
-                                        <div class="check-item p-2 d-flex align-items-center gap-2 pb-0 w-auto cursor-pointer">
-                                            <label for="select-allsub-1" class="fs-14 text-title m-0">{{ translate('messages.Select All') }}</label>
-                                            <div class="form-group form-check form--check m-0 ml-2">
-                                                <input type="checkbox" name="" value="" class="form-check-input rounded position-relative rounded check-all" id="select-allsub-1">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="p-3">
-                                        <div class="d-flex flex-wrap module-wise-gap">
-                                            <div class="check-item p-2">
-                                                <div class="form-group form-check form--check m-0">
-                                                    <input type="checkbox" name="modules[]" value="dashboard" class="form-check-input rounded"
-                                                        id="dashboard">
-                                                    <label class="form-check-label qcont text-dark" for="dashboard">{{translate('messages.Dashboard')}}</label>
-                                                </div>
-                                            </div>
-                                            <div class="check-item p-2">
-                                                <div class="form-group form-check form--check m-0">
-                                                    <input type="checkbox" name="modules[]" value="profile" class="form-check-input rounded"
-                                                        id="profile">
-                                                    <label class="form-check-label qcont text-dark" for="profile">{{translate('messages.Profile')}}</label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="bg-white rounded select-subwrapper">
-                                    <div class="border-bottom p-3 d-flex align-items-center justify-content-between flex-wrap flex-xxl-nowrap gap-1">
-                                        <h5 class="m-0 font-medium">{{ translate('messages.Order Management') }}</h5>
-                                        <div class="check-item p-2 d-flex align-items-center gap-2 pb-0 w-auto cursor-pointer">
-                                            <label for="select-allsub-2" class="fs-14 text-title m-0">{{ translate('messages.Select All') }}</label>
-                                            <div class="form-group form-check form--check m-0 ml-2">
-                                                <input type="checkbox" name="" value="" class="form-check-input rounded position-relative rounded check-all" id="select-allsub-2">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="p-3">
-                                        <div class="d-flex flex-wrap module-wise-gap">
-                                            <div class="check-item p-2">
-                                                <div class="form-group form-check form--check m-0">
-                                                    <input type="checkbox" name="modules[]" value="order" class="form-check-input rounded"
-                                                        id="order">
-                                                    <label class="form-check-label qcont text-dark" for="order">{{translate('messages.All Orders')}}</label>
-                                                </div>
-                                            </div>
-                                            @if (\App\CentralLogics\Helpers::employee_module_permission_check('pos'))
-                                            <div class="check-item p-2">
-                                                <div class="form-group form-check form--check m-0">
-                                                    <input type="checkbox" name="modules[]" value="pos" class="form-check-input rounded"
-                                                        id="pos">
-                                                    <label class="form-check-label qcont text-dark" for="pos">{{translate('messages.Point of Sale (POS)')}}</label>
-                                                </div>
-                                            </div>
-                                            @endif
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="bg-white rounded select-subwrapper">
-                                    <div class="border-bottom p-3 d-flex align-items-center justify-content-between flex-wrap flex-xxl-nowrap gap-1">
-                                        <h5 class="m-0 font-medium">{{ translate('messages.Item Management') }}</h5>
-                                        <div class="check-item p-2 d-flex align-items-center gap-2 pb-0 w-auto cursor-pointer">
-                                            <label for="select-allsub-3" class="fs-14 text-title m-0">{{ translate('messages.Select All') }}</label>
-                                            <div class="form-group form-check form--check m-0 ml-2">
-                                                <input type="checkbox" name="" value="" class="form-check-input rounded position-relative rounded check-all" id="select-allsub-3">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="p-3">
-                                        <div class="d-flex flex-lg-nowrap flex-wrap module-wise-gap">
-                                            <div class="check-item p-2">
-                                                <div class="form-group form-check form--check m-0">
-                                                    <input type="checkbox" name="modules[]" value="item" class="form-check-input rounded"
-                                                        id="item">
-                                                    <label class="form-check-label qcont text-dark" for="item">{{translate('messages.Items')}}</label>
-                                                </div>
-                                            </div>
-                                            @if (config('module.'.\App\CentralLogics\Helpers::get_store_data()->module->module_type)['add_on'])
-                                            <div class="check-item p-2">
-                                                <div class="form-group form-check form--check m-0">
-                                                    <input type="checkbox" name="modules[]" value="addon" class="form-check-input rounded"
-                                                        id="addon">
-                                                    <label class="form-check-label qcont text-dark" for="addon">{{translate('messages.Addons')}}</label>
-                                                </div>
-                                            </div>
-                                            @endif
-                                            <div class="check-item p-2">
-                                                <div class="form-group form-check form--check m-0">
-                                                    <input type="checkbox" name="modules[]" value="category" class="form-check-input rounded"
-                                                        id="category">
-                                                    <label class="form-check-label qcont text-dark" for="category">{{translate('messages.Categories')}}</label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="bg-white rounded select-subwrapper">
-                                    <div class="border-bottom p-3 d-flex align-items-center justify-content-between flex-wrap flex-xxl-nowrap gap-1">
-                                        <h5 class="m-0 font-medium">{{ translate('messages.Marketing Section') }}</h5>
-                                        <div class="check-item p-2 d-flex align-items-center gap-2 pb-0 w-auto cursor-pointer">
-                                            <label for="select-allsub-4" class="fs-14 text-title m-0">{{ translate('messages.Select All') }}</label>
-                                            <div class="form-group form-check form--check m-0 ml-2">
-                                                <input type="checkbox" name="" value="" class="form-check-input rounded position-relative rounded check-all" id="select-allsub-4">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="p-3">
-                                        <div class="d-flex flex-lg-nowrap flex-wrap module-wise-gap">
-                                            <div class="check-item p-2">
-                                                <div class="form-group form-check form--check m-0">
-                                                    <input type="checkbox" name="modules[]" value="campaign" class="form-check-input rounded"
-                                                        id="campaign">
-                                                    <label class="form-check-label qcont text-dark" for="campaign">{{translate('messages.Campaign')}}</label>
-                                                </div>
-                                            </div>
-                                            <div class="check-item p-2">
-                                                <div class="form-group form-check form--check m-0">
-                                                    <input type="checkbox" name="modules[]" value="coupon" class="form-check-input rounded"
-                                                        id="coupon">
-                                                    <label class="form-check-label qcont text-dark" for="coupon">{{translate('messages.Coupon')}}</label>
-                                                </div>
-                                            </div>
-                                            <div class="check-item p-2">
-                                                <div class="form-group form-check form--check m-0">
-                                                    <input type="checkbox" name="modules[]" value="banner" class="form-check-input rounded"
-                                                        id="banner">
-                                                    <label class="form-check-label qcont text-dark" for="banner">{{translate('messages.Banner')}}</label>
-                                                </div>
-                                            </div>
-
-                                             @if (
-                                                addon_published_status('ReelsModule')
-                                                && \App\CentralLogics\Helpers::get_business_settings('vendor_can_upload_reels')
-                                                && \Modules\ReelsModule\Support\ReelModuleConfig::isAllowedType(\App\CentralLogics\Helpers::get_store_data()?->module?->module_type)
-                                                )
-                                            <div class="check-item p-2">
-                                                <div class="form-group form-check form--check m-0">
-                                                    <input type="checkbox" name="modules[]" value="reels" class="form-check-input rounded"
-                                                            id="reels">
-                                                    <label class="form-check-label qcont text-dark" for="reels">{{translate('messages.reels')}}</label>
-                                                </div>
-                                            </div>
-
-                                            @endif
-
-
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="bg-white rounded select-subwrapper">
-                                    <div class="border-bottom p-3 d-flex align-items-center justify-content-between flex-wrap flex-xxl-nowrap gap-1">
-                                        <h5 class="m-0 font-medium">{{ translate('messages.Advertisement Management') }}</h5>
-                                        <div class="check-item p-2 d-flex align-items-center gap-2 pb-0 w-auto cursor-pointer">
-                                            <label for="select-allsub-5" class="fs-14 text-title m-0">{{ translate('messages.Select All') }}</label>
-                                            <div class="form-group form-check form--check m-0 ml-2">
-                                                <input type="checkbox" name="" value="" class="form-check-input rounded position-relative rounded check-all" id="select-allsub-5">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="p-3">
-                                        <div class="d-flex flex-wrap module-wise-gap">
-                                                <div class="check-item p-2">
-                                                <div class="form-group form-check form--check m-0">
-                                                    <input type="checkbox" name="modules[]" value="advertisement" class="form-check-input rounded"
-                                                        id="advertisement">
-                                                    <label class="form-check-label qcont text-dark" for="advertisement">{{translate('messages.New Advertisement')}}</label>
-                                                </div>
-                                            </div>
-                                            <div class="check-item p-2">
-                                                <div class="form-group form-check form--check m-0">
-                                                    <input type="checkbox" name="modules[]" value="advertisement_list" class="form-check-input rounded"
-                                                        id="advertisement_list">
-                                                    <label class="form-check-label qcont text-dark" for="advertisement_list">{{translate('messages.Advertisement List')}}</label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            @if (\App\CentralLogics\Helpers::get_store_data()->sub_self_delivery)
-                            <div class="col-md-6">
-                                <div class="bg-white rounded select-subwrapper">
-                                    <div class="border-bottom p-3 d-flex align-items-center justify-content-between flex-wrap flex-xxl-nowrap gap-1">
-                                        <h5 class="m-0 font-medium">{{ translate('messages.Delivery Man Management') }}</h5>
-                                        <div class="check-item p-2 d-flex align-items-center gap-2 pb-0 w-auto cursor-pointer">
-                                            <label for="select-allsub-10" class="fs-14 text-title m-0">{{ translate('messages.Select All') }}</label>
-                                            <div class="form-group form-check form--check m-0 ml-2">
-                                                <input type="checkbox" name="" value="" class="form-check-input rounded position-relative rounded check-all" id="select-allsub-10">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="p-3">
-                                        <div class="d-flex flex-wrap module-wise-gap">
-                                                <div class="check-item p-2">
-                                                <div class="form-group form-check form--check m-0">
-                                                    <input type="checkbox" name="modules[]" value="deliveryman" class="form-check-input rounded"
-                                                        id="deliveryman">
-                                                    <label class="form-check-label qcont text-dark" for="deliveryman">{{translate('messages.New deliveryman')}}</label>
-                                                </div>
-                                            </div>
-                                            <div class="check-item p-2">
-                                                <div class="form-group form-check form--check m-0">
-                                                    <input type="checkbox" name="modules[]" value="deliveryman_list" class="form-check-input rounded"
-                                                        id="deliveryman_list">
-                                                    <label class="form-check-label qcont text-dark" for="deliveryman_list">{{translate('messages.Deliveryman List')}}</label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            @endif
-                            <div class="col-md-6">
-                                <div class="bg-white rounded select-subwrapper">
-                                    <div class="border-bottom p-3 d-flex align-items-center justify-content-between flex-wrap flex-xxl-nowrap gap-1">
-                                        <h5 class="m-0 font-medium">{{ translate('messages.Wallet Management') }}</h5>
-                                        <div class="check-item p-2 d-flex align-items-center gap-2 pb-0 w-auto cursor-pointer">
-                                            <label for="select-allsub-6" class="fs-14 text-title m-0">{{ translate('messages.Select All') }}</label>
-                                            <div class="form-group form-check form--check m-0 ml-2">
-                                                <input type="checkbox" name="" value="" class="form-check-input rounded position-relative rounded check-all" id="select-allsub-6">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="p-3">
-                                        <div class="d-flex flex-wrap module-wise-gap">
-                                            <div class="check-item p-2">
-                                                <div class="form-group form-check form--check m-0">
-                                                    <input type="checkbox" name="modules[]" value="wallet" class="form-check-input rounded"
-                                                        id="wallet">
-                                                    <label class="form-check-label qcont text-dark" for="wallet">{{translate('messages.My Wallet')}}</label>
-                                                </div>
-                                            </div>
-                                            <div class="check-item p-2">
-                                                <div class="form-group form-check form--check m-0">
-                                                    <input type="checkbox" name="modules[]" value="wallet_method" class="form-check-input rounded"
-                                                        id="wallet_method">
-                                                    <label class="form-check-label qcont text-dark" for="wallet_method">{{translate('messages.Wallet Method')}}</label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="bg-white rounded select-subwrapper">
-                                    <div class="border-bottom p-3 d-flex align-items-center justify-content-between flex-wrap flex-xxl-nowrap gap-1">
-                                        <h5 class="m-0 font-medium">{{ translate('messages.Employee Management') }}</h5>
-                                        <div class="check-item p-2 d-flex align-items-center gap-2 pb-0 w-auto cursor-pointer">
-                                            <label for="select-allsub-7" class="fs-14 text-title m-0">{{ translate('messages.Select All') }}</label>
-                                            <div class="form-group form-check form--check m-0 ml-2">
-                                                <input type="checkbox" name="" value="" class="form-check-input rounded position-relative rounded check-all" id="select-allsub-7">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="p-3">
-                                        <div class="d-flex flex-wrap module-wise-gap">
-                                            <div class="check-item p-2">
-                                                <div class="form-group form-check form--check m-0">
-                                                    <input type="checkbox" name="modules[]" value="role" class="form-check-input rounded"
-                                                        id="role">
-                                                    <label class="form-check-label qcont text-dark" for="role">{{translate('messages.Role Management')}}</label>
-                                                </div>
-                                            </div>
-                                            <div class="check-item p-2">
-                                                <div class="form-group form-check form--check m-0">
-                                                    <input type="checkbox" name="modules[]" value="employee" class="form-check-input rounded"
-                                                        id="employee">
-                                                    <label class="form-check-label qcont text-dark" for="employee">{{translate('messages.All Employee')}}</label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="bg-white rounded select-subwrapper">
-                                    <div class="border-bottom p-3 d-flex align-items-center justify-content-between flex-wrap flex-xxl-nowrap gap-1">
-                                        <h5 class="m-0 font-medium">{{ translate('messages.Report Section') }}</h5>
-                                        <div class="check-item p-2 d-flex align-items-center gap-2 pb-0 w-auto cursor-pointer">
-                                            <label for="select-allsub-8" class="fs-14 text-title m-0">{{ translate('messages.Select All') }}</label>
-                                            <div class="form-group form-check form--check m-0 ml-2">
-                                                <input type="checkbox" name="" value="" class="form-check-input rounded position-relative rounded check-all" id="select-allsub-8">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="p-3">
-                                        <div class="d-flex flex-wrap module-wise-gap">
-                                            <div class="check-item p-2">
-                                                <div class="form-group form-check form--check m-0">
-                                                    <input type="checkbox" name="modules[]" value="expense_report" class="form-check-input rounded"
-                                                            id="expense_report">
-                                                    <label class="form-check-label qcont text-dark" for="expense_report">{{translate('messages.Expense Report')}}</label>
-                                                </div>
-                                            </div>
-                                            <div class="check-item p-2">
-                                                <div class="form-group form-check form--check m-0">
-                                                    <input type="checkbox" name="modules[]" value="disbursement_report" class="form-check-input rounded"
-                                                        id="disbursement_report">
-                                                    <label class="form-check-label qcont text-dark" for="disbursement_report">{{translate('messages.Disbursement Report')}}</label>
-                                                </div>
-                                            </div>
-                                            <div class="check-item p-2">
-                                                <div class="form-group form-check form--check m-0">
-                                                    <input type="checkbox" name="modules[]" value="vat_report" class="form-check-input rounded"
-                                                        id="vat_report">
-                                                    <label class="form-check-label qcont text-dark" for="vat_report">{{translate('messages.Vat Report')}}</label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                    <div class="check-item">
+                        <div class="form-group form-check form--check">
+                            <input type="checkbox" name="modules[]" value="order" class="form-check-input"
+                                    id="order">
+                            <label class="form-check-label input-label " for="order">{{translate('messages.orders')}}</label>
                         </div>
                     </div>
-                    <div class="mt-4 check--item-wrapper d-inline">
-                        <div class="bg-white rounded select-subwrapper">
-                            <div class="border-bottom p-3 d-flex align-items-center justify-content-between flex-wrap flex-xxl-nowrap gap-1">
-                                <h5 class="m-0 font-medium">{{ translate('messages.Business Management') }}</h5>
-                                <div class="check-item p-2 d-flex align-items-center gap-2 pb-0 w-auto cursor-pointer">
-                                    <label for="select-allsub-9" class="fs-14 text-title m-0">{{ translate('messages.Select All') }}</label>
-                                    <div class="form-group form-check form--check m-0 ml-2">
-                                        <input type="checkbox" name="" value="" class="form-check-input rounded position-relative rounded check-all" id="select-allsub-9">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="p-3">
-                                <div class="m-0 row g-3">
-                                    <div class="col-xxl-2 col-xl-3 col-lg-3 col-md-3 col-sm-4">
-                                        <div class="check-item p-2">
-                                            <div class="form-group form-check form--check m-0">
-                                                <input type="checkbox" name="modules[]" value="store_setup" class="form-check-input rounded"
-                                                        id="store_setup">
-                                                <label class="form-check-label text-nowrap qcont text-dark" for="store_setup">{{translate('messages.Store Setup')}}</label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-xxl-2 col-xl-3 col-lg-3 col-md-3 col-sm-4">
-                                        <div class="check-item p-2">
-                                            <div class="form-group form-check form--check m-0">
-                                                <input type="checkbox" name="modules[]" value="notification_setup" class="form-check-input rounded"
-                                                    id="notification_setup">
-                                                <label class="form-check-label text-nowrap qcont text-dark" for="notification_setup">{{translate('messages.Notification Setup')}}</label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-xxl-2 col-xl-3 col-lg-3 col-md-3 col-sm-4">
-                                        <div class="check-item p-2">
-                                            <div class="form-group form-check form--check m-0">
-                                                <input type="checkbox" name="modules[]" value="my_shop" class="form-check-input rounded"
-                                                    id="my_shop">
-                                                <label class="form-check-label text-nowrap qcont text-dark" for="my_shop">{{translate('messages.MY Shop')}}</label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-xxl-2 col-xl-3 col-lg-3 col-md-3 col-sm-4">
-                                        <div class="check-item p-2">
-                                            <div class="form-group form-check form--check m-0">
-                                                <input type="checkbox" name="modules[]" value="business_plan" class="form-check-input rounded"
-                                                    id="business_plan">
-                                                <label class="form-check-label text-nowrap qcont text-dark" for="business_plan">{{translate('messages.Business Plan')}}</label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    @if (\App\CentralLogics\Helpers::employee_module_permission_check('reviews'))
-                                    <div class="col-xxl-2 col-xl-3 col-lg-3 col-md-3 col-sm-4">
-                                            <div class="check-item p-2">
-                                            <div class="form-group form-check form--check m-0">
-                                                <input type="checkbox" name="modules[]" value="reviews" class="form-check-input rounded"
-                                                    id="reviews">
-                                                <label class="form-check-label text-nowrap qcont text-dark" for="reviews">{{translate('messages.Reviews')}}</label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    @endif
-                                    <div class="col-xxl-2 col-xl-3 col-lg-3 col-md-3 col-sm-4">
-                                        <div class="check-item p-2">
-                                            <div class="form-group form-check form--check m-0">
-                                                <input type="checkbox" name="modules[]" value="chat" class="form-check-input rounded"
-                                                    id="chat">
-                                                <label class="form-check-label text-nowrap qcont text-dark" for="chat">{{translate('messages.Chat')}}</label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                    <div class="check-item">
+                        <div class="form-group form-check form--check">
+                            <input type="checkbox" name="modules[]" value="store_setup" class="form-check-input" id="store_setup">
+                            <label class="form-check-label input-label " for="store_setup">{{translate('messages.store_setup')}}</label>
+                        </div>
+                    </div>
+                    @if (config('module.'.\App\CentralLogics\Helpers::get_store_data()->module->module_type)['add_on'])
+                    <div class="check-item">
+                        <div class="form-group form-check form--check">
+                            <input type="checkbox" name="modules[]" value="addon" class="form-check-input"
+                                    id="addon">
+                            <label class="form-check-label input-label " for="addon">{{translate('messages.addons')}}</label>
+                        </div>
+                    </div>
+                    @endif
+                    <div class="check-item">
+                        <div class="form-group form-check form--check">
+                            <input type="checkbox" name="modules[]" value="wallet" class="form-check-input"
+                                    id="wallet">
+                            <label class="form-check-label input-label " for="wallet">{{translate('messages.my_wallet')}}</label>
+                        </div>
+                    </div>
+                    <div class="check-item">
+                        <div class="form-group form-check form--check">
+                            <input type="checkbox" name="modules[]" value="bank_info" class="form-check-input"
+                                    id="bank_info">
+                            <label class="form-check-label input-label " for="bank_info">{{translate('messages.profile')}}</label>
+                        </div>
+                    </div>
+                    <div class="check-item">
+                        <div class="form-group form-check form--check">
+                            <input type="checkbox" name="modules[]" value="employee" class="form-check-input"
+                                    id="employee">
+                            <label class="form-check-label input-label " for="employee">{{translate('messages.Employees')}}</label>
+                        </div>
+                    </div>
+                    <div class="check-item">
+                        <div class="form-group form-check form--check">
+                            <input type="checkbox" name="modules[]" value="my_shop" class="form-check-input"
+                                    id="my_shop">
+                            <label class="form-check-label input-label " for="my_shop">{{translate('messages.my_shop')}}</label>
+                        </div>
+                    </div>
+
+                    <div class="check-item">
+                        <div class="form-group form-check form--check">
+                            <input type="checkbox" name="modules[]" value="campaign" class="form-check-input"
+                                    id="campaign">
+                            <label class="form-check-label input-label " for="campaign">{{translate('messages.campaigns')}}</label>
+                        </div>
+                    </div>
+                    <div class="check-item">
+                        <div class="form-group form-check form--check">
+                            <input type="checkbox" name="modules[]" value="reviews" class="form-check-input"
+                                    id="reviews">
+                            <label class="form-check-label input-label " for="reviews">{{translate('messages.reviews')}}</label>
+                        </div>
+                    </div>
+                    <div class="check-item">
+                        <div class="form-group form-check form--check">
+                            <input type="checkbox" name="modules[]" value="pos" class="form-check-input"
+                                    id="pos">
+                            <label class="form-check-label input-label  text-uppercase" for="pos">{{translate('messages.pos')}}</label>
+                        </div>
+                    </div>
+                    <div class="check-item">
+                        <div class="form-group form-check form--check">
+                            <input type="checkbox" name="modules[]" value="chat" class="form-check-input"
+                                    id="chat">
+                            <label class="form-check-label input-label " for="chat">{{translate('messages.chat')}}</label>
                         </div>
                     </div>
                 </div>
@@ -589,48 +269,5 @@
     </div>
 </div>
 @endsection
-
-@push('script_2')
-<script>
-$(document).ready(function () {
-    // Global select all
-    $('#select-all').on('change', function () {
-        const isChecked = $(this).is(':checked');
-        $('input[type="checkbox"][name="modules[]"]').prop('checked', isChecked);
-        $('.check-all').prop('checked', isChecked);
-    });
-
-    // Group-wise select all
-    $('.check-all').on('change', function () {
-        const container = $(this).closest('.select-subwrapper');
-        const isChecked = $(this).is(':checked');
-        container.find('input[type="checkbox"][name="modules[]"]').prop('checked', isChecked);
-
-        // Update global select-all status
-        updateGlobalSelectAll();
-    });
-
-    // Individual checkbox change
-    $('input[type="checkbox"][name="modules[]"]').on('change', function () {
-        const container = $(this).closest('.select-subwrapper');
-        const allInGroup = container.find('input[type="checkbox"][name="modules[]"]').length;
-        const checkedInGroup = container.find('input[type="checkbox"][name="modules[]"]:checked').length;
-
-        // Set group select-all checkbox based on state
-        container.find('.check-all').prop('checked', allInGroup === checkedInGroup);
-
-        // Update global select-all status
-        updateGlobalSelectAll();
-    });
-
-    // Function to update global select-all checkbox
-    function updateGlobalSelectAll() {
-        const all = $('input[type="checkbox"][name="modules[]"]').length;
-        const checked = $('input[type="checkbox"][name="modules[]"]:checked').length;
-        $('#select-all').prop('checked', all === checked);
-    }
-});
-</script>
-@endpush
 
 

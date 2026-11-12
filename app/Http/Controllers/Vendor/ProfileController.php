@@ -16,6 +16,17 @@ class ProfileController extends Controller
         return view('vendor-views.profile.index');
     }
 
+    public function bank_view()
+    {
+        $data = Helpers::get_vendor_data();
+        return view('vendor-views.profile.bankView', compact('data'));
+    }
+
+    public function edit()
+    {
+        $data = Helpers::get_vendor_data();
+        return view('vendor-views.profile.edit', compact('data'));
+    }
 
     public function update(Request $request)
     {
@@ -34,10 +45,8 @@ class ProfileController extends Controller
         $seller->l_name = $request->l_name;
         $seller->phone = $request->phone;
         $seller->email = $request->email;
-        if($table == 'vendors' ){
-            $seller->store()->update(['email' =>$request->email]);
-        }
 
+        $seller->store()->update(['email' =>$request->email]);
         if ($request->image) {
             $seller->image = Helpers::update('vendor/', $seller->image, 'png', $request->file('image'));
         }
@@ -61,7 +70,40 @@ class ProfileController extends Controller
         return back();
     }
 
+    public function bank_update(Request $request)
+    {
+        $request->validate([
+            'bank_name' => 'required|max:191',
+            'branch' => 'required|max:191',
+            'holder_name' => 'required|max:191',
+            'account_no' => 'required|max:191',
+        ]);
+        $bank = Helpers::get_vendor_data();
+        $bank->bank_name = $request->bank_name;
+        $bank->branch = $request->branch;
+        $bank->holder_name = $request->holder_name;
+        $bank->account_no = $request->account_no;
+        $bank->save();
+        Toastr::success(translate('messages.bank_info_updated_successfully'));
+        return redirect()->route('vendor.profile.bankView');
+    }
 
+    public function bank_edit()
+    {
+        $data = Helpers::get_vendor_data();
+        return view('vendor-views.profile.bankEdit', compact('data'));
+    }
 
+    public function bank_delete()
+    {
+        $data = Helpers::get_vendor_data();
+        $data->bank_name = null;
+        $data->branch = null;
+        $data->holder_name = null;
+        $data->account_no = null;
+        $data->save();
+        Toastr::success(translate('messages.bank_info_updated_successfully'));
+        return redirect()->route('vendor.profile.bankView');
+    }
 
 }

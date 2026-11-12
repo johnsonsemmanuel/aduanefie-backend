@@ -36,18 +36,7 @@ class WalletBonusRepository implements WalletBonusRepositoryInterface
 
     public function getListWhere(string $searchValue = null, array $filters = [], array $relations = [], int|string $dataLimit = DEFAULT_DATA_LIMIT, int $offset = null): Collection|LengthAwarePaginator
     {
-        return $this->bonus->with($relations)->where($filters)
-
-        ->when($searchValue !== null, function ($query) use ($searchValue) {
-            $key = explode(' ', $searchValue);
-            $query->where(function ($query) use ($key) {
-            foreach ($key as $value) {
-                $query->orWhere('title', 'like', "%{$value}%");
-            }
-        });
-        })
-
-        ->latest('end_date')->paginate($dataLimit);
+        return $this->bonus->with($relations)->where($filters)->latest('end_date')->paginate($dataLimit);
     }
 
     public function update(string $id, array $data): bool|string|object
@@ -74,4 +63,13 @@ class WalletBonusRepository implements WalletBonusRepositoryInterface
         return $this->bonus->withoutGlobalScope('translate')->where($params)->first();
     }
 
+    public function getSearchedList(string $searchValue = null, int|string $dataLimit = DEFAULT_DATA_LIMIT): Collection
+    {
+        $key = explode(' ', $searchValue);
+        return $this->bonus->where(function ($query) use ($key) {
+            foreach ($key as $value) {
+                $query->orWhere('title', 'like', "%{$value}%");
+            }
+        })->limit($dataLimit)->get();
+    }
 }

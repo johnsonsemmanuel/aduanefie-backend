@@ -16,21 +16,3 @@ forms.forEach(function(form) {
         form.submit();
     });
 });
-
-$("#customFileEg1").change(function() {
-    readURL(this);
-    $('#viewer').show(1000)
-});
-
-    $('.location-reload-to-brand, .location-reload-to-category').on('click', function() {
-        let nurl = new URL($(this).data('url'));
-        nurl.searchParams.delete('search');
-        location.href = nurl;
-    });
-
-$('#reset_btn').click(function(){
-    $('#exampleFormControlSelect1').val(null).trigger('change');
-        $('#viewer').attr('src', $(this).data('image'));
-})
-
-

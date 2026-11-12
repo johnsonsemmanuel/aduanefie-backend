@@ -30,18 +30,15 @@
             @endforeach
         </div>
     @else
-        <!-- <div class="empty--data">
+        <div class="empty--data">
             <img src="{{ asset('/public/assets/admin/svg/illustrations/empty-state.svg') }}" alt="public">
             <h5>
                 {{ translate('no_data_found') }}
             </h5>
-        </div> -->
-        <div class="empty--data d-flex flex-column align-items-center justify-content-center h-100 w-100">
-            <img src="{{ asset('/public/assets/admin/img/no-store.png') }}" alt="public">
-            <h5 class="secondary-clr">
-                {{ translate('No stores available') }}
-            </h5>
         </div>
+
     @endif
 
 </div>
+
+<script src="{{ asset('public/assets/admin') }}/js/view-pages/common.js"></script>

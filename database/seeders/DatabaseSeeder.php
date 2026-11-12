@@ -15,7 +15,14 @@ class DatabaseSeeder extends Seeder
     {
         // \App\Models\User::factory(10)->create();
         $this->call([
-            UserSeeder::class
+            UserSeeder::class,
+            AgriTradePositioningSeeder::class,
+            CommodityTaxonomySeeder::class,
+            ExchangeRateSeeder::class,
+            TradeCorridorSeeder::class,
+            CustomsDutySeeder::class,
+            TradeBlocSeeder::class,
+            SampleAgriDataSeeder::class
         ]);
     }
 }

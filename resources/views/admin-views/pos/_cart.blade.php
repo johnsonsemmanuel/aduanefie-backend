@@ -12,7 +12,7 @@
         <?php
             $subtotal = 0;
             $addon_price = 0;
-            $tax = session()->get('tax_amount');
+            $tax = isset($store)? $store->tax: 0;
             $discount = 0;
             $discount_type = 'amount';
             $discount_on_product = 0;
@@ -21,6 +21,10 @@
         @if(session()->has('cart') && count( session()->get('cart')) > 0)
             <?php
                 $cart = session()->get('cart');
+                if(isset($cart['tax']))
+                {
+                    $tax = $cart['tax'];
+                }
                 if(isset($cart['discount']))
                 {
                     $discount = $cart['discount'];
@@ -67,95 +71,18 @@
 </div>
 
 <?php
-    $total = $subtotal + $addon_price;
-
-    if ($discount_type == 'percent' && $discount > 0) {
-        $discount_amount = (($total - $discount_on_product) * $discount) / 100;
-    } else {
-        $discount_amount = $discount;
+    if(session()->get('address') && count(session()->get('address'))>0){
+        $delivery_fee = session()->get('address')['delivery_fee'];
+    }else{
+        $delivery_fee = 0;
     }
-
+    $total = $subtotal+$addon_price;
+    $discount_amount = ($discount_type=='percent' && $discount>0)?((($total-$discount_on_product) * $discount)/100):$discount;
     $total -= ($discount_amount + $discount_on_product);
-
-    $tax_amount = session()->get('tax_amount');
-    $tax_included = session()->get('tax_included');
-//    $tax_included = ($tax_included && $tax_amount > 0) ? 1 : 0;
-
-    $base_delivery_fee = (float) session()->get('address.delivery_fee', 0);
-    $pos_order_type    = (string) (session('order_type') ?? 'delivery');
-
-    $pos_eligible_amount = max(0, $subtotal + $addon_price - $discount_on_product - ($discount_amount ?? 0));
-    $pos_free_delivery   = \App\CentralLogics\DeliveryFeeLogic::effectiveFee(
-        $base_delivery_fee,
-        $store ?? null,
-        $pos_eligible_amount,
-        \App\CentralLogics\DeliveryFeeLogic::resolveCouponCodeFromSession(),
-    );
-    $delivery_fee              = (float) $pos_free_delivery['fee'];
-    $pos_free_delivery_by      = $pos_free_delivery['free_by'];
-    $pos_is_free_delivery      = (bool) $pos_free_delivery['is_free'];
-    $delivery_fee_for_selector = $delivery_fee;
-
-    $pos_module_zone_pivot = ($store && $store->zone_id)
-        ? \App\Models\ModuleZone::query()
-            ->where('module_id', $store->module_id)
-            ->where('zone_id', $store->zone_id)
-            ->first()
-        : null;
-    $pos_saver_enabled = (bool) ($pos_module_zone_pivot->additional_delivery_option_status ?? false);
-    $pos_min_charge    = (float) ($pos_module_zone_pivot->minimum_delivery_charge ?? 0);
-
-    $is_charge_eligible = $pos_saver_enabled
-        && $pos_order_type === 'delivery'
-        && $delivery_fee > 0
-        && ($pos_min_charge <= 0 || $delivery_fee >= $pos_min_charge);
-
-    $deliveryType       = session()->get('delivery_type', '');
-    $deliveryTypeCharge = $is_charge_eligible ? (float) session()->get('delivery_type_charge', 0) : 0;
-    $isExpressDelivery  = $is_charge_eligible && $deliveryType === 'express'        && $deliveryTypeCharge > 0;
-    $isSlightlyDelay    = $is_charge_eligible && $deliveryType === 'slightly_delay' && $deliveryTypeCharge > 0;
-
-    $pos_pro_discount             = (float) session()->get('pos_pro_discount', 0);
-    $pos_pro_benefit_type         = session()->get('pos_pro_benefit_type');
-    $pos_pro_delivery_offer_type  = session()->get('pos_pro_delivery_offer_type');
-    $pos_pro_delivery_percentage  = (float) session()->get('pos_pro_delivery_percentage', 0);
-
-    $pos_pro_delivery_savings = 0.0;
-    if ($pos_pro_benefit_type === 'delivery_fee' && !$pos_is_free_delivery && $delivery_fee > 0) {
-        if ($pos_pro_delivery_offer_type === 'full_free') {
-            $pos_pro_delivery_savings = 0;
-        } elseif ($pos_pro_delivery_offer_type === 'partial_free' && $pos_pro_delivery_percentage > 0 && $pos_pro_delivery_percentage < 100) {
-            $pre_pro = $delivery_fee / (1 - ($pos_pro_delivery_percentage / 100));
-            $pos_pro_delivery_savings = max(0, $pre_pro - $delivery_fee);
-        }
-    }
-
-    $adjustedDeliveryFee = $delivery_fee;
-    if ($isExpressDelivery) {
-        $adjustedDeliveryFee = $delivery_fee + $deliveryTypeCharge;
-    } elseif ($isSlightlyDelay) {
-        $adjustedDeliveryFee = max(0, $delivery_fee - $deliveryTypeCharge);
-    }
-
-    $total -= $pos_pro_discount;
-    $total += $adjustedDeliveryFee;
-
-    $deliveryTypeLabels = [
-        'standard'       => translate('messages.standard'),
-        'express'        => translate('messages.express'),
-        'slightly_delay' => translate('messages.slightly_delay'),
-    ];
-    $deliveryTypeSuffix = ($isExpressDelivery || $isSlightlyDelay)
-        ? ' (' . ($deliveryTypeLabels[$deliveryType] ?? '') . ')'
-        : ($pos_is_free_delivery && $pos_order_type === 'delivery' ? ' (' . translate('messages.Free Delivery') . ')' : '');
+    $tax_included = \App\Models\BusinessSetting::where(['key'=>'tax_included'])->first() ?  \App\Models\BusinessSetting::where(['key'=>'tax_included'])->first()->value : 0;
+    $total_tax_amount= ($tax > 0)?(($total * $tax)/100):0;
+    $total = $total + $delivery_fee;
 ?>
-
-@php
-    $cart_has_address = session()->has('address') && is_array(session('address')) && isset(session('address')['delivery_fee']);
-@endphp
-<input type="hidden" id="cart_delivery_fee" data-value="{{ $delivery_fee_for_selector }}" value="{{ $delivery_fee_for_selector }}">
-<input type="hidden" id="cart_order_type" data-value="{{ $pos_order_type }}" value="{{ $pos_order_type }}">
-<input type="hidden" id="cart_has_address" data-value="{{ $cart_has_address ? 1 : 0 }}" value="{{ $cart_has_address ? 1 : 0 }}">
 <div class="box p-3">
     <dl class="row text-dark">
         @if (Config::get('module.current_module_type') == 'food')
@@ -166,42 +93,33 @@
 
         <dd  class="col-6">{{translate('messages.subtotal')}}
             @if ($tax_included ==  1)
-                ({{ translate('messages.TAX_Included') }})
-                @php($tax_amount=0)
+            ({{ translate('messages.TAX_Included') }})
+            @php($total_tax_amount=0)
             @endif
             :</dd>
         <dd class="col-6 text-right">{{\App\CentralLogics\Helpers::format_currency($subtotal+$addon_price)}}</dd>
+
+
+        {{-- Coupon Discount --}}
+        {{-- @if(true)
+            <dd  class="col-6">{{translate('coupon_discount')}} :</dd>
+            <dd class="col-6 text-right">
+            <span class="delivery--edit-icon text-primary cursor-pointer" data-toggle="modal" data-target="#couponModal">
+                <i class="tio-edit"></i>
+            </span>
+            - {{\App\CentralLogics\Helpers::format_currency(100)}}</dd>
+        @endif --}}
+
         <dd  class="col-6">{{translate('messages.discount')}} :</dd>
         <dd class="col-6 text-right">- {{\App\CentralLogics\Helpers::format_currency(round($discount_on_product,2))}}</dd>
-        @if ($pos_pro_discount > 0)
-            <dd class="col-6">{{ translate('messages.Pro_Discount') }} :</dd>
-            <dd class="col-6 text-right">- {{ \App\CentralLogics\Helpers::format_currency(round($pos_pro_discount, 2)) }}</dd>
-        @endif
-        <dd class="col-6">{{ translate('messages.delivery_fee') }}{{ $deliveryTypeSuffix }}
-            @if ($pos_pro_delivery_savings > 0)
-                @if ($pos_pro_delivery_offer_type === 'full_free')
-                    <i class="tio-info-outined text-info" data-toggle="tooltip"
-                       title="{{ translate('messages.Pro_Customer_free_delivery_applied') }}"></i>
-                @else
-                    <i class="tio-info-outined text-info" data-toggle="tooltip"
-                       title="{{ translate('messages.Pro_Customer_partial_delivery_discount_applied') }} ({{ (float) $pos_pro_delivery_percentage }}%)"></i>
-                @endif
-            @endif
-            :</dd>
+        <dd class="col-6">{{ translate('messages.delivery_fee') }} :</dd>
         <dd class="col-6 text-right" id="delivery_price">
-            {{ \App\CentralLogics\Helpers::format_currency($adjustedDeliveryFee) }}</dd>
-        {{-- @if(isset($store) && $store?->sub_self_delivery)
-            <dd class="col-12">
-                <small class="text-warning">
-                    <i class="tio-info-outined"></i>
-                    {{ translate('This store delivers on its own — the vendor\'s delivery charge applies.') }}
-                </small>
-            </dd>
-        @endif --}}
-        @if ($tax_included !=  1)
-            <dd  class="col-6">{{ translate('messages.tax') }}  : </dd>
-            <dd class="col-6 text-right">
-            {{\App\CentralLogics\Helpers::format_currency(round($tax_amount,2))}}</dd>
+            {{ \App\CentralLogics\Helpers::format_currency($delivery_fee) }}</dd>
+            @if ($tax_included !=  1)
+
+        <dd  class="col-6">{{ translate('messages.tax') }}  : </dd>
+        <dd class="col-6 text-right">
+            {{\App\CentralLogics\Helpers::format_currency(round($total_tax_amount,2))}}</dd>
         @endif
         <dd  class="col-6 pr-0">
             <hr class="my-0">
@@ -211,7 +129,7 @@
         </dd>
         <dt  class="col-6">{{ translate('messages.total') }}  : </dt>
         <dt class="col-6 text-right">
-            {{\App\CentralLogics\Helpers::format_currency(round($total+$tax_amount, 2))}}
+            {{\App\CentralLogics\Helpers::format_currency(round($total+$total_tax_amount, 2))}}
         </dt>
     </dl>
 
@@ -244,13 +162,101 @@
 
         <div class="row button--bottom-fixed g-1 bg-white">
             <div class="col-sm-6">
-                <button type="button" class="btn h-100  btn-outline-danger btn-block empty-Cart" {{ (session()->has('cart') && count( session()->get('cart')) > 0)?'':'disabled' }}>{{ translate('messages.Clear Cart') }} </button>
+                <button type="button" class="btn h-100  btn-outline-danger btn-block empty-Cart">{{ translate('messages.Clear Cart') }} </button>
             </div>
             <div class="col-sm-6">
                 <button type="submit" class="btn  btn--primary place-order-submit btn-block">{{ translate('messages.place_order') }} </button>
             </div>
         </div>
     </form>
+</div>
+
+{{-- Coupon Modal --}}
+<div class="modal fade" id="couponModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content modal-scroll">
+            <div class="modal-header pt-3 pb-0">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+            <div class="modal-body p-4 pt-0">
+                <div class="text-center">
+                    <h3 class="modal-title flex-grow-1 text-center">{{translate('Coupon Discount')}}</h3>
+                    <p>Select from available coupon or input code</p>
+                </div>
+                <div>
+                    <div class="mb-4">
+                        <label class="form-label">Available Coupons</label>
+                        <div class="coupon-slider owl-carousel owl-theme">
+                            <div class="coupon-slider-item">
+                                <button class="coupon-slider-button active" type="button">
+                                    <div class="left">
+                                        <h6>Code : NewUser</h6>
+                                        <small>Use it in 1st order</small>
+                                    </div>
+                                    <div class="right">
+                                        <h6>10%</h6>
+                                        <small>Discount</small>
+                                    </div>
+                                    <i class="tio-checkmark-circle checkmark"></i>
+                                </button>
+                            </div>
+                            <div class="coupon-slider-item">
+                                <button class="coupon-slider-button" type="button">
+                                    <div class="left">
+                                        <h6>Code : NewUser</h6>
+                                        <small>Use it in 1st order</small>
+                                    </div>
+                                    <div class="right">
+                                        <h6>10%</h6>
+                                        <small>Discount</small>
+                                    </div>
+                                    <i class="tio-checkmark-circle checkmark"></i>
+                                </button>
+                            </div>
+                            <div class="coupon-slider-item">
+                                <button class="coupon-slider-button" type="button">
+                                    <div class="left">
+                                        <h6>Code : NewUser</h6>
+                                        <small>Use it in 1st order</small>
+                                    </div>
+                                    <div class="right">
+                                        <h6>10%</h6>
+                                        <small>Discount</small>
+                                    </div>
+                                    <i class="tio-checkmark-circle checkmark"></i>
+                                </button>
+                            </div>
+                            <div class="coupon-slider-item">
+                                <button class="coupon-slider-button" type="button">
+                                    <div class="left">
+                                        <h6>Code : NewUser</h6>
+                                        <small>Use it in 1st order</small>
+                                    </div>
+                                    <div class="right">
+                                        <h6>10%</h6>
+                                        <small>Discount</small>
+                                    </div>
+                                    <i class="tio-checkmark-circle checkmark"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <label class="form-label">Coupon Code</label>
+                    <input type="text" class="form-control">
+                    <div class="btn--container justify-content-end mt-3">
+                        <button class="btn btn--reset" type="button" data-dismiss="modal">
+                            Cancel
+                        </button>
+                        <button class="btn btn-sm btn--primary text-white" type="button">
+                            Apply
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 {{-- Delivery Address Modal --}}
@@ -264,7 +270,7 @@
                 </button>
             </div>
             @if ($store)
-            <div class="modal-body p-xxl-4 p-3">
+            <div class="modal-body">
                 <?php
                     if(session()->has('address')) {
                         $old = session()->get('address');
@@ -281,14 +287,14 @@
                                 for="contact_person_name">{{ translate('messages.contact_person_name') }}<span
                                             class="input-label-secondary text-danger">*</span></label>
                             <input  id="contact_person_name" type="text" class="form-control" name="contact_person_name"
-                                value="{{ $old ? $old['contact_person_name'] : (isset($customer) ? $customer->f_name . ' ' . $customer->l_name : '' )}}" placeholder="{{ translate('messages.Ex :') }} Jhone">
+                                value="{{ $old ? $old['contact_person_name'] : '' }}" placeholder="{{ translate('messages.Ex :') }} Jhone">
                         </div>
                         <div class="col-md-6">
                             <label class="input-label"
                                 for="contact_person_number">{{ translate('Contact Number') }}<span
                                             class="input-label-secondary text-danger">*</span></label>
                             <input id="contact_person_number" type="tel" class="form-control" name="contact_person_number"
-                                value="{{ $old ? $old['contact_person_number'] : (isset($customer) ? $customer->phone : '')  }}"  placeholder="{{ translate('messages.Ex :') }} +3264124565">
+                                value="{{ $old ? $old['contact_person_number'] : '' }}"  placeholder="{{ translate('messages.Ex :') }} +3264124565">
                         </div>
                         <div class="col-md-6">
                             <label class="input-label" for="road">{{ translate('messages.Road') }}</label>
@@ -335,7 +341,7 @@
                                         <strong>{{ $old ? $old['delivery_fee'] : 0 }} {{ \App\CentralLogics\Helpers::currency_symbol() }}</strong>
                                     </div>
                                 </div>
-                                <input id="pac-input" class="controls map-search__option rounded initial-8"
+                                <input id="pac-input" class="controls rounded initial-8"
                                     title="{{ translate('messages.search_your_location_here') }}" type="text"
                                     placeholder="{{ translate('messages.search_here') }}" />
                                 <div class="mb-2 h-200px" id="map"></div>
@@ -343,7 +349,7 @@
                         </div>
                     </div>
                     <div class="col-md-12">
-                        <div class="btn--container justify-content-end mt-20">
+                        <div class="btn--container justify-content-end mt-3">
                             <button class="btn btn-sm btn--primary w-100 delivery-Address-Store" type="button">
                                 {{  translate('Update_Delivery address') }}
                             </button>
@@ -371,6 +377,7 @@
 </div>
 
 @push('script_2')
+    <script src="{{asset('public/assets/admin')}}/js/view-pages/common.js"></script>
     <script>
         $(document).ready(function(){
             $('.coupon-slider').owlCarousel({

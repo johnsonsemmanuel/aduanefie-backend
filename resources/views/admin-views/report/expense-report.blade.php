@@ -22,7 +22,7 @@
 
         <div class="light-card mb-3 d-flex gap-3 rounded align-items-center p-3 fs-12">
             <img width="18" src="{{ asset('public/assets/admin/img/icons/intel.png') }}" alt="">
-            {{ translate('This report will show all the orders in which the admin discount has been used. The admin discount are: Free delivery over, store discount, Coupon discount, Pro customer discount & item discounts(partial according to order commission).') }}
+            {{ translate('This report will show all the orders in which the admin discount has been used. The admin discount are: Free delivery over, store discount, Coupon discount & item discounts(partial according to order commission).') }}
         </div>
 
         <div class="card mb-20">
@@ -36,7 +36,7 @@
                                 title="{{ translate('messages.select_modules') }}">
                                 <option value="" {{ !request('module_id') ? 'selected' : '' }}>
                                     {{ translate('messages.all_modules') }}</option>
-                                @foreach (\App\Models\Module::WithoutAdditionalModules()->where('module_type', '!=', 'parcel')->get(['id', 'module_name']) as $module)
+                                @foreach (\App\Models\Module::notParcel()->get() as $module)
                                     <option value="{{ $module->id }}"
                                         {{ request('module_id') == $module->id ? 'selected' : '' }}>
                                         {{ $module['module_name'] }}
@@ -60,7 +60,7 @@
                                 data-placeholder="{{ translate('messages.select_vendor') }}"
                                 class="js-data-example-ajax form-control set-filter" data-url="{{ url()->full() }}" data-filter="store_id">
                                 @if (isset($store))
-                                    <option value="{{ $store->id }}" data-verified="{{ (int) $store->verified_seller }}" selected>{{ $store->name }}</option>
+                                    <option value="{{ $store->id }}" selected>{{ $store->name }}</option>
                                 @else
                                     <option value="all" selected>{{ translate('messages.all_vendors') }}</option>
                                 @endif
@@ -79,27 +79,22 @@
                         </div>
                         <div class="col-sm-6 col-md-3">
                             <select class="form-control js-select2-custom set-filter" data-url="{{ url()->full() }}" data-filter="type" name="type">
-                                <option value="all" {{ isset($type) && $type == 'all' ? 'selected' : '' }}>{{ translate('messages.All Type') }}</option>
-                                @php
-                                    // Types whose creation paths are reachable for non-parcel orders.
-                                    // Audited from OrderLogic.php (`create_transaction` outside the
-                                    // `if $type == 'parcel'` block) + cashbackToWallet.
-                                    $orderTypes = [
-                                        'CashBack'                 => 'messages.CashBack',
-                                        'coupon_discount'          => 'messages.coupon_discount',
-                                        'discount_on_product'      => 'messages.discount_on_product',
-                                        'extra_discount'           => 'messages.extra_discount',
-                                        'flash_sale_discount'      => 'messages.flash_sale_discount',
-                                        'free_delivery'            => 'messages.free_delivery',
-                                        'pro_discount_on_product'  => 'messages.pro_discount_on_product',
-                                        'pro_free_delivery'        => 'messages.pro_free_delivery',
-                                        'pro_partial_free_delivery'=> 'messages.pro_partial_free_delivery',
-                                        'referral_discount'        => 'messages.referral_discount',
-                                    ];
-                                @endphp
-                                @foreach ($orderTypes as $value => $label)
-                                    <option value="{{ $value }}" {{ ($type ?? '') === $value ? 'selected' : '' }}>{{ translate($label) }}</option>
-                                @endforeach
+                                <option value="all" {{ isset($type) && $type == 'all' ? 'selected' : '' }}>
+                                    {{ translate('messages.All Type') }}</option>
+                                <option value="add_fund_bonus" {{ isset($type) && $type == 'add_fund_bonus' ? 'selected' : '' }}>
+                                    {{ translate('messages.add_fund_bonus') }}</option>
+                                <option value="free_delivery" {{ isset($type) && $type == 'free_delivery' ? 'selected' : '' }}>
+                                    {{ translate('messages.free_delivery') }}</option>
+                                <option value="coupon_discount" {{ isset($type) && $type == 'coupon_discount' ? 'selected' : '' }}>
+                                    {{ translate('messages.coupon_discount') }}</option>
+                                <option value="discount_on_product" {{ isset($type) && $type == 'discount_on_product' ? 'selected' : '' }}>
+                                    {{ translate('messages.discount_on_product') }}</option>
+                                <option value="flash_sale_discount" {{ isset($type) && $type == 'flash_sale_discount' ? 'selected' : '' }}>
+                                    {{ translate('messages.flash_sale_discount') }}</option>
+                                <option value="CashBack" {{ isset($type) && $type == 'CashBack' ? 'selected' : '' }}>
+                                    {{ translate('messages.CashBack') }}</option>
+                                <option value="referral_discount" {{ isset($type) && $type == 'referral_discount' ? 'selected' : '' }}>
+                                    {{ translate('messages.Referral_Discount') }}</option>
                             </select>
                         </div>
                         <div class="col-sm-6 col-md-3">
@@ -169,7 +164,7 @@
                         <!-- End Search -->
                     </form>
 
-                    @if(request()->input('search'))
+                    @if(request()->get('search'))
                         <button type="reset" class="btn btn--primary ml-2 location-reload-to-base" data-url="{{url()->full()}}">{{translate('messages.reset')}}</button>
                     @endif
                     <!-- Static Export Button -->
@@ -198,7 +193,7 @@
                                 <img class="avatar avatar-xss avatar-4by3 mr-2"
                                     src="{{ asset('public/assets/admin') }}/svg/components/placeholder-csv-format.svg"
                                     alt="Image Description">
-                                {{ translate('messages.csv') }}
+                                .{{ translate('messages.csv') }}
                             </a>
                         </div>
                     </div>
@@ -215,6 +210,9 @@
                             <tr>
                                 <th class="border-0">{{translate('sl')}}</th>
                                 <th class="border-0">{{translate('messages.order_id')}}</th>
+                                @if (addon_published_status('Rental'))
+                                <th class="border-0">{{translate('trip_id')}}</th>
+                                @endif
                                 <th class="border-0">{{translate('Date & Time')}}</th>
                                 <th class="border-0">{{ translate('Expense Type') }}</th>
                                 <th class="text-center" >{{ translate('Customer Name') }}</th>
@@ -231,6 +229,7 @@
                                 <td scope="row">{{$key+$expense->firstItem()}}</td>
                                 <td>
                                     @if ($exp->order)
+
                                     <div>
                                         <a class="text-dark" href="{{ route('admin.order.details', ['id' => $exp->order->id,'module_id'=>$exp->order->module_id]) }}">{{ $exp['order_id'] }}</a>
                                     </div>
@@ -238,18 +237,30 @@
                                     <label class="badge badge-primary">{{translate('messages.Other_Expenses')}}</label>
                                     @endif
                                 </td>
+                                @if (addon_published_status('Rental'))
+                                <td>
+                                    @if ($exp->trip)
+
+                                    <div>
+                                        <a class="text-dark" href="{{ route('admin.rental.trip.details', $exp->trip->id) }}">{{ $exp['trip_id'] }}</a>
+                                    </div>
+                                    @else
+                                    <label class="badge badge-primary">{{translate('messages.Other_Expenses')}}</label>
+                                    @endif
+                                </td>
+                                @endif
                                 <td>
                                     {{date('Y-m-d '.config('timeformat'),strtotime($exp->created_at))}}
                                 </td>
                                 <td><label>{{ucwords(translate("messages.{$exp['type']}"))}}</label></td>
                                 <td class="text-center">
-                                    @if($exp->order?->is_guest)
-                                        @php($customer_details = json_decode($exp->order['delivery_address'],true))
-                                        <strong>{{$customer_details['contact_person_name']}}</strong>
-                                    @elseif($exp->order?->customer)
-                                        {{$exp->order?->customer['f_name'].' '.$exp->order?->customer['l_name']}}
+                                    @if (isset($exp->order->customer))
+                                    {{ $exp->order->customer->f_name.' '.$exp->order->customer->l_name }}
+                                    @elseif ($exp['type'] == 'add_fund_bonus')
+                                    {{ $exp->user->f_name.' '.$exp->user->l_name }}
                                     @else
-                                        <label class="badge badge-danger">{{translate('messages.invalid_customer_data')}}</label>
+                                    <label class="badge badge-danger">{{translate('messages.invalid_customer_data')}}</label>
+
                                     @endif
                                 </td>
                                 <td class="text-right pr-xl-5">
@@ -300,7 +311,7 @@
         $(document).on('ready', function() {
             $('.js-data-example-ajax').select2({
                 ajax: {
-                    url: '{{ route('admin.store.get-stores') }}',
+                    url: '{{ url('/') }}/admin/store/get-stores',
                     data: function(params) {
                         return {
                             q: params.term, // search term

@@ -1,0 +1,36 @@
+# Exclude Composer vendor (installed during Docker build) & local bloat
+/vendor/
+/node_modules/
+/public/hot
+/public/storage
+/oldstuff/
+/installation/
+/__MACOSX/
+/*.zip
+/Admin panel update*/
+/Admin panel new install*/
+/.git/
+/.github/
+/.env
+/.env.*
+/storage/logs/*
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/tmp/*
+
+# Explicitly keep frontend/admin vendor assets and MVC vendor views/routes
+!public/assets/admin/vendor/
+!public/assets/admin/vendor/**
+!public/assets/admin/js/view-pages/vendor/
+!public/assets/admin/js/view-pages/vendor/**
+!resources/views/vendor/
+!resources/views/vendor/**
+!resources/views/admin-views/vendor/
+!resources/views/admin-views/vendor/**
+!resources/views/layouts/vendor/
+!resources/views/layouts/vendor/**
+!routes/vendor/
+!routes/vendor/**
+!routes/rest_api/v1/vendor/
+!routes/rest_api/v1/vendor/**

@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use App\CentralLogics\Helpers;
-use App\Traits\DemoMaskable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 /**
  * Class Admin
@@ -31,7 +32,7 @@ use Illuminate\Support\Str;
 
 class Admin extends Authenticatable
 {
-    use Notifiable,DemoMaskable;
+    use Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -46,7 +47,6 @@ class Admin extends Authenticatable
         'image',
         'password',
         'remember_token',
-        'login_remember_token',
         'role_id',
         'zone_id',
         'is_logged_in',
@@ -59,8 +59,40 @@ class Admin extends Authenticatable
      */
     protected $casts = [
         'is_logged_in' => 'boolean',
+        'two_factor_secret' => 'encrypted',
+        'two_factor_recovery_codes' => 'encrypted:array',
+        'two_factor_confirmed_at' => 'datetime',
+        'two_factor_last_step' => 'integer',
     ];
+
+    /**
+     * Never let the second-factor material leave the server through a JSON
+     * serialisation of the model. recovery codes are stored hashed, but the
+     * TOTP secret is reversible and must not appear in an API payload.
+     */
+    protected $hidden = [
+        'two_factor_secret',
+        'two_factor_recovery_codes',
+        'two_factor_last_step',
+    ];
+
     protected $appends = ['image_full_url'];
+
+    public function hasConfirmedTwoFactor(): bool
+    {
+        if ($this->two_factor_confirmed_at === null) {
+            return false;
+        }
+
+        try {
+            return !empty($this->two_factor_secret);
+        } catch (\Illuminate\Contracts\Encryption\DecryptException $exception) {
+            // APP_KEY rotated (or the column was tampered with). Treat it as
+            // "not enrolled" so the next login re-enrols instead of 500ing on
+            // every request. This fails closed to enrolment, not to access.
+            return false;
+        }
+    }
 
     /**
      * @return BelongsTo
@@ -77,6 +109,42 @@ class Admin extends Authenticatable
     {
         return $this->belongsTo(Zone::class,'zone_id');
     }
+
+    /**
+     * Stores this admin owns as a remote marketer.
+     */
+    public function marketerStores(): HasMany
+    {
+        return $this->hasMany(Store::class, 'marketer_id');
+    }
+
+    public function marketerCommissions(): HasMany
+    {
+        return $this->hasMany(MarketerCommission::class, 'marketer_id');
+    }
+
+    public function marketerPayouts(): HasMany
+    {
+        return $this->hasMany(MarketerPayout::class, 'marketer_id');
+    }
+
+    public function isMarketer(): bool
+    {
+        return (int) $this->role_id === (int) config('marketer.role_id', 5);
+    }
+
+    /**
+     * Share of the platform commission this marketer earns, as a percentage.
+     * A per-marketer value wins over the configured default.
+     */
+    public function marketerCommissionRate(): float
+    {
+        if ($this->marketer_commission_rate !== null && $this->marketer_commission_rate !== '') {
+            return (float) $this->marketer_commission_rate;
+        }
+
+        return (float) config('marketer.default_rate', 20);
+    }
     public function getImageFullUrlAttribute(){
         $value = $this->image;
         if (count($this->storage) > 0) {
@@ -89,25 +157,6 @@ class Admin extends Authenticatable
 
         return Helpers::get_full_url('admin',$value,'public');
     }
-    public function getFullNameAttribute(){
-        return Str::limit($this->f_name.' '.$this->l_name, 15, '...') ;
-    }
-    public function getMaskedEmailAttribute(){
-
-        if ($this->email) {
-            [$name, $domain] = explode('@', $this->email);
-            $maskedName = substr($name, 0, 2) . str_repeat('*', max(0, strlen($name) - 2));
-            $domainParts = explode('.', $domain);
-            $maskedDomain = str_repeat('*', strlen($domainParts[0])) .  end($domainParts);
-            $maskedEmail = $maskedName . '@' . $maskedDomain;
-        }
-        return $maskedEmail ?? $this->email;
-    }
-
-    // public function account()
-    // {
-    //     return $this->hasOne(UserAccount::class, 'user_id', 'id')->where('user_type', 'admin');
-    // }
 
     /**
      * @param $query
@@ -115,7 +164,7 @@ class Admin extends Authenticatable
      */
     public function scopeZone($query): mixed
     {
-        if(auth('admin')?->user() && auth('admin')->user()->zone_id)
+        if(isset(auth('admin')->user()->zone_id))
         {
             return $query->where('zone_id', auth('admin')->user()->zone_id);
         }

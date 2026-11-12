@@ -2,14 +2,9 @@
 
 @section('title', translate('messages.settings'))
 
-@push('css_or_js')
-<link rel="stylesheet" href="{{asset('public/assets/admin/css/custom.css')}}">
-
-@endpush
 
 
 @section('content')
- 
     <div class="content container-fluid config-inline-remove-class">
         <!-- Page Heading -->
         <div class="page-header">
@@ -27,12 +22,12 @@
             <div class="card-body py-3">
                 <div class="d-flex flex-row justify-content-between align-items-center">
                     <h4 class="card-title align-items-center d-flex">
-                        <img src="{{ asset('public/assets/admin/img/store.png') }}" class="w--20 mr-1" alt="">
-                        <span>{{ translate('messages.store_temporarily_closed_title') }}</span>
+                        <img src="{{asset('public/assets/admin/img/store.png')}}" class="w--20 mr-1" alt="">
+                        <span>{{translate('messages.store_temporarily_closed_title')}}</span>
                     </h4>
                     <label class="switch toggle-switch-lg m-0" for="restaurant-open-status">
-                        <input type="checkbox" id="restaurant-open-status"
-                            class="toggle-switch-input restaurant-open-status" {{ $store->active ? '' : 'checked' }}>
+                        <input type="checkbox" id="restaurant-open-status" class="toggle-switch-input restaurant-open-status"
+                            {{$store->active ?'':'checked'}}>
                         <span class="toggle-switch-label">
                             <span class="toggle-switch-indicator"></span>
                         </span>
@@ -40,6 +35,43 @@
                 </div>
             </div>
         </div>
+
+
+
+
+        {{-- <div class="card mb-3">
+            <div class="card-body py-3">
+                <div class="row">
+                    <div class="col-lg-6">
+                        <div>
+                            <p>{{ translate('To view a list of all active zones on your') }} <a target="_blank"
+                                    href="{{ route('home') }}"
+                                    class="text-underline text--info">{{ translate('Admin Landing') }}</a>
+                                {{ translate('Page, Enable the') }} <span
+                                    class="font-semibold">'{{ translate('Available Zones') }}'</span>
+                                {{ translate('feature') }}</p>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="">
+                            <label  class="toggle-switch toggle-switch-sm d-flex justify-content-between border border-secondary rounded px-4 form-control"
+                                for="restaurant-open-status">
+                                <span class="pr-2">{{ translate('messages.Provider_temporarily_closed_title') }}</span>
+                                <label class="switch toggle-switch-lg m-0">
+                                    <input id="restaurant-open-status" type="checkbox" {{ $store->active == 1? 'checked  oo' : 'off' }}
+                                        class="toggle-switch-input restaurant-open-status"
+                                        >
+                                    <span class="toggle-switch-label">
+                                        <span class="toggle-switch-indicator"></span>
+                                    </span>
+                                </label>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div> --}}
+
 
 
         <div class="card mb-3">
@@ -212,28 +244,38 @@
                             </div>
                         @endif
                         @if (config('module.' . $store->module->module_type)['halal'])
-                            <div class="col-xl-4 col-lg-4 col-md-6 col-sm-6 col-12">
+                            <div class="col-xl-4 col-md-4 col-sm-6">
                                 <div class="">
                                     <label
-                                        class="toggle-switch toggle-switch-sm d-flex justify-content-between border border-secondary rounded px-4 form-control"
+                                        class="toggle-switch toggle-switch-sm d-flex justify-content-between border  rounded px-3 form-control"
                                         for="halal_tag_status">
-                                        <span class="pr-2 text-capitalize">{{ translate('messages.halal_tag_status') }}
-
+                                        <span class="pr-2 d-flex">
+                                            <span class="line--limit-1">
+                                                {{ translate('messages.halal_tag_status') }}
+                                            </span>
                                             <span data-toggle="tooltip" data-placement="right"
-                                                data-original-title="{{ translate('If_enabled,_customers_can_see_halal_tag_on_product') }}"
-                                                class="input-label-secondary"><img
-                                                    src="{{ asset('public/assets/admin/img/info-circle.svg') }}"
-                                                    alt="i"></span>
-
+                                                data-original-title='{{ translate('If_enabled,_customers_can_see_halal_tag_on_product') }}'
+                                                class="input-label-secondary">
+                                                <img src="{{ asset('public/assets/admin/img/info-circle.svg') }}"
+                                                    alt="i">
+                                            </span>
                                         </span>
-                                        <input type="checkbox" class="toggle-switch-input redirect-url"
-                                            data-url="{{ route('vendor.business-settings.toggle-settings', [$store->id, $store->storeConfig?->halal_tag_status ? 0 : 1, 'halal_tag_status']) }}"
-                                            id="halal_tag_status"
-                                            {{ $store->storeConfig?->halal_tag_status ? 'checked' : '' }}>
+                                        <input type="checkbox" data-id="halal_tag_status" data-type="status"
+                                            data-image-on="{{ asset('/public/assets/admin/img/modal/schedule-on.png') }}"
+                                            data-image-off="{{ asset('/public/assets/admin/img/modal/schedule-off.png') }}"
+                                            data-title-on="{{ translate('Want_to_enable_halal_tag_status_for_this_restaurant?') }}"
+                                            data-title-off="{{ translate('Want_to_disable_halal_tag_status_for_this_restaurant?') }}"
+                                            data-text-on="<p>{{ translate('If_enabled,_customers_can_see_halal_tag_on_product') }}"
+                                            data-text-off="<p>{{ translate('If_disabled,_customers_can_not_see_halal_tag_on_product.') }}</p>"
+                                            class="toggle-switch-input dynamic-checkbox" id="halal_tag_status"
+                                            {{ $store->storeConfig?->halal_tag_status == 1 ? 'checked' : '' }}>
                                         <span class="toggle-switch-label">
                                             <span class="toggle-switch-indicator"></span>
                                         </span>
                                     </label>
+                                    <form action="{{ route('vendor.business-settings.toggle-settings', [$store->id, $store->storeConfig?->halal_tag_status ? 0 : 1, 'halal_tag_status']) }}"
+                                        method="get" id="halal_tag_status_form">
+                                    </form>
                                 </div>
                             </div>
                         @endif
@@ -264,10 +306,10 @@
                                     class="input-label-secondary" data-toggle="tooltip" data-placement="right"
                                     data-original-title="{{ translate('Specify_the_minimum_order_amount_required_for_customers_when_ordering_from_this_store.') }}"><img
                                         src="{{ asset('/public/assets/admin/img/info-circle.svg') }}"
-                                        alt="{{ translate('messages.self_delivery_hint') }}"></span> <span class="text-danger">*</span></label>
-                            <input type="number" id="minimum_order" name="minimum_order" step="0.01" min="1"
-                                max="999999999" class="form-control" placeholder="100" required
-                                value="{{ $store->minimum_order > 0 ? $store->minimum_order : 0 }}">
+                                        alt="{{ translate('messages.self_delivery_hint') }}"></span></label>
+                            <input type="number" id="minimum_order" name="minimum_order" step="0.01" min="0"
+                                max="100000" class="form-control" placeholder="100"
+                                value="{{ $store->minimum_order > 0 ? $store->minimum_order : '' }}">
                         </div>
                         @if (config('module.' . $store->module->module_type)['order_place_to_schedule_interval'])
                             <div class=" col-md-4">
@@ -288,7 +330,7 @@
                                     class="input-label-secondary" data-toggle="tooltip" data-placement="right"
                                     data-original-title="{{ translate('Set_the_total_time_to_deliver_products.') }}"><img
                                         src="{{ asset('/public/assets/admin/img/info-circle.svg') }}"
-                                        alt="{{ translate('Set_the_total_time_to_deliver_products.') }}"></span> <span class="text-danger">*</span></label>
+                                        alt="{{ translate('Set_the_total_time_to_deliver_products.') }}"></span></label>
                             <div class="input-group">
                                 <input type="number" id="minimum_delivery_time" name="minimum_delivery_time"
                                     class="form-control" placeholder="Min: 10"
@@ -331,7 +373,7 @@
                                         for="per_km_delivery_charge">{{ translate('messages.delivery_charge_per_km') }}
                                         ({{ \App\CentralLogics\Helpers::currency_symbol() }})</label>
                                     <input type="number" id="per_km_delivery_charge" name="per_km_delivery_charge"
-                                        step="0.01" min="0" max="999999999" class="form-control"
+                                        step="0.01" min="0" max="100000" class="form-control"
                                         placeholder="100" value="{{ $store->per_km_shipping_charge ?? '0' }}">
                                 </div>
                             </div>
@@ -349,6 +391,25 @@
                                     <input type="number" id="maximum_shipping_charge" name="maximum_shipping_charge"
                                         step="0.01" min="0" max="999999999" class="form-control"
                                         placeholder="10000" value="{{ $store->maximum_shipping_charge ?? '' }}">
+                                </div>
+                            </div>
+                        @endif
+
+                        @if ($store->module->module_type != 'food')
+                            <div class="col-sm-4 col-12">
+                                <div class="">
+                                    <label class="input-label text-capitalize"
+                                        for="minimum_stock_for_warning">{{ translate('messages.Minimum_stock_for_warning') }}
+                                        <span data-toggle="tooltip" data-placement="right"
+                                            data-original-title="{{ translate('When_the_stock_of_a_product_reaches_its_minimum_value_that_you_have_set,_you_will_receive_a_warning_to_update_the_stock._Additionally,_these_products_will_appear_in_the_Admin’s_Low_Stock_list.') }}"
+                                            class="input-label-secondary"><img
+                                                src="{{ asset('/public/assets/admin/img/info-circle.svg') }}"
+                                                alt="{{ translate('messages.Minimum_stock_for_warning') }}"></span>
+                                    </label>
+                                    <input type="number" id="minimum_stock_for_warning" name="minimum_stock_for_warning"
+                                        min="0" max="999999999" class="form-control"
+                                        placeholder="{{ translate('messages.Ex: 5') }}"
+                                        value="{{ $store?->storeConfig?->minimum_stock_for_warning ?? '' }}">
                                 </div>
                             </div>
                         @endif
@@ -420,117 +481,7 @@
                 </form>
             </div>
         </div>
-        @if ($store->module->module_type != 'food')
-            <div class="card mb-3">
-                <div class="card-header">
-                    <h5 class="card-title">
-                        <span class="card-header-icon">
-                            <i class="tio-apps"></i>
-                        </span>
-                        <span>{{ translate('messages.Stock_Setup') }}</span>
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <form action="{{ route('vendor.business-settings.update-stock-setup', [$store['id']]) }}" method="post">
-                        @csrf
-                        <div class="row align-items-end g-3">
-                            <div class="col-md-4">
-                                <div class="">
-                                    <label class="toggle-switch toggle-switch-sm d-flex justify-content-between border border-secondary rounded px-4 form-control"
-                                        for="show_low_stock_count">
-                                        <span class="pr-2">{{ translate('messages.Show_Low_Stock_Count') }}
-                                            <span class="form-label-secondary" data-toggle="tooltip" data-placement="right"
-                                                data-original-title="{{ translate('messages.If_enabled_low_stock_count_and_warning_products_will_be_visible_to_customer.') }}"><img
-                                                    src="{{ asset('/public/assets/admin/img/info-circle.svg') }}"
-                                                    alt="{{ translate('messages.Show_Low_Stock_Count') }}"></span>
-                                        </span>
-                                        <input type="checkbox" class="toggle-switch-input" name="show_low_stock_count"
-                                            id="show_low_stock_count" value="1"
-                                            {{ ($store?->storeConfig?->show_low_stock_count == 1) ? 'checked' : '' }}>
-                                        <span class="toggle-switch-label">
-                                            <span class="toggle-switch-indicator"></span>
-                                        </span>
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="input-label text-capitalize"
-                                    for="minimum_stock_for_warning_stock_card">{{ translate('messages.Minimum_stock_for_warning') }}
-                                    <span data-toggle="tooltip" data-placement="right"
-                                        data-original-title="{{ translate('When_the_stock_of_a_product_reaches_its_minimum_value_that_you_have_set,_you_will_receive_a_warning_to_update_the_stock._Additionally,_these_products_will_appear_in_the_Admin’s_Low_Stock_list.') }}"
-                                        class="input-label-secondary"><img
-                                            src="{{ asset('/public/assets/admin/img/info-circle.svg') }}"
-                                            alt="{{ translate('messages.Minimum_stock_for_warning') }}"></span>
-                                </label>
-                                <input type="number" id="minimum_stock_for_warning_stock_card" name="minimum_stock_for_warning"
-                                    min="0" max="999999999" class="form-control"
-                                    placeholder="{{ translate('messages.Ex: 5') }}"
-                                    value="{{ $store?->storeConfig?->minimum_stock_for_warning ?? '' }}">
-                            </div>
-                            <div class="col-12">
-                                <div class="btn--container mt-3 justify-content-end">
-                                    <button type="reset" class="btn btn--reset">{{ translate('messages.reset') }}</button>
-                                    <button type="submit" class="btn btn--primary">{{ translate('messages.update') }}</button>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        @endif
-        @if(addon_published_status('Builder') && $admin_website_builder_status == 1)
-
-            <div class="card mt-3" id="admin_website_builder_section">
-                <div class="card-body">
-                    <div class="mb-20">
-                        <div class="row g-1 align-items-center">
-                            <div class="col-xxl-9 col-lg-8 col-md-7 col-sm-6">
-                                <div>
-                                    <h4 class="mb-1">
-                                        {{ translate('Vendor Website Builder') }}
-                                    </h4>
-                                    <p class="mb-0 fs-12">
-                                        {{ translate('Enable this option to allow vendors to set up and manage their own website.') }}
-                                    </p>
-                                </div>
-                            </div>
-                            <div class="col-xxl-3 col-lg-4 col-md-5 col-sm-6">
-                                <div class="">
-                                    <div class="form-group mb-0">
-                                        <label
-                                            class="toggle-switch h--45px toggle-switch-sm d-flex justify-content-between border rounded px-3 py-0 form-control">
-                                            <span class="pr-1 d-flex align-items-center switch--label">
-                                                <span class="line--limit-1">
-                                                    {{translate('Status') }}
-                                                </span>
-                                            </span>
-                                            <input type="checkbox"
-                                                data-id="website_builder_status"
-                                                data-type="toggle"
-                                                data-image-on="{{ asset('/public/assets/admin/img/modal/store-reg-on.png') }}"
-                                                data-image-off="{{ asset('/public/assets/admin/img/modal/store-reg-off.png') }}"
-                                                data-title-on="<strong>{{translate('Are you sure to enable vendor Website setup?')}}</strong>"
-                                                data-title-off="<strong>{{translate('Are you sure to disable vendor Website setup?')}}</strong>"
-                                                data-text-on="<p>{{ translate('If enabled, vendors will have the freedom to create, edit, and manage their own websites independently.') }}</p>"
-                                                data-text-off="<p>{{ translate('If disabled, vendors will not be able to create or manage their own websites.') }}</p>"
-                                                class="status toggle-switch-input dynamic-checkbox"
-                                                value="1"
-                                                name="website_builder_status" id="website_builder_status"
-                                                {{ $store->storeConfig?->website_builder_status == 1?'checked':'' }}>
-                                            <span class="toggle-switch-label text">
-                                                <span class="toggle-switch-indicator"></span>
-                                            </span>
-                                                </label>
-                                                <form action="{{route('vendor.business-settings.website-builder-status',[$store->id,$store->storeConfig?->website_builder_status?0:1])}}"  method="get"  id="website_builder_status_form"></form>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-            @endif
-        <div class="card mb-3 mt-3">
+        <div class="card mb-3">
             <div class="card-header">
                 <h5 class="card-title">
                     <span class="card-header-icon">
@@ -546,7 +497,139 @@
                 <form action="{{ route('vendor.business-settings.update-meta-data', [$store['id']]) }}" method="post"
                     enctype="multipart/form-data" class="col-12">
                     @csrf
-                    @include('admin-views.business-settings.landing-page-settings.partial._meta_data', ['submit' => true])
+                    <div class="row g-2">
+                        <div class="col-lg-6">
+                            <div class="card shadow--card-2">
+                                <div class="card-body">
+                                    @if ($language)
+                                        <ul class="nav nav-tabs mb-4">
+                                            <li class="nav-item">
+                                                <a class="nav-link lang_link active" href="#"
+                                                    id="default-link">{{ translate('Default') }}</a>
+                                            </li>
+                                            @foreach (json_decode($language) as $lang)
+                                                <li class="nav-item">
+                                                    <a class="nav-link lang_link" href="#"
+                                                        id="{{ $lang }}-link">{{ \App\CentralLogics\Helpers::get_language_name($lang) . '(' . strtoupper($lang) . ')' }}</a>
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    @endif
+                                    @if ($language)
+                                        <div class="lang_form" id="default-form">
+                                            <div class=" ">
+                                                <label class="input-label"
+                                                    for="default_title">{{ translate('messages.meta_title') }}
+                                                    ({{ translate('messages.Default') }})
+                                                </label>
+                                                <input type="text" name="meta_title[]" id="default_title"
+                                                    class="form-control"
+                                                    placeholder="{{ translate('messages.meta_title') }}"
+                                                    value="{{ $store->getRawOriginal('meta_title') }}">
+                                            </div>
+                                            <input type="hidden" name="lang[]" value="default">
+                                            <div class="">
+                                                <label class="input-label"
+                                                    for="meta_description">{{ translate('messages.meta_description') }}
+                                                    ({{ translate('messages.default') }})</label>
+                                                <textarea type="text" id="meta_description" name="meta_description[]"
+                                                    placeholder="{{ translate('messages.meta_description') }}" class="form-control min-h-90px ckeditor">{{ $store->getRawOriginal('meta_description') }}</textarea>
+                                            </div>
+                                        </div>
+                                        @foreach (json_decode($language) as $lang)
+                                            <?php
+                                            if (count($store['translations'])) {
+                                                $translate = [];
+                                                foreach ($store['translations'] as $t) {
+                                                    if ($t->locale == $lang && $t->key == 'meta_title') {
+                                                        $translate[$lang]['meta_title'] = $t->value;
+                                                    }
+                                                    if ($t->locale == $lang && $t->key == 'meta_description') {
+                                                        $translate[$lang]['meta_description'] = $t->value;
+                                                    }
+                                                }
+                                            }
+                                            ?>
+                                            <div class="d-none lang_form" id="{{ $lang }}-form">
+                                                <div class=" ">
+                                                    <label class="input-label"
+                                                        for="{{ $lang }}_title">{{ translate('messages.meta_title') }}
+                                                        ({{ strtoupper($lang) }})
+                                                    </label>
+                                                    <input type="text" name="meta_title[]"
+                                                        id="{{ $lang }}_title" class="form-control"
+                                                        value="{{ $translate[$lang]['meta_title'] ?? '' }}"
+                                                        placeholder="{{ translate('messages.meta_title') }}">
+                                                </div>
+                                                <input type="hidden" name="lang[]" value="{{ $lang }}">
+                                                <div class="">
+                                                    <label class="input-label"
+                                                        for="meta_description{{ $lang }}">{{ translate('messages.meta_description') }}
+                                                        ({{ strtoupper($lang) }})</label>
+                                                    <textarea id="meta_description{{ $lang }}" type="text" name="meta_description[]"
+                                                        placeholder="{{ translate('messages.meta_description') }}" class="form-control min-h-90px ckeditor">{{ $translate[$lang]['meta_description'] ?? '' }}</textarea>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    @else
+                                        <div id="default-form">
+                                            <div class=" ">
+                                                <label class="input-label"
+                                                    for="meta_title">{{ translate('messages.meta_title') }}
+                                                    ({{ translate('messages.default') }})</label>
+                                                <input type="text" id="meta_title" name="meta_title[]"
+                                                    class="form-control"
+                                                    placeholder="{{ translate('messages.meta_title') }}">
+                                            </div>
+                                            <input type="hidden" name="lang[]" value="default">
+                                            <div class="">
+                                                <label class="input-label"
+                                                    for="meta_description">{{ translate('messages.meta_description') }}
+                                                </label>
+                                                <textarea type="text" id="meta_description" name="meta_description[]"
+                                                    placeholder="{{ translate('messages.meta_description') }}" class="form-control min-h-90px ckeditor"></textarea>
+                                            </div>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="card shadow--card-2">
+                                <div class="card-header">
+                                    <h5 class="card-title">
+                                        <span class="card-header-icon mr-1"><i class="tio-dashboard"></i></span>
+                                        <span>{{ translate('store_meta_image') }}</span>
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex flex-wrap flex-sm-nowrap __gap-12px">
+                                        <label class="__custom-upload-img mr-lg-5">
+                                            <label class="form-label">
+                                                {{ translate('meta_image') }} <span
+                                                    class="text--primary">({{ translate('1:1') }})</span>
+                                            </label>
+                                            <div class="text-center">
+                                                <img class="img--110 min-height-170px min-width-170px onerror-image"
+                                                    id="viewer"
+                                                    data-onerror-image="{{ asset('public/assets/admin/img/upload.png') }}"
+                                                    src="{{ $store->meta_image_full_url }}"
+                                                    alt="{{ translate('meta_image') }}" />
+                                            </div>
+                                            <input type="file" name="meta_image" id="customFileEg1"
+                                                class="custom-file-input"
+                                                accept=".jpg, .png, .jpeg, .gif, .bmp, .tif, .tiff|image/*">
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="justify-content-end btn--container">
+                                <button type="submit" class="btn btn--primary">{{ translate('save_changes') }}</button>
+                            </div>
+                        </div>
+                    </div>
                 </form>
             </div>
         </div>
@@ -572,8 +655,7 @@
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="exampleModalLabel">{{ translate('messages.Create Schedule For ') }}
-                        </h5>
+                        <h5 class="modal-title" id="exampleModalLabel">{{ translate('messages.Create Schedule For ') }}</h5>
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
@@ -585,8 +667,7 @@
                             <div class=" ">
                                 <label for="recipient-name"
                                     class="col-form-label">{{ translate('messages.Start time') }}:</label>
-                                <input type="time" id="recipient-name" class="form-control" name="start_time"
-                                    required>
+                                <input type="time" id="recipient-name" class="form-control" name="start_time" required>
                             </div>
                             <div class=" ">
                                 <label for="message-text"
@@ -595,8 +676,7 @@
                             </div>
                             <div class="btn--container mt-4 justify-content-end">
                                 <button type="reset" class="btn btn--reset">{{ translate('messages.reset') }}</button>
-                                <button type="submit"
-                                    class="btn btn--primary">{{ translate('messages.Submit') }}</button>
+                                <button type="submit" class="btn btn--primary">{{ translate('messages.Submit') }}</button>
                             </div>
                         </form>
                     </div>
@@ -610,9 +690,8 @@
 @endsection
 
 @push('script_2')
-
     <script>
-        "use strict";
+                "use strict";
 
         $(document).on('click', '.restaurant-open-status', function(event) {
 
@@ -728,10 +807,6 @@
                 } else {
                     $('#gst').attr('readonly', true);
                 }
-            });
-
-            $("#show_low_stock_count").on('change', function() {
-                // Low stock count visibility is separate from warning threshold.
             });
         });
 

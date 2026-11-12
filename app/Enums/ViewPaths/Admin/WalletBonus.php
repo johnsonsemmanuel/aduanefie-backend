@@ -29,5 +29,9 @@ enum WalletBonus
         VIEW => ''
     ];
 
+    const SEARCH = [
+        URI => 'search',
+        VIEW => 'admin-views.wallet-bonus.partials._table'
+    ];
 
 }

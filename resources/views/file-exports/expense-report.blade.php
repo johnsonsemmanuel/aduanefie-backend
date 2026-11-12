@@ -75,40 +75,13 @@
                     {{date('Y-m-d '.config('timeformat'),strtotime($exp->created_at))}}
                 </td>
                 <td>{{translate("messages.{$exp['type']}")}}</td>
-                <td class="text-center">
-                    @if ($exp->order)
-
-                    @if($exp->order?->is_guest)
-                    @php($customer_details = json_decode($exp->order['delivery_address'],true))
-                    <strong>{{$customer_details['contact_person_name']}}</strong>
-
-                    @elseif($exp->order?->customer)
-
-                    {{$exp->order?->customer['f_name'].' '.$exp->order?->customer['l_name']}}
-                    @else
-                        <label
-                            class="badge badge-danger">{{translate('messages.invalid_customer_data')}}</label>
-                    @endif
-
-                    @elseif($exp->trip)
-                    @if ($exp?->trip?->customer)
-
-                        {{ $exp?->trip?->customer?->fullName }}
-
-                        @elseif($exp?->trip?->user_info['contact_person_name'])
-                            <div class="font-medium">
-                                {{$exp?->trip?->user_info['contact_person_name'] }}
-                            </div>
-                        @else
-                            {{ translate('messages.Guest_user') }}
-                        @endif
-
-
+                <td>
+                    @if (isset($exp->order->customer))
+                    {{ $exp->order->customer->f_name.' '.$exp->order->customer->l_name }}
                     @elseif ($exp['type'] == 'add_fund_bonus')
                     {{ $exp->user->f_name.' '.$exp->user->l_name }}
                     @else
-                    <label class="badge badge-danger">{{translate('messages.invalid_customer_data')}}</label>
-
+                    {{translate('messages.invalid_customer')}}
                     @endif
                 </td>
                 <td>{{\App\CentralLogics\Helpers::format_currency($exp['amount'])}}</td>

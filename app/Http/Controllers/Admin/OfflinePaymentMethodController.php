@@ -20,20 +20,20 @@ class OfflinePaymentMethodController extends Controller
 
     public function index(Request $request)
     {
-        $status = $request->input('status');
-        $search = $request->input('search');
-
-        $methods = OfflinePaymentMethod::when($status == 'active', function ($query) {
+        if (request()->has('status') && (request('status') == 'active' || request('status') == 'inactive'))
+        {
+            $methods = OfflinePaymentMethod::when(request('status') == 'active', function($query){
                 return $query->where('status', 1);
-            })
-            ->when($status == 'inactive', function ($query) {
+            })->when(request('status') == 'inactive', function($query){
                 return $query->where('status', 0);
-            })
-            ->when($search, function ($query) use ($search) {
-                return $query->where('method_name', 'like', "%{$search}%");
-            })
-            ->latest()
-            ->paginate(config('default_pagination'));
+            })->paginate(10);
+        } else if(request()->has('search')) {
+            $methods = OfflinePaymentMethod::where(function ($query) {
+                $query->orWhere('method_name', 'like', "%".request('search')."%");
+            })->paginate(10);
+        }else{
+            $methods = OfflinePaymentMethod::paginate(10);
+        }
 
         return view('admin-views.business-settings.offline-payment.index', compact('methods'));
     }

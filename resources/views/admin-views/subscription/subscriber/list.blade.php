@@ -150,7 +150,7 @@ active
                                 <img class="avatar avatar-xss avatar-4by3 mr-2"
                                     src="{{ asset('public/assets/admin/svg/components/placeholder-csv-format.svg') }}"
                                     alt="Image Description">
-                                {{ translate('messages.csv') }}
+                                .{{ translate('messages.csv') }}
                             </a>
 
                         </div>
@@ -179,7 +179,7 @@ active
                             <tr>
                                 <td class="px-4 text-center">{{ $k + $subscribers->firstItem() }}</td>
                                 <td class="px-4">
-                                    <a href="{{route('admin.store.view', $subscriber->id)}}" alt="view restaurant" class="table-rest-info min--200">
+                                    <a href="{{route('admin.store.view', $subscriber->id)}}" alt="view restaurant" class="table-rest-info">
                                         <img src="{{ $subscriber->logo_full_url ?? asset('public/assets/admin/img/100x100/1.png') }}" >
                                         <div class="info">
                                             <span class="d-block text-title">

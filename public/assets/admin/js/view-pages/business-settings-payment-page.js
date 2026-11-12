@@ -28,4 +28,3 @@ checkedFunc()
 $('.switch--custom-label .toggle-switch-input').on('change', checkedFunc)
 
 
-    

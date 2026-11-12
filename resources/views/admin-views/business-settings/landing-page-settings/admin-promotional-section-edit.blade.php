@@ -22,7 +22,7 @@
             </div>
         </div>
     </div>
-    <div class="mb-20 mt-2">
+    <div class="mb-4 mt-2">
         <div class="js-nav-scroller hs-nav-scroller-horizontal">
             @include('admin-views.business-settings.landing-page-settings.top-menu-links.admin-landing-page-links')
         </div>
@@ -58,22 +58,14 @@
                                 <div class="col-sm-6">
                                     <label for="text" class="form-label">{{translate('Title')}} ({{ translate('messages.default') }})<span class="form-label-secondary" data-toggle="tooltip" data-placement="right" data-original-title="{{ translate('Write_the_title_within_20_characters') }}">
                                                 <img src="{{asset('public/assets/admin/img/info-circle.svg')}}" alt="">
-                                            </span>
-                                        <span class="form-label-secondary text-danger"
-                                              data-toggle="tooltip" data-placement="right"
-                                              data-original-title="{{ translate('messages.Required.')}}"> *
-                                                </span></label>
-                                        <input id="text" required type="text"  maxlength="20" name="title[]" value="{{ $banner?->getRawOriginal('title') }}" class="form-control" placeholder="{{translate('messages.title_here...')}}">
+                                            </span></label>
+                                        <input id="text" type="text"  maxlength="20" name="title[]" value="{{ $banner?->getRawOriginal('title') }}" class="form-control" placeholder="{{translate('messages.title_here...')}}">
                                 </div>
                                 <div class="col-sm-6">
                                     <label for="sub_title" class="form-label">{{translate('Sub Title')}} ({{ translate('messages.default') }})<span class="form-label-secondary" data-toggle="tooltip" data-placement="right" data-original-title="{{ translate('Write_the_title_within_80_characters') }}">
                                                 <img src="{{asset('public/assets/admin/img/info-circle.svg')}}" alt="">
-                                            </span>
-                                        <span class="form-label-secondary text-danger"
-                                              data-toggle="tooltip" data-placement="right"
-                                              data-original-title="{{ translate('messages.Required.')}}"> *
-                                                </span></label>
-                                        <input required id="sub_title" type="text"  maxlength="80" name="sub_title[]" value="{{ $banner?->getRawOriginal('sub_title') }}" class="form-control" placeholder="{{translate('messages.sub_title_here...')}}">
+                                            </span></label>
+                                        <input  id="sub_title" type="text"  maxlength="80" name="sub_title[]" value="{{ $banner?->getRawOriginal('sub_title') }}" class="form-control" placeholder="{{translate('messages.sub_title_here...')}}">
                                 </div>
                             </div>
                             <input type="hidden" name="lang[]" value="default">
@@ -121,39 +113,31 @@
                                 </div>
                                 <input type="hidden" name="lang[]" value="default">
                             @endif
-                        {{-- <div class="row g-3">
+                        <div class="row g-3">
                             <div class="col-sm-6">
-                                <label class="form-label d-block mb-3">
+                                <label class="form-label d-block mb-2">
                                     {{translate('Banner')}}  <span class="text--primary">{{translate('(size: 3:1)')}}</span>
-                                    <span class="form-label-secondary text-danger"
-                                          data-toggle="tooltip" data-placement="right"
-                                          data-original-title="{{ translate('messages.Required.')}}"> *
-                                                </span>
-                                    <div class="fs-12 opacity-70">
-                                        {{ translate(IMAGE_FORMAT.' ' . 'Less Than 2MB') }}
-                                    </div>
                                 </label>
                                 <div class="position-relative">
                                     <label class="upload-img-3 m-0 d-block">
                                         <div class="img">
                                             <img
-                                            src="{{ $banner['image_full_url'] ?? asset('/public/assets/admin/img/upload-4.png') }}"
+                                            src="{{ $banner['image_full_url'] ?? asset('/public/assets/admin/img/upload-4.png') }}" 
                                             data-onerror-image="{{asset('/public/assets/admin/img/upload-4.png')}}" class="vertical-img mw-100 vertical onerror-image" alt="">
                                         </div>
-                                            <input accept="{{IMAGE_EXTENSION}}" class="upload-file__input single_file_input" type="file" name="image"  hidden>
+                                            <input type="file" name="image"  hidden>
                                     </label>
                                     @if (isset($banner['image'] ))
-                                        <span id="banner_image" class="remove_image_button remove-image dynamic-checkbox"
+                                        <span id="banner_image" class="remove_image_button remove-image"
                                               data-id="banner_image"
-                                              data-image-off="{{ asset('/public/assets/admin/img/delete-confirmation.png') }}"
                                               data-title="{{translate('Warning!')}}"
                                               data-text="<p>{{translate('Are_you_sure_you_want_to_remove_this_image_?')}}</p>"
                                         > <i class="tio-clear"></i></span>
                                     @endif
                                 </div>
                             </div>
-                        </div> --}}
-                        <div class="btn--container justify-content-end mt-20">
+                        </div>
+                        <div class="btn--container justify-content-end mt-3">
                             <button type="reset" class="btn btn--reset mb-2">{{translate('Reset')}}</button>
                             <button type="submit" class="btn btn--primary mb-2">{{translate('messages.Update')}}</button>
                         </div>

@@ -5,7 +5,6 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\CentralLogics\Helpers;
 
 
 class AdminMiddleware
@@ -19,30 +18,19 @@ class AdminMiddleware
      */
     public function handle(Request $request, Closure $next)
     {
-        if (Auth::guard('admin')->user() && Auth::guard('admin')->user()->is_logged_in == 0) {
+        if(Auth::guard('admin')->user() && Auth::guard('admin')->user()->is_logged_in == 0){
             auth()->guard('admin')->logout();
         }
-
-        if (Auth::guard('admin')->user()) {
-            if (session('login_remember_token') !== Auth::guard('admin')->user()?->login_remember_token) {
-                if (auth()?->guard('admin')?->user()?->role_id == 1) {
-                    $user_link = Helpers::get_login_url('admin_login_url');
-                } else {
-                    $user_link = Helpers::get_login_url('admin_employee_login_url');
-                }
-                Auth::guard('admin')->logout();
-                session()->invalidate();
-                session()->regenerateToken();
-                return redirect()->route('login', [$user_link])
-                    ->withErrors(['Your session has expired. Please log in again.']);
-            }
-        }
-
         if (Auth::guard('admin')->check()) {
-            return $next($request);
+            // Mandatory second factor, enforced from the one middleware every
+            // admin route already uses. There are two admin route files
+            // (routes/admin.php and routes/admin/routes.php); putting the check
+            // here rather than in each group means a third file cannot be
+            // added later without the gate. AdminMfa holds the rules.
+            return app(AdminMfa::class)->handle($request, $next);
         }
-
-        $user_link = Helpers::get_login_url('admin_login_url') ?: 'login_admin';
-        return redirect()->route('login', [$user_link]);
+        return redirect()->route('home');
+        // return redirect()->route('login');
+        // return redirect()->route('admin.auth.login');
     }
 }

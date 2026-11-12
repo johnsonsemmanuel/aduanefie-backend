@@ -22,7 +22,7 @@
             </div>
         </div>
     </div>
-    <div class="mb-20 mt-2">
+    <div class="mb-4 mt-2">
         <div class="js-nav-scroller hs-nav-scroller-horizontal">
             @include('admin-views.business-settings.landing-page-settings.top-menu-links.admin-landing-page-links')
         </div>
@@ -49,7 +49,7 @@
     @endif
     <div class="tab-content">
         <div class="tab-pane fade show active">
-            <form action="{{ route('admin.business-settings.admin-landing-page-settings-update', 'promotional-section') }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ route('admin.business-settings.admin-landing-page-settings', 'promotional-section') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <div class="card mb-3">
                     <div class="card-body">
@@ -58,22 +58,14 @@
                                 <div class="col-sm-6">
                                     <label for="title" class="form-label">{{translate('Title')}} ({{ translate('messages.default') }})<span class="form-label-secondary" data-toggle="tooltip" data-placement="right" data-original-title="{{ translate('Write_the_title_within_20_characters') }}">
                                                 <img src="{{asset('public/assets/admin/img/info-circle.svg')}}" alt="">
-                                            </span>
-                                        <span class="form-label-secondary text-danger"
-                                              data-toggle="tooltip" data-placement="right"
-                                              data-original-title="{{ translate('messages.Required.')}}"> *
-                                                </span></label>
-                                        <input id="title" required type="text"  maxlength="20" name="title[]" class="form-control" placeholder="{{translate('messages.title_here...')}}">
+                                            </span></label>
+                                        <input id="title" type="text"  maxlength="20" name="title[]" class="form-control" placeholder="{{translate('messages.title_here...')}}">
                                 </div>
                                 <div class="col-sm-6">
                                     <label for="sub_title" class="form-label">{{translate('Sub Title')}} ({{ translate('messages.default') }})<span class="form-label-secondary" data-toggle="tooltip" data-placement="right" data-original-title="{{ translate('Write_the_title_within_80_characters') }}">
                                                 <img src="{{asset('public/assets/admin/img/info-circle.svg')}}" alt="">
-                                            </span>
-                                        <span class="form-label-secondary text-danger"
-                                              data-toggle="tooltip" data-placement="right"
-                                              data-original-title="{{ translate('messages.Required.')}}"> *
-                                                </span></label>
-                                        <input id="sub_title" required type="text"  maxlength="80" name="sub_title[]" class="form-control" placeholder="{{translate('messages.sub_title_here...')}}">
+                                            </span></label>
+                                        <input id="sub_title" type="text"  maxlength="80" name="sub_title[]" class="form-control" placeholder="{{translate('messages.sub_title_here...')}}">
                                 </div>
                             </div>
                             <input type="hidden" name="lang[]" value="default">
@@ -107,28 +99,20 @@
                                 </div>
                                 <input type="hidden" name="lang[]" value="default">
                             @endif
-                        {{-- <div class="row g-3">
+                        <div class="row g-3">
                             <div class="col-sm-6">
-                                <label class="form-label d-block mb-3">
+                                <label class="form-label d-block mb-2">
                                     {{translate('Banner')}}  <span class="text--primary">{{translate('(size: 3:1)')}}</span>
-                                    <span class="form-label-secondary text-danger"
-                                          data-toggle="tooltip" data-placement="right"
-                                          data-original-title="{{ translate('messages.Required.')}}"> *
-                                                </span>
-                                    <div class="fs-12 opacity-70">
-                                        {{ translate(IMAGE_FORMAT.' ' . 'Less Than 2MB') }}
-                                    </div>
                                 </label>
-
                                 <label class="upload-img-3 m-0 d-block">
                                     <div class="img">
                                         <img src="{{asset('/public/assets/admin/img/upload-4.png')}}" data-onerror-image="{{asset('/public/assets/admin/img/upload-4.png')}}" class="vertical-img mw-100 vertical onerror-image" alt="">
                                     </div>
-                                        <input accept="{{IMAGE_EXTENSION}}" class="upload-file__input single_file_input"  type="file" name="image" hidden>
+                                        <input type="file" name="image"  hidden>
                                 </label>
                             </div>
-                        </div> --}}
-                        <div class="btn--container justify-content-end mt-20">
+                        </div>
+                        <div class="btn--container justify-content-end mt-3">
                             <button type="reset" class="btn btn--reset mb-2">{{translate('Reset')}}</button>
                             <button type="submit" class="btn btn--primary mb-2">{{translate('Add')}}</button>
                         </div>
@@ -139,7 +123,7 @@
             <div class="card">
                 <div class="card-header py-2">
                     <div class="search--button-wrapper">
-                        <h5 class="card-title">{{translate('Promotional_List')}}
+                        <h5 class="card-title">{{translate('Promotional_Banner_List')}}
                             {{-- <span class="badge badge-secondary ml-1">5</span>  --}}
                         </h5>
                     </div>
@@ -160,7 +144,7 @@
                                 <th class="border-0">{{translate('sl')}}</th>
                                 <th class="border-0">{{translate('Title')}}</th>
                                 <th class="border-0">{{translate('Sub Title')}}</th>
-                                {{-- <th class="border-0">{{translate('Image')}}</th> --}}
+                                <th class="border-0">{{translate('Image')}}</th>
                                 <th class="border-0">{{translate('Status')}}</th>
                                 <th class="text-center border-0">{{translate('messages.action')}}</th>
                             </tr>
@@ -179,11 +163,11 @@
                                             {{ $banner->sub_title }}
                                          </span>
                                     </td>
-                                    {{-- <td>
+                                    <td>
                                         <img
                                         src="{{ $banner->image_full_url ?? asset('/public/assets/admin/img/upload-3.png') }}"
                                         data-onerror-image="{{asset('/public/assets/admin/img/upload-3.png')}}" class="__size-105 onerror-image" alt="">
-                                    </td> --}}
+                                    </td>
                                     <td>
                                         <label class="toggle-switch toggle-switch-sm">
                                             <input type="checkbox"

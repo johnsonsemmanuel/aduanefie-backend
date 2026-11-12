@@ -6,10 +6,6 @@
 <link rel="stylesheet" href="{{asset('public/assets/admin/css/radio-image.css')}}">
 @endpush
 
-@section('edit_module')
-active
-@endsection
-
 @section('content')
     <div class="content container-fluid">
         <!-- Page Header -->
@@ -55,11 +51,7 @@ active
                                     data-original-title="{{ translate('messages.Write_a_short_description_of_your_new_business_module_within_100_words_(550_characters)')}}"><img
                                         src="{{ asset('/public/assets/admin/img/info-circle.svg') }}"
                                         alt="{{ translate('messages.veg_non_veg') }}"></span></label>
-                                <textarea  data-value="{!! $module->description ?? '' !!}" id="description"  class="ckeditor form-control" name="description[]">{!! $module?->getRawOriginal('description') ?? '' !!}</textarea>
-                            </div>
-                            <div class="form-group">
-                                <label class="input-label d-flex">{{ translate('Short_description') }} ({{ translate('messages.default') }})</label>
-                                <textarea class="form-control" name="short_description[]" maxlength="100" rows="2" placeholder="{{ translate('messages.Write_a_short_description') }}">{{ $module?->getRawOriginal('short_description') }}</textarea>
+                                <textarea  data-value="{!! $module->description !!}" id="description"  class="ckeditor form-control" name="description[]">{!! $module?->getRawOriginal('description') !!}</textarea>
                             </div>
                         </div>
 
@@ -77,10 +69,6 @@ active
                                         if($t->locale == $lang && $t->key=="description"){
                                             $translate[$lang]['description'] = $t->value;
                                         }
-
-                                        if($t->locale == $lang && $t->key=="short_description"){
-                                            $translate[$lang]['short_description'] = $t->value;
-                                        }
                                     }
                                 }
                             ?>
@@ -97,10 +85,6 @@ active
                                             alt="{{ translate('messages.veg_non_veg') }}"></span></label>
                                     <textarea  data-value="{!! $translate[$lang]['description']??'' !!}" id="description{{ $lang }}" class="ckeditor form-control" name="description[]">{!! $translate[$lang]['description']??'' !!}</textarea>
                                 </div>
-                                <div class="form-group">
-                                    <label class="input-label d-flex">{{ translate('Short_description') }} ({{strtoupper($lang)}})</label>
-                                    <textarea class="form-control" name="short_description[]" maxlength="100" rows="2" placeholder="{{ translate('messages.Write_a_short_description') }}">{{ $translate[$lang]['short_description']??'' }}</textarea>
-                                </div>
                             </div>
 
                             <input type="hidden" name="lang[]" value="{{$lang}}">
@@ -113,10 +97,6 @@ active
                         <div class="form-group">
                             <label class="input-label" for="module_type">{{translate('messages.description')}}</label>
                             <textarea  data-value="{!! $module->description !!}" id="description" class="ckeditor form-control" name="description">{!! $module->description !!}</textarea>
-                        </div>
-                        <div class="form-group">
-                            <label class="input-label">{{ translate('Short_description') }}</label>
-                            <textarea class="form-control" name="short_description" maxlength="100" rows="2" placeholder="{{ translate('messages.Write_a_short_description') }}">{{ $module?->getRawOriginal('short_description') }}</textarea>
                         </div>
                         <input type="hidden" name="lang[]" value="default">
                     @endif
@@ -207,7 +187,7 @@ active
                     </div>
                 </div>
             </div>
-            <div class="btn--container justify-content-end mt-20">
+            <div class="btn--container justify-content-end mt-3">
                 <button type="reset" id="reset_btn" class="btn btn--reset">{{translate('messages.reset')}}</button>
                 <button type="submit" class="btn btn--primary">{{translate('messages.Save_changes')}}</button>
             </div>
@@ -222,7 +202,33 @@ active
     <script src="{{asset('public/assets/admin/ckeditor/ckeditor.js')}}"></script>
     <script>
         "use strict";
+        $('.module-change').on('click', function (){
+            let id = $(this).val();
+            modulChange(id)
+        })
+        function modulChange(id)
+        {
+            $.get({
+                url: "{{url('/')}}/admin/module/type/?module_type="+id,
+                dataType: 'json',
+                success: function (data) {
+                    if(data.data.description.length)
+                    {
+                        $('#module_des_card').show();
+                        $('#module_description').html(data.data.description);
+                    }
+                    else
+                    {
+                        $('#module_des_card').hide();
+                    }
+                    if(id=='parcel')
+                    {
+                        $('#module_theme').hide();
 
+                    }
+                },
+            });
+        }
 
         function readURL(input, id) {
             if (input.files && input.files[0]) {
@@ -244,20 +250,30 @@ active
             readURL(this,'viewer2');
         });
 
+        $(".lang_link").click(function(e){
+            e.preventDefault();
+            $(".lang_link").removeClass('active');
+            $(".lang_form").addClass('d-none');
+            $(this).addClass('active');
 
+            let form_id = this.id;
+            let lang = form_id.substring(0, form_id.length - 5);
+            console.log(lang);
+            $("#"+lang+"-form").removeClass('d-none');
+        });
 
         $(document).ready(function () {
             @if ($module->module_type=='parcel')
                 $('#module_des_card').hide();
+                $('#module_theme').hide();
+                $('#zone_check').hide();
             @endif
-            CKEDITOR.config.customConfig = '';
-            CKEDITOR.replaceAll('ckeditor');
+            $('.ckeditor').ckeditor();
         });
 
         $('#reset_btn').click(function(){
             $('.ckeditor').each(function() {
-                var editor = CKEDITOR.instances[$(this).attr('id')];
-                if (editor) editor.setData($(this).data('value') || '');
+                CKEDITOR.instances[$(this).attr('id')].setData($(this).data('value'));
             });
 
             $('#viewer').attr('src','{{ $module['icon_full_url'] }}');

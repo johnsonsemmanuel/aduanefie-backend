@@ -115,13 +115,13 @@
                 <div class="col-md-4 col-6">
                     <div class="form-group">
                         <label class="input-label" for="title">{{translate('messages.min_purchase')}} ({{\App\CentralLogics\Helpers::currency_symbol()}})</label>
-                        <input type="number" name="min_purchase" step="0.01" min="0" max="999999999" class="form-control" placeholder="100" value="{{$store->discount?$store->discount->min_purchase:'0'}}">
+                        <input type="number" name="min_purchase" step="0.01" min="0" max="100000" class="form-control" placeholder="100" value="{{$store->discount?$store->discount->min_purchase:'0'}}">
                     </div>
                 </div>
                 <div class="col-md-4 col-6">
                     <div class="form-group">
                         <label class="input-label" for="title">{{translate('messages.max_discount')}} ({{\App\CentralLogics\Helpers::currency_symbol()}})</label>
-                        <input type="number" min="0" max="999999999" step="0.01" name="max_discount" class="form-control" value="{{$store->discount?$store->discount->max_discount:'0'}}">
+                        <input type="number" min="0" max="1000000" step="0.01" name="max_discount" class="form-control" value="{{$store->discount?$store->discount->max_discount:'0'}}">
                     </div>
                 </div>
             </div>

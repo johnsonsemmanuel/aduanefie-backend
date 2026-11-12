@@ -91,12 +91,28 @@
                             <div class="subtxt">566 newly added</div>
                         </div>
                     </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="__dashboard-card-2 bg--farming">
+                            <img src="{{asset('/public/assets/admin/img/dashboard/food/items.svg')}}" alt="dashboard/farming">
+                            <h6 class="name">{{translate('messages.currently_farming')}}</h6>
+                            <h3 class="count">{{App\Models\Item::ongoingFarming()->where('is_approved', 1)->count()}}</h3>
+                            <div class="subtxt">{{translate('messages.products_in_farming_mode')}}</div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="__dashboard-card-2 bg--backyard">
+                            <img src="{{asset('/public/assets/admin/img/dashboard/food/stores.svg')}}" alt="dashboard/backyard">
+                            <h6 class="name">{{translate('messages.backyard_farms')}}</h6>
+                            <h3 class="count">{{App\Models\Item::backyard()->where('is_approved', 1)->count()}}</h3>
+                            <div class="subtxt">{{translate('messages.backyard_grown_products')}}</div>
+                        </div>
+                    </div>
                     <div class="col-12">
                         <div class="row g-2">
                             <div class="col-sm-6 col-lg-3">
                                 <a class="order--card h-100" href="{{route('admin.order.list',['delivered'])}}">
                                     <div class="d-flex justify-content-between align-items-center">
-                                        <h6 class="card-subtitle d-flex justify-content-between m-0 align-items-center text-hover--primary">
+                                        <h6 class="card-subtitle d-flex justify-content-between m-0 align-items-center">
                                             <img src="{{asset('/public/assets/admin/img/dashboard/food/unassigned.svg')}}" alt="dashboard" class="oder--card-icon">
                                             <span>{{translate('messages.unassigned_orders')}}</span>
                                         </h6>
@@ -110,7 +126,7 @@
                             <div class="col-sm-6 col-lg-3">
                                 <a class="order--card h-100" href="{{route('admin.order.list',['refunded'])}}">
                                     <div class="d-flex justify-content-between align-items-center">
-                                        <h6 class="card-subtitle d-flex justify-content-between m-0 align-items-center text-hover--primary">
+                                        <h6 class="card-subtitle d-flex justify-content-between m-0 align-items-center">
                                             <img src="{{asset('/public/assets/admin/img/dashboard/food/accepted.svg')}}" alt="dashboard" class="oder--card-icon">
                                             <span>{{translate('Accepted by Delivery Man')}}</span>
                                         </h6>
@@ -123,7 +139,7 @@
                             <div class="col-sm-6 col-lg-3">
                                 <a class="order--card h-100" href="{{route('admin.order.list',['canceled'])}}">
                                     <div class="d-flex justify-content-between align-items-center">
-                                        <h6 class="card-subtitle d-flex justify-content-between m-0 align-items-center text-hover--primary">
+                                        <h6 class="card-subtitle d-flex justify-content-between m-0 align-items-center">
                                             <img src="{{asset('/public/assets/admin/img/dashboard/food/packaging.svg')}}" alt="dashboard" class="oder--card-icon">
                                             <span>{{translate('Packaging')}}</span>
                                         </h6>
@@ -137,7 +153,7 @@
                             <div class="col-sm-6 col-lg-3">
                                 <a class="order--card h-100" href="{{route('admin.order.list',['failed'])}}">
                                     <div class="d-flex justify-content-between align-items-center">
-                                        <h6 class="card-subtitle d-flex justify-content-between m-0 align-items-center text-hover--primary">
+                                        <h6 class="card-subtitle d-flex justify-content-between m-0 align-items-center">
                                             <img src="{{asset('/public/assets/admin/img/dashboard/food/out-for.svg')}}" alt="dashboard" class="oder--card-icon">
                                             <span>{{translate('Out for Delivery')}}</span>
                                         </h6>
@@ -151,7 +167,7 @@
                             <div class="col-sm-6 col-lg-3">
                                 <a class="order--card h-100" href="{{route('admin.order.list',['delivered'])}}">
                                     <div class="d-flex justify-content-between align-items-center">
-                                        <h6 class="card-subtitle d-flex justify-content-between m-0 align-items-center text-hover--primary">
+                                        <h6 class="card-subtitle d-flex justify-content-between m-0 align-items-center">
                                             <img src="{{asset('/public/assets/admin/img/dashboard/grocery/delivered.svg')}}" alt="dashboard" class="oder--card-icon">
                                             <span>{{translate('messages.delivered')}}</span>
                                         </h6>
@@ -165,7 +181,7 @@
                             <div class="col-sm-6 col-lg-3">
                                 <a class="order--card h-100" href="{{route('admin.order.list',['canceled'])}}">
                                     <div class="d-flex justify-content-between align-items-center">
-                                        <h6 class="card-subtitle d-flex justify-content-between m-0 align-items-center text-hover--primary">
+                                        <h6 class="card-subtitle d-flex justify-content-between m-0 align-items-center">
                                             <img src="{{asset('/public/assets/admin/img/order-status/canceled.svg')}}" alt="dashboard" class="oder--card-icon">
                                             <span>{{translate('messages.canceled')}}</span>
                                         </h6>
@@ -179,7 +195,7 @@
                             <div class="col-sm-6 col-lg-3">
                                 <a class="order--card h-100" href="{{route('admin.order.list',['refunded'])}}">
                                     <div class="d-flex justify-content-between align-items-center">
-                                        <h6 class="card-subtitle d-flex justify-content-between m-0 align-items-center text-hover--primary">
+                                        <h6 class="card-subtitle d-flex justify-content-between m-0 align-items-center">
                                             <img src="{{asset('/public/assets/admin/img/order-status/refunded.svg')}}" alt="dashboard" class="oder--card-icon">
                                             <span>{{translate('messages.refunded')}}</span>
                                         </h6>
@@ -193,7 +209,7 @@
                             <div class="col-sm-6 col-lg-3">
                                 <a class="order--card h-100" href="{{route('admin.order.list',['failed'])}}">
                                     <div class="d-flex justify-content-between align-items-center">
-                                        <h6 class="card-subtitle d-flex justify-content-between m-0 align-items-center text-hover--primary">
+                                        <h6 class="card-subtitle d-flex justify-content-between m-0 align-items-center">
                                             <img src="{{asset('/public/assets/admin/img/order-status/payment-failed.svg')}}" alt="dashboard" class="oder--card-icon">
                                             <span>{{translate('messages.payment_failed')}}</span>
                                         </h6>
@@ -390,7 +406,7 @@
             dataLabels: {
                 enabled: false,
                 style: {
-                    colors: ['#005555', '#00aa96', '#b9e0e0',]
+                    colors: ['#4F3E2C', '#8B9F69', '#C7BA9E']
                 }
             },
             responsive: [{
@@ -401,9 +417,9 @@
                     },
                 }
             }],
-            colors: ['#005555','#00aa96', '#111'],
+            colors: ['#4F3E2C','#8B9F69', '#C7BA9E'],
             fill: {
-                colors: ['#005555','#00aa96', '#b9e0e0']
+                colors: ['#4F3E2C','#8B9F69', '#C7BA9E']
             },
             legend: {
                 show: false
@@ -567,4 +583,28 @@
             window.history.pushState('page2', 'Title', '{{url()->current()}}?' + params);
         }
     </script>
+    <style>
+        .__dashboard-card-2.bg--farming {
+            border: 1px solid var(--primary-clr, #67513A);
+        }
+        .__dashboard-card-2.bg--farming .name,
+        .__dashboard-card-2.bg--farming .count,
+        .__dashboard-card-2.bg--farming .subtxt {
+            color: var(--primary-clr, #67513A);
+        }
+        .__dashboard-card-2.bg--farming .count {
+            font-weight: 800;
+        }
+        .__dashboard-card-2.bg--backyard {
+            border: 1px solid var(--secondary-clr, #8B9F69);
+        }
+        .__dashboard-card-2.bg--backyard .name,
+        .__dashboard-card-2.bg--backyard .count,
+        .__dashboard-card-2.bg--backyard .subtxt {
+            color: var(--secondary-clr, #8B9F69);
+        }
+        .__dashboard-card-2.bg--backyard .count {
+            font-weight: 800;
+        }
+    </style>
 @endpush

@@ -58,12 +58,12 @@
                                 <div class="input-group input--group">
                                     <input id="datatableSearch" name="search" type="search" class="form-control"
                                            placeholder="{{translate('ex_: search_delivery_man_,_email_or_phone')}}"
-                                           value="{{ request()->input('search') }}"
+                                           value="{{ request()->get('search') }}"
                                            aria-label="{{translate('messages.search_here')}}">
                                     <button type="submit" class="btn btn--secondary"><i class="tio-search"></i></button>
                                 </div>
                             </form>
-                            @if(request()->input('search'))
+                            @if(request()->get('search'))
                                 <button type="reset" class="btn btn--primary ml-2 location-reload-to-base"
                                         data-url="{{url()->full()}}">{{translate('messages.reset')}}</button>
                             @endif
@@ -94,7 +94,7 @@
                                         <img class="avatar avatar-xss avatar-4by3 mr-2"
                                              src="{{ asset('public/assets/admin/svg/components/placeholder-csv-format.svg') }}"
                                              alt="Image Description">
-                                        {{ translate('messages.csv') }}
+                                        .{{ translate('messages.csv') }}
                                     </a>
                                 </div>
                             </div>
@@ -176,7 +176,7 @@
                                     </td>
                                     <td>
                                         <div class="btn--container justify-content-center">
-                                            <a class="btn action-btn btn--warning btn-outline-warning" id="view-details" href="#"
+                                            <a class="btn action-btn btn--warning btn-outline-warning view-details" href="#"
                                                title="View" data-order_id="{{$review->order_id}}"
                                                data-date="{{ Helpers::time_date_format($review->created_at) }}"
                                                data-name="{{$review?->delivery_man?->f_name.' '.$review?->delivery_man?->l_name}}"
@@ -265,7 +265,7 @@
 @push('script_2')
     <script>
         "use strict";
-        $(document).on('click', '#view-details', function () {
+        $(document).on('click', '.view-details', function () {
             let data = $(this).data();
             $('#deliverymanReviewModal .modal-body #deliverymanReviewModalLabel').text('Deliveryman Review');
             $('#deliverymanReviewModal .modal-body #order-id').text(data.order_id);

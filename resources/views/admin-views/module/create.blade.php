@@ -81,10 +81,6 @@
                                 alt="{{ translate('messages.veg_non_veg') }}"></span></label>
                         <textarea id="description" class="ckeditor form-control" name="description[]"></textarea>
                     </div>
-                    <div class="form-group">
-                        <label class="input-label d-flex">{{ translate('Short_description') }} ({{ translate('messages.default') }})</label>
-                        <textarea class="form-control" name="short_description[]" maxlength="100" rows="2" placeholder="{{ translate('messages.Write_a_short_description') }}"></textarea>
-                    </div>
                 </div>
 
                 <input type="hidden" name="lang[]" value="default">
@@ -102,10 +98,6 @@
                                 alt="{{ translate('messages.veg_non_veg') }}"></span></label>
                         <textarea id="description{{ $lang }}" class="ckeditor form-control" name="description[]"></textarea>
                     </div>
-                    <div class="form-group">
-                        <label class="input-label d-flex">{{ translate('Short_description') }} ({{strtoupper($lang)}})</label>
-                        <textarea class="form-control" name="short_description[]" maxlength="100" rows="2" placeholder="{{ translate('messages.Write_a_short_description') }}"></textarea>
-                    </div>
                 </div>
 
                 <input type="hidden" name="lang[]" value="{{$lang}}">
@@ -118,10 +110,6 @@
                 <div class="form-group">
                     <label class="input-label">{{ translate('Business_Module_description')}}</label>
                     <textarea id="description" class="ckeditor form-control" name="description"></textarea>
-                </div>
-                <div class="form-group">
-                    <label class="input-label">{{ translate('Short_description') }}</label>
-                    <textarea class="form-control" name="short_description" maxlength="100" rows="2" placeholder="{{ translate('messages.Write_a_short_description') }}"></textarea>
                 </div>
                 <input type="hidden" name="lang[]" value="default">
                 @endif
@@ -155,7 +143,7 @@
                             <div class="card-body p-0">
                                 <div class="module-radio-group">
                                 @foreach (config('module.module_type') as $key)
-                                @if($key != 'rental' && $key != 'ride-share')
+                                @if($key != 'rental')
                                 <label class="form-check form--check">
                                     <input class="form-check-input" type="radio" name="module_type" value="{{$key}}">
                                     <span class="form-check-label">
@@ -174,8 +162,8 @@
                             <div class="card-body">
                                 <div class="row h-100">
                                     <div class="col-sm-6 mb-4 mb-sm-0">
-                                        <div class="form-group m-0 h-100 d-flex align-items-center flex-column justify-content-center pb-lg-2">
-                                            <label class="form-label mb-3">
+                                        <div class="form-group m-0 h-100 d-flex align-items-center flex-column justify-content-center">
+                                            <label class="form-label mb-0">
                                                 {{translate('messages.icon')}}
                                                 <small class="text-danger">* ( {{translate('messages.ratio')}} 1:1)</small>
                                             </label>
@@ -191,8 +179,8 @@
                                         </div>
                                     </div>
                                     <div class="col-sm-6">
-                                        <div class="form-group m-0 h-100 d-flex flex-column justify-content-center align-items-center pb-lg-2">
-                                            <label class="form-label mb-3">
+                                        <div class="form-group m-0 h-100 d-flex flex-column justify-content-center align-items-center">
+                                            <label class="form-label mb-4">
                                                 {{translate('messages.thumbnail')}}
                                                 <small class="text-danger">* ( {{translate('messages.ratio')}} 1:1)</small>
                                             </label>
@@ -292,13 +280,12 @@
     });
 
     $(document).ready(function () {
-        CKEDITOR.config.customConfig = '';
-        CKEDITOR.replaceAll('ckeditor');
+        $('.ckeditor').ckeditor();
     });
 
         $('#reset_btn').click(function(){
-            Object.values(CKEDITOR.instances).forEach(function(editor) {
-                editor.setData('');
+            $('.ckeditor').each(function() {
+                CKEDITOR.instances[$(this).attr('id')].setData('');
             });
             $('#viewer').attr('src','{{asset('public/assets/admin/img/400x400/img2.jpg')}}');
             $('#viewer2').attr('src','{{asset('public/assets/admin/img/400x400/img2.jpg')}}');

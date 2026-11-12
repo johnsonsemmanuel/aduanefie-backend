@@ -16,8 +16,6 @@ use App\CentralLogics\FileManagerLogic;
 use Brian2694\Toastr\Facades\Toastr;
 use Madnest\Madzipper\Facades\Madzipper;
 use ZipArchive;
-use Illuminate\Pagination\LengthAwarePaginator;
-
 
 class FileManagerController extends Controller
 {
@@ -27,68 +25,44 @@ class FileManagerController extends Controller
      * @return \Illuminate\Http\Response
      */
     public function index($folder_path = "cHVibGlj", $storage = 'local')
-{
-    $perPage = 50;
-    $page = request()->get('page', 1);
-    if ($storage == 's3' && Helpers::getDisk() == 's3') {
-        try {
-            Storage::disk('s3')->exists($folder_path);
-        } catch (\Exception $e) {
-            Toastr::error(translate('messages.something_went_wrong'));
-            return back();
+    {
+
+        if ($storage == 's3' && Helpers::getDisk()=='s3'){
+            try {
+                Storage::disk('s3')->exists($folder_path);
+            } catch (\Exception $e){
+                Toastr::error(translate('messages.something_went_wrong'));
+                return back();
+            }
+
+            $folder_path = $folder_path == "cHVibGlj"? "":$folder_path;
+            $directory = base64_decode($folder_path).'/';
+            $s3 = Storage::disk('s3');
+            $file = $directory == '/'?[]:$s3->allFiles($directory);
+            $directories = $s3->allDirectories($directory);
+        }else{
+            $storage = 'local';
+            $file = Storage::files(base64_decode($folder_path));
+            $directories = Storage::directories(base64_decode($folder_path));
+
         }
+        $folders = FileManagerLogic::format_file_and_folders($directories, 'folder');
+        $files = FileManagerLogic::format_file_and_folders($file, 'file');
 
-        $folder_path = $folder_path == "cHVibGlj" ? "" : $folder_path;
-        $directory = base64_decode($folder_path) . '/';
 
-        $s3 = Storage::disk('s3');
+        $data = array_merge($folders, $files);
 
-        $files = $directory == '/' ? [] : $s3->allFiles($directory);
-        $directories = $s3->allDirectories($directory);
-    } else {
-        $storage = 'local';
-        $directory = base64_decode($folder_path);
-
-        $files = Storage::files($directory);
-        $directories = Storage::directories($directory);
+        return view('admin-views.file-manager.index', compact('data', 'folder_path','storage'));
     }
-
-    $folders = FileManagerLogic::format_file_and_folders($directories, 'folder');
-    $files = FileManagerLogic::format_file_and_folders($files, 'file');
-    $data = array_merge($folders, $files);
-
-    $collection = collect($data);
-
-    $paginatedData = new LengthAwarePaginator(
-        $collection->slice(($page - 1) * $perPage, $perPage)->values(),
-        $collection->count(),
-        $perPage,
-        $page,
-        [
-            'path' => request()->url(),
-            'query' => request()->query(),
-        ]
-    );
-
-    return view(
-        'admin-views.file-manager.index',
-        [
-            'data' => $paginatedData,
-            'folder_path' => $folder_path,
-            'storage' => $storage
-        ]
-    );
-}
 
 
     public function upload(Request $request)
     {
         $request->validate([
-            'images.*' => 'required_without:file|mimes:'. IMAGE_FORMAT_FOR_VALIDATION,
-            'file' => 'required_without:images|mimetypes:application/zip',
+            'images' => 'required_without:file',
+            'file' => 'required_without:images',
             'path' => 'required_if:disk,local',
-        ]);
-
+          ]);
         $disk = $request->disk;
         if($disk == 's3' && !$request->path){
             Toastr::warning(translate('messages.To_upload_file_on_s3_bucket_go_to_a_specific_folder'));

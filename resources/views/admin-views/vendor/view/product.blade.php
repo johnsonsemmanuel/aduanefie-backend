@@ -17,7 +17,7 @@
 
                 <div class="col-12 mb-3">
                     <div class="row g-2">
-                        @php($item = \App\Models\Item::withoutGlobalScope(\App\Scopes\StoreScope::class)->where(['store_id' => $store->id,'is_approved'=>1 ])->count())
+                        @php($item = \App\Models\Item::withoutGlobalScope(\App\Scopes\StoreScope::class)->where(['store_id' => $store->id])->count())
                         <div class="col-sm-6 col-lg-3">
                             <a class="order--card h-100"
                                 href="{{ route('admin.store.view', ['store' => $store->id, 'tab' => 'item']) }}">
@@ -34,7 +34,7 @@
                             </a>
                         </div>
 
-                        @php( $item = \App\Models\Item::withoutGlobalScope(\App\Scopes\StoreScope::class)->where(['store_id' => $store->id, 'is_approved'=>1,'status' => 1])->count())
+                        @php( $item = \App\Models\Item::withoutGlobalScope(\App\Scopes\StoreScope::class)->where(['store_id' => $store->id, 'status' => 1])->count())
                         <div class="col-sm-6 col-lg-3">
                             <a class="order--card h-100"
                                 href="{{ route('admin.store.view', ['store' => $store->id, 'tab' => 'item', 'sub_tab' => 'active-items']) }}">
@@ -50,7 +50,7 @@
                                 </div>
                             </a>
                         </div>
-                        @php( $item = \App\Models\Item::withoutGlobalScope(\App\Scopes\StoreScope::class)->where(['store_id' => $store->id,'is_approved'=>1, 'status' => 0])->count())
+                        @php( $item = \App\Models\Item::withoutGlobalScope(\App\Scopes\StoreScope::class)->where(['store_id' => $store->id, 'status' => 0])->count())
                         <div class="col-sm-6 col-lg-3">
                             <a class="order--card h-100"
                                 href="{{ route('admin.store.view', ['store' => $store->id, 'tab' => 'item', 'sub_tab' => 'inactive-items']) }}">
@@ -160,7 +160,7 @@
                                         <img class="avatar avatar-xss avatar-4by3 mr-2"
                                             src="{{ asset('public/assets/admin') }}/svg/components/placeholder-csv-format.svg"
                                             alt="Image Description">
-                                        {{ translate('messages.csv') }}
+                                        .{{ translate('messages.csv') }}
                                     </a>
 
                                 </div>
@@ -182,15 +182,12 @@
                                 <tr>
                                     <th class="border-0">{{ translate('sl') }}</th>
                                     <th class="border-0">{{ translate('messages.name') }}</th>
-                                    <th class="border-0">{{ translate('Category') }}</th>
+                                    <th class="border-0">{{ translate('messages.type') }}</th>
                                     @if (Config::get('module.current_module_type') != 'food' &&
                                             !(isset($sub_tab) && ($sub_tab == 'rejected-items' || $sub_tab == 'pending-items')))
                                         <th class="border-0">{{ translate('messages.quantity') }}</th>
                                     @endif
                                     <th class="border-0">{{ translate('messages.price') }}</th>
-                                      @if ($productWiseTax)
-                                        <th  class="border-0 ">{{ translate('messages.Vat/Tax') }}</th>
-                                    @endif
                                     <th class="border-0">{{ translate('messages.status') }}</th>
                                     <th class="border-0 text-center">{{ translate('messages.action') }}</th>
                                 </tr>
@@ -216,7 +213,7 @@
                                                 </a>
                                             </td>
                                             <td>
-                                                {{ Str::limit(App\CentralLogics\Helpers::get_category_name($food['category_ids']) , 20, '...') }}
+                                                {{ Str::limit($food->category ? $food->category->name : translate('messages.category_deleted'), 20, '...') }}
                                             </td>
 
                                             <td>
@@ -224,23 +221,6 @@
                                                     {{ \App\CentralLogics\Helpers::format_currency($food['price']) }}
                                                 </div>
                                             </td>
-
-                                             @if ($productWiseTax)
-                                            <td>
-                                                <span class="d-block font-size-sm text-body">
-                                                    @forelse ($food?->taxVats?->pluck('tax.name', 'tax.tax_rate')->toArray() as $key => $tax)
-                                                        <span> {{ $tax }} : <span class="font-bold">
-                                                                ({{ $key }}%)
-                                                            </span> </span>
-                                                        <br>
-                                                    @empty
-                                                        <span> {{ translate('messages.no_tax') }} </span>
-                                                    @endforelse
-                                                </span>
-
-                                            </td>
-
-                                            @endif
                                             <td>
                                                 <div class="">
                                                     @if ($food->is_rejected == 1)
@@ -314,12 +294,12 @@
                                                 </a>
                                             </td>
                                             <td>
-                                                {{ Str::limit(App\CentralLogics\Helpers::get_category_name($food['category_ids']), 20, '...') }}
+                                                {{ Str::limit($food->category ? $food->category->name : translate('messages.category_deleted'), 20, '...') }}
                                             </td>
                                             @if (Config::get('module.current_module_type') != 'food')
                                                 <td>
                                                     <div class="d-flex align-items-center gap-2">
-                                                        <h5 class="text-hover-primary fw-medium mb-0">{{ max((int) $food->stock, 0) }}
+                                                        <h5 class="text-hover-primary fw-medium mb-0">{{ $food->stock }}
                                                         </h5>
                                                         <span data-toggle="modal" data-id="{{ $food->id }}"
                                                             data-target="#update-quantity"
@@ -328,21 +308,6 @@
                                                 </td>
                                             @endif
                                             <td>{{ \App\CentralLogics\Helpers::format_currency($food['price']) }}</td>
-                                            @if ($productWiseTax)
-                                            <td>
-                                                <span class="d-block font-size-sm text-body">
-                                                    @forelse ($food?->taxVats?->pluck('tax.name', 'tax.tax_rate')->toArray() as $key => $tax)
-                                                        <span> {{ $tax }} : <span class="font-bold">
-                                                                ({{ $key }}%)
-                                                            </span> </span>
-                                                        <br>
-                                                    @empty
-                                                        <span> {{ translate('messages.no_tax') }} </span>
-                                                    @endforelse
-                                                </span>
-                                            </td>
-
-                                            @endif
                                             <td>
                                                 <label class="toggle-switch toggle-switch-sm"
                                                     for="stocksCheckbox{{ $food->id }}">
@@ -430,6 +395,50 @@
     <!-- Page level plugins -->
     <script>
         "use script";
+        // Call the dataTables jQuery plugin
+        $(document).ready(function() {
+            $('#dataTable').DataTable();
+
+            // INITIALIZATION OF DATATABLES
+            // =======================================================
+            let datatable = $.HSCore.components.HSDatatables.init($('#columnSearchDatatable'));
+
+            $('#column1_search').on('keyup', function() {
+                datatable
+                    .columns(1)
+                    .search(this.value)
+                    .draw();
+            });
+
+            $('#column2_search').on('keyup', function() {
+                datatable
+                    .columns(2)
+                    .search(this.value)
+                    .draw();
+            });
+
+            $('#column3_search').on('change', function() {
+                datatable
+                    .columns(3)
+                    .search(this.value)
+                    .draw();
+            });
+
+            $('#column4_search').on('keyup', function() {
+                datatable
+                    .columns(4)
+                    .search(this.value)
+                    .draw();
+            });
+
+
+            // INITIALIZATION OF SELECT2
+            // =======================================================
+            $('.js-select2-custom').each(function() {
+                let select2 = $.HSCore.components.HSSelect2.init($(this));
+            });
+
+        });
         $('.update-quantity').on('click', function() {
             let val = $(this).data('id');
             $.get({

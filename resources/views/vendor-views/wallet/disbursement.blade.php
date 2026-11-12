@@ -131,7 +131,7 @@
                                 </div>
                             </td>
                             <td>
-                                @php($store_disbursement_waiting_time = (int) \App\Models\BusinessSetting::where('key', 'store_disbursement_waiting_time')->first()?->value ?? 0)
+                                @php($store_disbursement_waiting_time = \App\Models\BusinessSetting::where('key', 'store_disbursement_waiting_time')->first()?->value ?? 0)
                                 <div>
                                     {{ $store->created_at->addDays($store_disbursement_waiting_time)->format('d-M-y')  }}
                                     <small>
@@ -279,7 +279,7 @@
                     </button>
 
                 </div>
-                <form action="{{ route('vendor.wallet.wallet_make_payment') }}" method="POST" class="needs-validation">
+                <form action="{{ route('vendor.wallet.make_payment') }}" method="POST" class="needs-validation">
                     <div class="modal-body">
                         @csrf
                         <input type="hidden" value="{{ \App\CentralLogics\Helpers::get_store_id() }}" name="store_id"/>
@@ -291,7 +291,7 @@
                                     <div class="d-flex gap-3 align-items-center">
                                         <input type="radio" required id="{{$item['gateway'] }}" name="payment_gateway" value="{{$item['gateway'] }}">
                                         <label for="{{$item['gateway'] }}" class="d-flex align-items-center gap-3 mb-0">
-                                            <img height="24" src="{{ asset('storage/payment_modules/gateway_image/'. $item['gateway_image']) }}" alt="">
+                                            <img height="24" src="{{ asset('storage/app/public/payment_modules/gateway_image/'. $item['gateway_image']) }}" alt="">
                                             {{ $item['gateway_title'] }}
                                         </label>
                                     </div>

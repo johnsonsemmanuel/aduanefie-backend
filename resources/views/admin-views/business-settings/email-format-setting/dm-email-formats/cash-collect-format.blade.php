@@ -10,7 +10,17 @@
     <div class="content container-fluid">
         <!-- Page Header -->
         <div class="page-header">
-            @include('admin-views.business-settings.email-format-setting.partials.email-template-header')
+            <div class="d-flex flex-wrap justify-content-between align-items-center __gap-15px">
+                <h1 class="page-header-title mr-3 mb-0">
+                    <span class="page-header-icon">
+                        <img src="{{ asset('public/assets/admin/img/email-setting.png') }}" class="w--26" alt="">
+                    </span>
+                    <span>
+                        {{ translate('messages.Email Templates') }}
+                    </span>
+                </h1>
+                @include('admin-views.business-settings.email-format-setting.partials.email-template-options')
+            </div>
             @include('admin-views.business-settings.email-format-setting.partials.dm-email-template-setting-links')
         </div>
 
@@ -22,7 +32,7 @@
                         <div class="maintenance-mode-toggle-bar d-flex flex-wrap justify-content-between border rounded align-items-center p-2">
                             <h5 class="text-capitalize m-0 text--primary pl-2">
                                 {{translate('Send_Mail_on_‘Cash_Collection’?')}}
-                        <span class="form-label-secondary text--primary" data-toggle="tooltip" data-placement="right" data-original-title="{{ \App\CentralLogics\Helpers::formatDeliverymanText(translate('If_Admin_or_Store_collects_cash_from_a_Deliveryman,_he_will_receive_an_automated_email_from_the_system_showing_how_much_cash_is_collected.'), null, true) }}">
+                        <span class="form-label-secondary text--primary" data-toggle="tooltip" data-placement="right" data-original-title="{{ translate('If_Admin_or_Store_collects_cash_from_a_Deliveryman,_he_will_receive_an_automated_email_from_the_system_showing_how_much_cash_is_collected.') }}">
                                     <img src="{{asset('public/assets/admin/img/info-circle.svg')}}" alt="">
                                 </span>
                             </h5>
@@ -34,8 +44,8 @@
                                        data-image-off="{{asset('/public/assets/admin/img/modal')}}/place-order-off.png"
                                        data-title-on="{{translate('Want_to_enable_cash_collect_mail?')}}"
                                        data-title-off="{{translate('Want_to_disable_cash_collect_mail?')}}"
-                                       data-text-on="<p>{{ \App\CentralLogics\Helpers::formatDeliverymanText(translate('If_enabled,_the_Deliveryman_will_receive_an_email_after_the_Admin/Store_collects_cash_from_him.'), null, true) }}</p>"
-                                       data-text-off="<p>{{ \App\CentralLogics\Helpers::formatDeliverymanText(translate('If_disabled,_the_Deliveryman_will_not_receive_any_email_on_Cash_Collection.'), null, true) }}</p>"
+                                       data-text-on="<p>{{translate('If_enabled,_the_Deliveryman_will_receive_an_email_after_the_Admin/Store_collects_cash_from_him.')}}</p>"
+                                       data-text-off="<p>{{translate('If_disabled,_the_Deliveryman_will_not_receive_any_email_on_Cash_Collection.')}}</p>"
                                        id="mail-status" {{$mail_status == '1'?'checked':''}}>
                                 <span class="toggle-switch-label text mb-0">
                                     <span class="toggle-switch-indicator"></span>
@@ -48,7 +58,7 @@
                 </div>
                 @php($data=\App\Models\EmailTemplate::where('type','dm')->where('email_type', 'cash_collect')->first())
                 @php($template= $template ?? $data?->email_template ?? 6)
-                <form action="{{ route('admin.business-settings.email-setup-update', ['dm','cash-collect']) }}" method="POST" enctype="multipart/form-data">
+                <form action="{{ route('admin.business-settings.email-setup', ['dm','cash-collect']) }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <div class="card border-0">
                         <div class="card-body">
@@ -286,7 +296,7 @@
                                                             <label class="form-label">
                                                                 {{translate('Copyright Content')}}({{ translate('messages.default') }})
                                                             </label>
-                                                            <input type="text" data-id="mail-copyright" name="copyright_text[]"  placeholder="{{ \App\CentralLogics\Helpers::copyright_placeholder() }}" class="form-control" value="{{ $data?->getRawOriginal('copyright_text') }}">
+                                                            <input type="text" data-id="mail-copyright" name="copyright_text[]"  placeholder="{{ translate('Ex:_Copyright_2023_Aduanefie._All_right_reserved') }}" class="form-control" value="{{ $data?->getRawOriginal('copyright_text') }}">
                                                         </div>
                                                     @foreach(json_decode($language) as $lang)
                                                     <?php
@@ -304,7 +314,7 @@
                                                             <label class="form-label">
                                                                 {{translate('Copyright Content')}}({{strtoupper($lang)}})
                                                             </label>
-                                                            <input type="text" name="copyright_text[]"  placeholder="{{ \App\CentralLogics\Helpers::copyright_placeholder() }}" class="form-control" value="{{ $translate[$lang]['copyright_text']??'' }}">
+                                                            <input type="text" name="copyright_text[]"  placeholder="{{ translate('Ex:_Copyright_2023_Aduanefie._All_right_reserved') }}" class="form-control" value="{{ $translate[$lang]['copyright_text']??'' }}">
                                                         </div>
                                                     @endforeach
                                                 @else
@@ -313,13 +323,13 @@
                                                         {{translate('Copyright Content')}}
 
                                                     </label>
-                                                    <input type="text" placeholder="{{ \App\CentralLogics\Helpers::copyright_placeholder() }}" class="form-control" name="copyright_text[]" value="">
+                                                    <input type="text" placeholder="{{ translate('Ex:_Copyright_2023_Aduanefie._All_right_reserved') }}" class="form-control" name="copyright_text[]" value="">
                                                 </div>
                                                 @endif
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="btn--container justify-content-end mt-20">
+                                    <div class="btn--container justify-content-end mt-3">
                                         <button type="reset" id="reset_btn" class="btn btn--reset">{{translate('Reset')}}</button>
                                         <button type="submit" class="btn btn--primary">{{translate('Save')}}</button>
                                     </div>
@@ -346,3 +356,4 @@
     <script src="{{asset('public/assets/admin/js/view-pages/email-templates.js')}}"></script>
     <!-- Email Template End-->
 @endpush
+

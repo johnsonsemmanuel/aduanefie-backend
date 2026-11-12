@@ -3,18 +3,17 @@
 namespace App\Models;
 
 use App\CentralLogics\Helpers;
-use App\Traits\HasProductVideoPreview;
 use App\Scopes\ZoneScope;
 use App\Scopes\StoreScope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Support\Facades\DB;
-use Modules\TaxModule\Entities\Taxable;
 
 class TempProduct extends Model
 {
-    use HasFactory, HasProductVideoPreview;
-    protected $with = ['storeCategory'];
+    use HasFactory;
     protected $casts = [
         'tax' => 'float',
         'price' => 'float',
@@ -24,7 +23,6 @@ class TempProduct extends Model
         'set_menu' => 'integer',
         'category_id' => 'integer',
         'store_id' => 'integer',
-        'store_category_id' => 'integer',
         'reviews_count' => 'integer',
         'recommended' => 'integer',
         'maximum_cart_quantity' => 'integer',
@@ -37,9 +35,17 @@ class TempProduct extends Model
         'item_id'=>'integer',
         'is_rejected'=>'integer',
         'stock'=>'integer',
+        'seasonality'=>'array',
+        'perishability_days'=>'integer',
+        'origin_farm'=>'string',
+        'certification'=>'string',
+        'cold_chain_required'=>'boolean',
+        'harvest_date'=>'date',
+        'expiry_date'=>'date',
+        'minimum_order_qty'=>'integer',
     ];
     protected $guarded = ['id'];
-    protected $appends = ['image_full_url','images_full_url', 'video_full_url', 'video_size', 'video_preview_type', 'video_embed_url', 'video_preview_url', 'video_thumbnail_url', 'video_preview_modal_type', 'video_preview_modal_url', 'has_video_preview', 'has_video_source'];
+    protected $appends = ['image_full_url','images_full_url'];
     public function getImageFullUrlAttribute(){
         $value = $this->image;
         if (count($this->storage) > 0) {
@@ -102,10 +108,6 @@ class TempProduct extends Model
     {
         return $this->hasOne(PharmacyItemDetails::class, 'temp_product_id');
     }
-    public function ecommerce_item_details()
-    {
-        return $this->hasOne(EcommerceItemDetails::class, 'temp_product_id');
-    }
 
     public function scopeType($query, $type)
     {
@@ -137,11 +139,6 @@ class TempProduct extends Model
     public function category()
     {
         return $this->belongsTo(Category::class, 'category_id');
-    }
-
-    public function storeCategory()
-    {
-        return $this->belongsTo(StoreCategory::class, 'store_category_id');
     }
 
     public function storage()
@@ -190,28 +187,7 @@ class TempProduct extends Model
                     'updated_at' => now(),
                 ]);
             }
-            if($model->isDirty('video')){
-                $value = Helpers::getDisk();
-
-                DB::table('storages')->updateOrInsert([
-                    'data_type' => get_class($model),
-                    'data_id' => $model->id,
-                    'key' => 'video',
-                ], [
-                    'value' => $value,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
         });
 
-    }
-       public function taxVats()
-    {
-        return $this->morphMany(Taxable::class, 'taxable');
-    }
-
-    public function seoData(){
-        return $this->hasOne(ItemSeoData::class,'temp_item_id');
     }
 }

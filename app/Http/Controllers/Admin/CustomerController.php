@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Models\User;
 use App\Models\Order;
-use App\Models\Store;
 use App\Models\Newsletter;
 use Illuminate\Http\Request;
 use App\CentralLogics\Helpers;
@@ -19,7 +18,6 @@ use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Mail;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\SubscriberListExport;
-use Modules\Builder\Entities\TenantDomainConfig;
 use Modules\Rental\Entities\Trips;
 use Modules\Rental\Exports\TripExport;
 
@@ -27,28 +25,12 @@ class CustomerController extends Controller
 {
     public function __construct()
     {
-        DB::statement("SET sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''));");
+        if (DB::connection()->getDriverName() === 'mysql') {
+            DB::statement("SET sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''));");
+        }
     }
     public function customer_list(Request $request)
     {
-        $builder_published = (bool) addon_published_status('Builder');
-        $tab = $request->tab === 'storefront' && $builder_published ? 'storefront' : 'main';
-
-        // Stores whose Builder storefront is currently published — used for
-        // both the filter dropdown and to guard a hand-crafted storefront_id.
-        $publishedStoreIds = $builder_published
-            ? TenantDomainConfig::where('website_visibility', true)->pluck('sub_tenant_id')->unique()->values()
-            : collect();
-        $storefronts = $builder_published
-            ? Store::whereIn('id', $publishedStoreIds)->select('id', 'name')->orderBy('name')->get()
-            : collect();
-        $publishedStoreLookup = $storefronts->pluck('name', 'id')->all();
-
-        $storefront_id = $request->storefront_id;
-        if ($storefront_id !== null && !$publishedStoreIds->contains((int) $storefront_id)) {
-            $storefront_id = null;
-        }
-
         $zone_id=  $request->zone_id ?? null;
         $filter=  $request->filter ?? null;
         $order_wise=  $request->order_wise ?? null;
@@ -86,19 +68,6 @@ class CustomerController extends Controller
                     ->orWhere('phone', 'like', "%{$value}%");
             };
         })->withcount('orders')
-
-        // Admin bypasses HostScope, so without these clauses both tabs would
-        // bleed into each other. Main tab = host-context users only; storefront
-        // tab = any user with a sub_tenant_id (i.e. registered via Builder).
-        ->when($tab === 'main', function ($query) {
-            $query->where('tenant_id', 0)->where('sub_tenant_id', 0);
-        })
-        ->when($tab === 'storefront', function ($query) {
-            $query->where('sub_tenant_id', '>', 0);
-        })
-        ->when($tab === 'storefront' && $storefront_id, function ($query) use ($storefront_id) {
-            $query->where('sub_tenant_id', (int) $storefront_id);
-        })
 
         ->when(isset($request->join_date) , function ($query) use($join_date_start, $join_date_end) {
             $query->WhereBetween('created_at', [$join_date_start, $join_date_end]);
@@ -163,14 +132,7 @@ class CustomerController extends Controller
         }
 
 
-        return view('admin-views.customer.list', compact(
-            'customers',
-            'tab',
-            'builder_published',
-            'storefronts',
-            'publishedStoreLookup',
-            'storefront_id',
-        ));
+        return view('admin-views.customer.list', compact('customers'));
     }
 
     public function status(User $customer, Request $request)
@@ -202,7 +164,7 @@ class CustomerController extends Controller
                 }
 
                 if ( config('mail.status') && Helpers::get_mail_status('suspend_mail_status_user') == '1' &&  Helpers::getNotificationStatusData('customer','customer_account_block','mail_status') )  {
-                    Mail::to($customer?->getRawOriginal('email'))->send(new \App\Mail\UserStatus('suspended', $customer->f_name.' '.$customer->l_name));
+                    Mail::to($customer->email)->send(new \App\Mail\UserStatus('suspended', $customer->f_name.' '.$customer->l_name));
                 }
 
             } else{
@@ -227,7 +189,7 @@ class CustomerController extends Controller
                 }
 
                 if ( config('mail.status') && Helpers::get_mail_status('unsuspend_mail_status_user')== '1' &&  Helpers::getNotificationStatusData('customer','customer_account_unblock','mail_status') ) {
-                    Mail::to($customer?->getRawOriginal('email'))->send(new \App\Mail\UserStatus('unsuspended', $customer->f_name.' '.$customer->l_name));
+                    Mail::to($customer->email)->send(new \App\Mail\UserStatus('unsuspended', $customer->f_name.' '.$customer->l_name));
                 }
             }
 
@@ -242,21 +204,6 @@ class CustomerController extends Controller
 
     public function search(Request $request)
     {
-        $builder_published = (bool) addon_published_status('Builder');
-        $tab = $request->tab === 'storefront' && $builder_published ? 'storefront' : 'main';
-
-        $publishedStoreIds = $builder_published
-            ? TenantDomainConfig::where('website_visibility', true)->pluck('sub_tenant_id')->unique()->values()
-            : collect();
-        $publishedStoreLookup = $builder_published
-            ? Store::whereIn('id', $publishedStoreIds)->pluck('name', 'id')->all()
-            : [];
-
-        $storefront_id = $request->storefront_id;
-        if ($storefront_id !== null && !$publishedStoreIds->contains((int) $storefront_id)) {
-            $storefront_id = null;
-        }
-
         $key = explode(' ', $request['search']);
         $customers = User::where(function ($q) use ($key) {
             foreach ($key as $value) {
@@ -265,20 +212,10 @@ class CustomerController extends Controller
                     ->orWhere('email', 'like', "%{$value}%")
                     ->orWhere('phone', 'like', "%{$value}%");
             }
-        })
-            ->when($tab === 'main', function ($query) {
-                $query->where('tenant_id', 0)->where('sub_tenant_id', 0);
-            })
-            ->when($tab === 'storefront', function ($query) {
-                $query->where('sub_tenant_id', '>', 0);
-            })
-            ->when($tab === 'storefront' && $storefront_id, function ($query) use ($storefront_id) {
-                $query->where('sub_tenant_id', (int) $storefront_id);
-            })
-            ->orderBy('order_count', 'desc')->limit(50)->get();
+        })->orderBy('order_count', 'desc')->limit(50)->get();
         return response()->json([
             'count' => count($customers),
-            'view' => view('admin-views.customer.partials._table', compact('customers', 'tab', 'publishedStoreLookup'))->render()
+            'view' => view('admin-views.customer.partials._table', compact('customers'))->render()
         ]);
     }
 
@@ -297,8 +234,7 @@ class CustomerController extends Controller
                 $query->Where('id', 'like', "%{$key}%");
             } )
             ->Notpos()->paginate(config('default_pagination'));
-            $moduleType = 'normal';
-            return view('admin-views.customer.customer-view', compact('customer', 'orders','total_order_amount','moduleType'));
+            return view('admin-views.customer.customer-view', compact('customer', 'orders','total_order_amount'));
         }
         Toastr::error(translate('messages.customer_not_found'));
         return back();
@@ -317,8 +253,7 @@ class CustomerController extends Controller
             ->when(isset($key), function($query) use($key){
                 $query->Where('id', 'like', "%{$key}%");
             })->paginate(config('default_pagination'));
-            $moduleType = 'rental';
-            return view('admin-views.customer.customer-rental-view', compact('customer', 'trips','total_trips_amount','moduleType'));
+            return view('admin-views.customer.customer-rental-view', compact('customer', 'trips','total_trips_amount'));
         }
         Toastr::error(translate('messages.customer_not_found'));
         return back();
@@ -328,7 +263,7 @@ class CustomerController extends Controller
     {
         $customer = User::find($request->id);
 
-        $orders = Order::with(['orderProDiscount'])->latest()->where(['user_id' => $request->id])->Notpos()->get();
+        $orders = Order::latest()->where(['user_id' => $request->id])->Notpos()->get();
 
         $data = [
             'orders'=>$orders,
@@ -514,7 +449,7 @@ class CustomerController extends Controller
 
     public function update_settings(Request $request)
     {
-        if (getEnvMode()== 'demo') {
+        if (env('APP_MODE') == 'demo') {
             Toastr::info(translate('messages.update_option_is_disable_for_demo'));
             return back();
         }
@@ -524,36 +459,58 @@ class CustomerController extends Controller
             'loyalty_point_exchange_rate'=>'nullable|numeric',
             'ref_earning_exchange_rate'=>'nullable|numeric',
         ]);
-            $keys=['guest_checkout_status','toggle_veg_non_veg','wallet_status','wallet_add_refund','add_fund_status','loyalty_point_status','loyalty_point_exchange_rate','loyalty_point_item_purchase_point',
-                    'loyalty_point_minimum_point','ref_earning_status','ref_earning_exchange_rate','new_customer_discount_status',
-                    'new_customer_discount_amount_type','new_customer_discount_validity_type','new_customer_discount_amount','new_customer_discount_amount_validity',
-                    'pro_member_status',
-                    'customer_personalization_status',
-                // 'country_picker_status',
-                ];
+        Helpers::businessUpdateOrInsert(['key' => 'customer_verification'], [
+            'value' => $request['customer_verification_status']??0
+        ]);
+        Helpers::businessUpdateOrInsert(['key' => 'wallet_status'], [
+            'value' => $request['customer_wallet']??0
+        ]);
+        Helpers::businessUpdateOrInsert(['key' => 'loyalty_point_status'], [
+            'value' => $request['customer_loyalty_point']??0
+        ]);
+        Helpers::businessUpdateOrInsert(['key' => 'ref_earning_status'], [
+            'value' => $request['ref_earning_status'] ?? 0
+        ]);
+        Helpers::businessUpdateOrInsert(['key' => 'wallet_add_refund'], [
+            'value' => $request['refund_to_wallet']??0
+        ]);
+        Helpers::businessUpdateOrInsert(['key' => 'loyalty_point_exchange_rate'], [
+            'value' => $request['loyalty_point_exchange_rate'] ?? 0
+        ]);
+        Helpers::businessUpdateOrInsert(['key' => 'ref_earning_exchange_rate'], [
+            'value' => $request['ref_earning_exchange_rate'] ?? 0
+        ]);
+        Helpers::businessUpdateOrInsert(['key' => 'loyalty_point_item_purchase_point'], [
+            'value' => $request['item_purchase_point']??0
+        ]);
+        Helpers::businessUpdateOrInsert(['key' => 'loyalty_point_minimum_point'], [
+            'value' => $request['minimun_transfer_point']??0
+        ]);
+        Helpers::businessUpdateOrInsert(['key' => 'add_fund_status'], [
+            'value' => $request['add_fund_status']??0
+        ]);
 
-        foreach ($keys as $key) {
-            Helpers::businessUpdateOrInsert(['key' => $key], [
-                'value' => $request->$key ?? 0,
-            ]);
-        }
+        Helpers::businessUpdateOrInsert(['key' => 'new_customer_discount_status'], [
+            'value' => $request['new_customer_discount_status']??0
+        ]);
+        Helpers::businessUpdateOrInsert(['key' => 'new_customer_discount_amount'], [
+            'value' => $request['new_customer_discount_amount']??0
+        ]);
+        Helpers::businessUpdateOrInsert(['key' => 'new_customer_discount_amount_type'], [
+            'value' => $request['new_customer_discount_amount_type']?? 'percentage'
+        ]);
+        Helpers::businessUpdateOrInsert(['key' => 'new_customer_discount_amount_validity'], [
+            'value' => $request['new_customer_discount_amount_validity']??0
+        ]);
+        Helpers::businessUpdateOrInsert(['key' => 'new_customer_discount_validity_type'], [
+            'value' => $request['new_customer_discount_validity_type']??'day'
+        ]);
+
         Toastr::success(translate('messages.customer_settings_updated_successfully'));
         return back();
     }
 
     public function export(Request $request){
-        $builder_published = (bool) addon_published_status('Builder');
-        $tab = $request->tab === 'storefront' && $builder_published ? 'storefront' : 'main';
-
-        $publishedStoreIds = $builder_published
-            ? TenantDomainConfig::where('website_visibility', true)->pluck('sub_tenant_id')->unique()->values()
-            : collect();
-
-        $storefront_id = $request->storefront_id;
-        if ($storefront_id !== null && !$publishedStoreIds->contains((int) $storefront_id)) {
-            $storefront_id = null;
-        }
-
         $zone_id=  $request->zone_id ?? null;
         $filter=  $request->filter ?? null;
         $order_wise=  $request->order_wise ?? null;
@@ -590,16 +547,6 @@ class CustomerController extends Controller
                     ->orWhere('phone', 'like', "%{$value}%");
             };
         })->withcount('orders')
-
-        ->when($tab === 'main', function ($query) {
-            $query->where('tenant_id', 0)->where('sub_tenant_id', 0);
-        })
-        ->when($tab === 'storefront', function ($query) {
-            $query->where('sub_tenant_id', '>', 0);
-        })
-        ->when($tab === 'storefront' && $storefront_id, function ($query) use ($storefront_id) {
-            $query->where('sub_tenant_id', (int) $storefront_id);
-        })
 
         ->when(isset($request->join_date) , function ($query) use($join_date_start, $join_date_end) {
             $query->WhereBetween('created_at', [$join_date_start, $join_date_end]);

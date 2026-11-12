@@ -30,7 +30,6 @@ class EmployeeService
         } else {
             $pass = bcrypt($request['password']);
             $employee->remember_token=null;
-            $employee->login_remember_token=null;
         }
 
         if ($request->has('image')) {

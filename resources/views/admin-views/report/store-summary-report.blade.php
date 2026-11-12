@@ -2,13 +2,9 @@
 
 @section('title',translate('Store Report'))
 
-@section('store_summary_report')
-    active
-@endsection
 @push('css_or_js')
     <meta name="csrf-token" content="{{ csrf_token() }}">
 @endpush
-
 
 @section('content')
 
@@ -81,7 +77,7 @@
             <div class="left-content-card">
                 <img src="{{asset('/public/assets/admin/img/report/cart.svg')}}" alt="">
                 <div class="info">
-                    <h4 class="subtitle">{{ $total_orders }}</h4>
+                    <h4 class="subtitle">{{ $orders->count() }}</h4>
                     <h6 class="subtext">{{ translate('messages.Total Orders') }}</h6>
                 </div>
                 <div class="coupon__discount w-100 text-right d-flex justify-content-between">
@@ -106,7 +102,7 @@
             <div class="left-content-card">
                 <img src="{{asset('/public/assets/admin/img/report/product.svg')}}" alt="">
                 <div class="info">
-                    <h4 class="subtitle">{{ $items }}</h4>
+                    <h4 class="subtitle">{{ $items->count() }}</h4>
                     <h6 class="subtext">{{ translate('New Items') }}</h6>
                 </div>
             </div>
@@ -224,10 +220,7 @@
     <div class="mt-11px card">
         <div class="card-header border-0 py-2">
             <div class="search--button-wrapper">
-                <h5 class="card-title">
-                    {{translate('messages.Total Stores')}}
-                    <span class="badge badge-soft-secondary ml-2" id="itemCount">{{ $stores->total() }}</span>
-                </h5>
+                <h5 class="card-title">{{translate('messages.Total Stores')}}</h5>
                 <form class="search-form">
                                 <!-- Search -->
                     {{-- @csrf --}}
@@ -262,7 +255,7 @@
                             <img class="avatar avatar-xss avatar-4by3 mr-2"
                                 src="{{ asset('public/assets/admin') }}/svg/components/placeholder-csv-format.svg"
                                 alt="Image Description">
-                            {{ translate('messages.csv') }}
+                            .{{ translate('messages.csv') }}
                         </a>
                     </div>
                 </div>
@@ -288,37 +281,32 @@
                     </thead>
                     <tbody id="set-rows">
                     @foreach ($stores as $k => $store)
-
-
-                        <?php
-                        $total_orders= $store->total_orders;
-                        $delivered=$store->delivered;
-                        $canceled=$store->canceled;
-                        $refunded=$store->refunded;
-                        $refund_requested=$store->refund_requested;
-                        ?>
+                        @php($delivered = $store->orders->where('order_status', 'delivered')->count())
+                        @php($canceled = $store->orders->where('order_status', 'canceled')->count())
+                        @php($refunded = $store->orders->where('order_status', 'refunded')->count())
+                        @php($refund_requested = $store->orders->whereNotNull('refund_requested')->count())
                         <tr>
                             <td>{{$k+$stores->firstItem()}}</td>
                             <td>
                                 <a href="{{route('admin.store.view', [$store->id, 'module_id'=>$store->module_id])}}">{{ $store->name }}</a>
                             </td>
                             <td class="text-center">
-                                {{ $total_orders }}
+                                {{ $store->orders->count() }}
                             </td>
                             <td class="text-center">
                                 {{ $delivered }}
                             </td>
                             <td class="text-center white-space-nowrap">
-                                {{\App\CentralLogics\Helpers::number_format_short($store->delivered_amount)}}
+                                {{\App\CentralLogics\Helpers::number_format_short($store->orders->where('order_status','delivered')->sum('order_amount'))}}
                             </td>
                             <td class="text-center white-space-nowrap">
-                                {{ ($total_orders > 0 && $delivered > 0)? number_format((100*$delivered)/$total_orders, config('round_up_to_digit')): 0 }}%
+                                {{ ($store->orders->count() > 0 && $delivered > 0)? number_format((100*$delivered)/$store->orders->count(), config('round_up_to_digit')): 0 }}%
                             </td>
                             <td class="text-center">
-                                {{ ($total_orders > 0 && $delivered > 0)? number_format((100*($total_orders-($delivered+$canceled)))/$total_orders, config('round_up_to_digit')): 0 }}%
+                                {{ ($store->orders->count() > 0 && $delivered > 0)? number_format((100*($store->orders->count()-($delivered+$canceled)))/$store->orders->count(), config('round_up_to_digit')): 0 }}%
                             </td>
                             <td class="text-center">
-                                {{ ($total_orders > 0 && $canceled > 0)? number_format((100*$canceled)/$total_orders, config('round_up_to_digit')): 0 }}%
+                                {{ ($store->orders->count() > 0 && $canceled > 0)? number_format((100*$canceled)/$store->orders->count(), config('round_up_to_digit')): 0 }}%
                             </td>
                             <td class="text-center">
                                 {{ $refunded }} <small>({{ $refund_requested }} pending)</small>

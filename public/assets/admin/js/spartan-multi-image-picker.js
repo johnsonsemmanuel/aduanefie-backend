@@ -24,7 +24,7 @@
             },
             maxCount: "",
             maxFileSize: "",
-            allowedExt: "png|jpg|jpeg|gif|webp",
+            allowedExt: "png|jpg|jpeg|gif",
             onAddRow: function () {},
             onRenderedPreview: function () {},
             onRemoveRow: function () {},

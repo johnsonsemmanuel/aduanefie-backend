@@ -30,21 +30,16 @@ class CategoryService
             'image' => $this->upload('category/', 'png', $request->file('image')),
             'parent_id' => $request->parent_id == null ? 0 : $request->parent_id,
             'position' => $request->position,
-            'priority' => $request->priority??0,
             'module_id' => isset($request->parent_id) ? $parentCategory['module_id'] : Config::get('module.current_module_id')
         ];
     }
 
     public function getUpdateData(CategoryUpdateRequest $request, object $object): array
     {
-
         $slug = Str::slug($request->name[array_search('default', $request->lang)]);
         return [
             'slug' => $object->slug ?? "{$slug}{$object->id}",
             'name' => $request->name[array_search('default', $request->lang)],
-            'priority' => $request->priority??0,
-            'status' => $request->status ?? 0,
-            'parent_id' =>$request->parent_id ?? 0,
             'image' => $request->has('image') ? $this->updateAndUpload('category/', $object->image, 'png', $request->file('image')) : $object->image,
         ];
     }

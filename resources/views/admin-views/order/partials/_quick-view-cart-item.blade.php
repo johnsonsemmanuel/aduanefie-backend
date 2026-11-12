@@ -1,19 +1,3 @@
-@php
-    foreach (['food_variations', 'choice_options', 'add_ons', 'variations'] as $jsonField) {
-        if (isset($product->{$jsonField}) && !is_string($product->{$jsonField})) {
-            $product->{$jsonField} = json_encode($product->{$jsonField});
-        }
-    }
-    foreach (['variation', 'add_ons'] as $cartJsonField) {
-        if (is_array($cart_item) || $cart_item instanceof \ArrayAccess) {
-            if (isset($cart_item[$cartJsonField]) && !is_string($cart_item[$cartJsonField])) {
-                $cart_item[$cartJsonField] = json_encode($cart_item[$cartJsonField]);
-            }
-        } elseif (isset($cart_item->{$cartJsonField}) && !is_string($cart_item->{$cartJsonField})) {
-            $cart_item->{$cartJsonField} = json_encode($cart_item->{$cartJsonField});
-        }
-    }
-@endphp
 <div class="modal-header p-0">
     <h4 class="modal-title product-title">
     </h4>
@@ -196,54 +180,19 @@
                         @endforeach
                     @endif
                 @else
-{{--                    @php($variations = count($temp) > 0 ? explode('-', $temp[0]['type']) : [])--}}
-                        <?php
-                        $variations = [];
-                        $itemType = null;
-                        if (is_array($temp)) {
-                            if (isset($temp['type']) && !empty($temp['type'])) {
-                                $itemType = $temp['type'];
-                            } elseif (isset($temp[0]['type'])) {
-                                $itemType = $temp[0]['type'];
-                            }
-                        }
-
-
-                        if (is_array($temp) && isset($itemType)) {
-                            $typeParts = explode('-', $itemType);
-                            $choiceOptions = json_decode($product->choice_options ?? '[]');
-
-                            foreach ($choiceOptions as $index => $choice) {
-                                if (isset($choice->name)) {
-                                    $variations[$choice->name] = trim($typeParts[$index] ?? '');
-                                }
-                            }
-                        }
-                        ?>
-
-                @foreach (json_decode($product->choice_options) as $key => $choice)
+                    @php($variations = count($temp) > 0 ? explode('-', $temp[0]['type']) : [])
+                    @foreach (json_decode($product->choice_options) as $key => $choice)
                         <div class="h3 p-0 pt-2">{{ $choice->title }}
                         </div>
 
                         <div class="d-flex justify-content-left flex-wrap">
                             @foreach ($choice->options as $option)
-{{--                                <input class="btn-check" type="radio" id="{{ $choice->name }}-{{ $option }}"--}}
-{{--                                    name="{{ $choice->name }}" value="{{ $option }}"--}}
-{{--                                    {{ count($temp) > 0 && str_replace(' ', '', $option) == $variations[$key] ? 'checked' : '' }}--}}
-{{--                                       autocomplete="off">--}}
-                                @php($option_id = Str::slug($choice->name . '-' . $option, '_'))
-
-                                <input class="btn-check" type="radio"
-                                       id="{{ $option_id }}"
-                                       name="{{ $choice->name }}"
-                                       value="{{ $option }}"
-                                       {{ trim(strtolower($option)) == strtolower($variations[$choice->name] ?? '') ? 'checked' : '' }}
-                                       autocomplete="off">
+                                <input class="btn-check" type="radio" id="{{ $choice->name }}-{{ $option }}"
+                                    name="{{ $choice->name }}" value="{{ $option }}"
+                                    {{ count($temp) > 0 && str_replace(' ', '', $option) == $variations[$key] ? 'checked' : '' }}
+                                    autocomplete="off">
                                 <label class="btn btn-sm check-label mx-1 choice-input"
-                                       for="{{ $option_id }}">
-                                    {{ Str::limit($option, 20, '...') }}
-                                </label>
-
+                                    for="{{ $choice->name }}-{{ $option }}">{{ Str::limit($option, 20, '...') }}</label>
                             @endforeach
                         </div>
                     @endforeach
@@ -280,7 +229,7 @@
                     </div>
 
                     <div class="d-flex justify-content-left flex-wrap">
-                            @php($addons = array_column(json_decode($cart_item['add_ons'], true), 'quantity', 'id'))
+                        @php($addons = array_column(json_decode($cart_item['add_ons'], true), 'quantity', 'id'))
                         @foreach (\App\Models\AddOn::withoutGlobalScope(\App\Scopes\StoreScope::class)->whereIn('id', $add_ons)->active()->get() as $key => $add_on)
                             @php($checked = array_key_exists($add_on->id, $addons))
                             <div class="flex-column pb-2">
@@ -292,15 +241,15 @@
                                     for="addon{{ $key }}">{{ Str::limit($add_on->name, 20, '...') }} <br>
                                     {{ \App\CentralLogics\Helpers::format_currency($add_on->price) }}</label>
                                 <label
-                                    class="input-group addon-quantity-input mx-1 shadow bg-white rounded px-1  visiblity-visible @if (!$checked)d-none @endif"
+                                    class="input-group addon-quantity-input mx-1 shadow bg-white rounded px-1 @if ($checked) visiblity-visible @endif"
                                     for="addon{{ $key }}">
-                                    <button class="btn btn-sm h-100 text-dark px-0 addon-stepdown " type="button"><i
+                                    <button class="btn btn-sm h-100 text-dark px-0 addon-stepup" type="button"><i
                                             class="tio-remove  font-weight-bold"></i></button>
                                     <input type="number" name="addon-quantity{{ $add_on->id }}"
                                         class="form-control text-center border-0 h-100" placeholder="1"
                                         value="{{ $checked ? $addons[$add_on->id] : 1 }}" min="1"
                                         max="100" readonly>
-                                    <button class="btn btn-sm h-100 text-dark px-0 addon-stepup" type="button"><i
+                                    <button class="btn btn-sm h-100 text-dark px-0 addon-stepdown" type="button"><i
                                             class="tio-add  font-weight-bold"></i></button>
                                 </label>
                             </div>
@@ -333,42 +282,17 @@
         </div>
     </div>
 </div>
+<script src="{{asset('public/assets/admin')}}/js/view-pages/common.js"></script>
 <script type="text/javascript">
-
-
-  cartQuantityInitialize();
+    cartQuantityInitialize();
     getVariantPrice();
-
-    // Update price when input changes (like variant selection)
-    $('#add-to-cart-form input').on('change', function () {
+    $('#add-to-cart-form input').on('change', function() {
         getVariantPrice();
     });
-
-    // Handle "plus" (step up)
-    $('.addon-stepup').on('click', function () {
-        const input = this.parentNode.querySelector('input[type=number]');
-        input.stepUp();
-        input.dispatchEvent(new Event('change')); // manually trigger change
-        getVariantPrice();
+    $('.addon-stepup').on('change', function() {
+        this.parentNode.querySelector('input[type=number]').stepDown(), getVariantPrice()
     });
-     document.querySelectorAll('.addon-chek').forEach(checkbox => {
-        checkbox.addEventListener('change', function () {
-            const id = this.getAttribute('id'); // e.g., addon3
-            const qtyLabel = document.querySelector(`label.addon-quantity-input[for="${id}"]`);
-            if (qtyLabel) {
-                qtyLabel.classList.toggle('d-none', !this.checked);
-            }
-        });
-         getVariantPrice();
+    $('.addon-stepdown').on('change', function() {
+        this.parentNode.querySelector('input[type=number]').stepUp(), getVariantPrice()
     });
-
-    // Handle "minus" (step down)
-    $('.addon-stepdown').on('click', function () {
-        const input = this.parentNode.querySelector('input[type=number]');
-        input.stepDown();
-        input.dispatchEvent(new Event('change'));
-        getVariantPrice();
-    });
-
-
 </script>

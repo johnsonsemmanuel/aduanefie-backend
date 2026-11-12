@@ -4,21 +4,15 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use App\Traits\AddonHelper;
+use Illuminate\Database\Connection;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\Mail;
 use App\CentralLogics\Helpers;
-use Illuminate\Http\Request;
 
 class AppServiceProvider extends ServiceProvider
 {
     use AddonHelper;
-
-    private const BUILDER_MODULE_PATH    = 'Modules/Builder';
-    private const BUILDER_ADAPTER_PATH   = 'Builder';
-    private const BUILDER_CONTRACT_NS    = 'Modules\\Builder\\Contracts\\';
-    private const BUILDER_ADAPTER_NS     = 'App\\Builder\\';
-
     /**
      * Register any application services.
      *
@@ -26,43 +20,19 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        $this->registerBuilderBindings();
-    }
-
-    /**
-     * Auto-discover host adapters in app/Builder/ and bind each one
-     * to whichever Modules\Builder\Contracts\* interface it implements.
-     */
-    private function registerBuilderBindings(): void
-    {
-        // Gate on the Aduanefie addon-activation status, not just disk
-        // presence. A customer may have installed Builder (files
-        // extracted to Modules/Builder/) but not yet clicked "Activate"
-        // in the admin panel — in that state `is_published` is 0 and
-        // the host adapters should stay dormant.
-        if (!\addon_published_status('Builder')) {
-            return;
+        // Geometry SRID depends on the runtime driver: MySQL keeps SRID 0 while
+        // PostGIS zones are stored as SRID 4326. Defined here because the .env
+        // file is not loaded yet when composer autoloads app/Library/Constants.php.
+        if (!defined('POINT_SRID')) {
+            define('POINT_SRID', (int) env('DB_POINT_SRID', config('database.default') === 'pgsql' ? 4326 : 0));
         }
 
-        $adapterPath = app_path(self::BUILDER_ADAPTER_PATH);
-
-        if (!is_dir($adapterPath)) {
-            return;
-        }
-
-        foreach (glob($adapterPath . '/*.php') as $file) {
-            $class = self::BUILDER_ADAPTER_NS . basename($file, '.php');
-
-            if (!class_exists($class)) {
-                continue;
-            }
-
-            foreach (class_implements($class) ?: [] as $interface) {
-                if (str_starts_with($interface, self::BUILDER_CONTRACT_NS)) {
-                    $this->app->bind($interface, $class);
-                }
-            }
-        }
+        // Keep LIKE case-insensitive on Postgres. The stock grammar casts the
+        // column to ::text, which defeats the citext columns that reproduce
+        // MySQL's case-insensitive comparisons. MySQL keeps its own grammar.
+        Connection::resolverFor('pgsql', function ($connection, $database, $prefix, $config) {
+            return new \App\Database\PostgresConnection($connection, $database, $prefix, $config);
+        });
     }
 
     /**
@@ -72,38 +42,25 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-
-        //TODO: need to remove after 3.8 development
-        if (app()->environment('local')) {
-            if (request()->header('x-forwarded-proto') === 'https' || request()->getScheme() === 'https') {
-                \URL::forceScheme('https');
-            }
-            if(request()->header('x-forwarded-host')) {
-                \URL::forceRootUrl('https://' . request()->header('x-forwarded-host'));
-            }
-        }
-
-        if (app()->environment('production')) {
-            \URL::forceScheme('https');
+        if (config('app.env') === 'production' || env('FORCE_HTTPS', true)) {
+            \Illuminate\Support\Facades\URL::forceScheme('https');
         }
 
         try
         {
-            Request::macro('isAny', function (array $patterns) {
-                return collect($patterns)->contains(fn ($pattern) => Request::is($pattern));
+            $bootData = Cache::remember('boot_app_provider_v1', now()->addMinutes(3), function () {
+                return [
+                    'addon_admin_routes' => $this->get_addon_admin_routes(),
+                    'get_payment_publish_status' => $this->get_payment_publish_status(),
+                    'view_keys' => Helpers::get_view_keys(),
+                ];
             });
-
-            Config::set('addon_admin_routes',$this->get_addon_admin_routes());
-            Config::set('get_payment_publish_status',$this->get_payment_publish_status());
+            Config::set('addon_admin_routes', $bootData['addon_admin_routes']);
+            Config::set('get_payment_publish_status', $bootData['get_payment_publish_status']);
             Paginator::useBootstrap();
-            foreach(Helpers::get_view_keys() as $key=>$value)
-            {
+            foreach ($bootData['view_keys'] as $key => $value) {
                 view()->share($key, $value);
             }
-
-            Mail::extend('brevoapi', function ($config) {
-                return new \App\Mail\BrevoApiTransport($config['api_key'] ?? '');
-            });
         }
         catch(\Exception $e)
         {

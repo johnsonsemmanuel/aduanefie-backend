@@ -30,7 +30,7 @@
                     </div>
                     <!-- End Search -->
                 </form>
-                @if(request()->input('search'))
+                @if(request()->get('search'))
                 <button type="reset" class="btn btn--primary ml-2 location-reload-to-base" data-url="{{url()->full()}}">{{translate('messages.reset')}}</button>
                 @endif
                 <div class="min--200">
@@ -46,7 +46,7 @@
                 <div class="min--200">
                     <select name="store_id" data-placeholder="{{translate('messages.select_store')}}" class="js-data-example-ajax form-control set-filter theme-style" data-url="{{ url()->full() }}" data-filter="store_id">
                         @if(isset($store))
-                        <option value="{{$store->id}}" data-verified="{{ (int) $store->verified_seller }}" selected>{{$store->name}}</option>
+                        <option value="{{$store->id}}" selected>{{$store->name}}</option>
                         @else
                         <option value="all" selected>{{translate('messages.all_stores')}}</option>
                         @endif
@@ -75,7 +75,7 @@
                             <img class="avatar avatar-xss avatar-4by3 mr-2"
                                 src="{{ asset('public/assets/admin') }}/svg/components/placeholder-csv-format.svg"
                                 alt="Image Description">
-                            {{ translate('messages.csv') }}
+                            .{{ translate('messages.csv') }}
                         </a>
                     </div>
                 </div>
@@ -246,7 +246,7 @@
     $(document).on('ready', function() {
         $('.js-data-example-ajax').select2({
             ajax: {
-                url: '{{ route('admin.store.get-stores') }}',
+                url: '{{url('/')}}/admin/store/get-stores',
                 data: function(params) {
                     return {
                         q: params.term, // search term

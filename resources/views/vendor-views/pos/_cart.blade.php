@@ -12,7 +12,7 @@
             <?php
             $subtotal = 0;
             $addon_price = 0;
-            $tax = session()->get('tax_amount');
+            $tax = \App\CentralLogics\Helpers::get_store_data()->tax;
             $discount = 0;
             $discount_type = 'amount';
             $discount_on_product = 0;
@@ -21,6 +21,9 @@
             @if (session()->has('cart') && count(session()->get('cart')) > 0)
                 <?php
                 $cart = session()->get('cart');
+                if (isset($cart['tax'])) {
+                    $tax = $cart['tax'];
+                }
                 if (isset($cart['discount'])) {
                     $discount = $cart['discount'];
                     $discount_type = $cart['discount_type'];
@@ -71,122 +74,31 @@
 </div>
 
 <?php
-    $add = false;
-    $sessionAddress = session()->get('address');
-    $hasRealDeliveryAddress = is_array($sessionAddress)
-        && !empty($sessionAddress['latitude'])
-        && !empty($sessionAddress['longitude']);
-    if ($hasRealDeliveryAddress) {
-        $add = true;
-        $delivery_fee = $sessionAddress['delivery_fee'] ?? 0;
-    } else {
-        $delivery_fee = 0;
-    }
+$add = false;
+if (session()->has('address') && count(session()->get('address')) > 0) {
+    $add = true;
+    $delivery_fee = session()->get('address')['delivery_fee'];
+} else {
+    $delivery_fee = 0;
+}
+$total = $subtotal + $addon_price;
+$discount_amount = $discount_type == 'percent' && $discount > 0 ? (($total - $discount_on_product) * $discount) / 100 : $discount;
+$total -= $discount_amount + $discount_on_product;
+$tax_included =  \App\Models\BusinessSetting::where(['key'=>'tax_included'])->first()?->value ?? 0;
+$total_tax_amount = $tax > 0 ? ($total * $tax) / 100 : 0;
 
-    $total = $subtotal + $addon_price;
-
-    if ($discount_type == 'percent' && $discount > 0) {
-        $discount_amount = (($total - $discount_on_product) * $discount) / 100;
-    } else {
-        $discount_amount = $discount;
-    }
-
-    $total -= $discount_amount + $discount_on_product;
-
-    $tax_amount = session()->get('tax_amount');
-    $tax_included = session()->get('tax_included');
-
-    if ($tax_included ==  1){
-        $tax_amount = 0;
-    }
-
-    $base_delivery_fee = (float) $delivery_fee;
-    $pos_order_type    = (string) (session('order_type') ?? 'delivery');
-    $pos_vendor_store  = \App\CentralLogics\Helpers::get_store_data();
-
-    $pos_eligible_amount = max(0, $subtotal + $addon_price - $discount_on_product - ($discount_amount ?? 0));
-    $pos_free_delivery   = \App\CentralLogics\DeliveryFeeLogic::effectiveFee(
-        $base_delivery_fee,
-        $pos_vendor_store,
-        $pos_eligible_amount,
-        \App\CentralLogics\DeliveryFeeLogic::resolveCouponCodeFromSession(),
-    );
-    $delivery_fee              = (float) $pos_free_delivery['fee'];
-    $pos_free_delivery_by      = $pos_free_delivery['free_by'];
-    $pos_is_free_delivery      = (bool) $pos_free_delivery['is_free'];
-    $delivery_fee_for_selector = $delivery_fee;
-
-    $pos_module_zone_pivot = ($pos_vendor_store && $pos_vendor_store->zone_id)
-        ? \App\Models\ModuleZone::query()
-            ->where('module_id', $pos_vendor_store->module_id)
-            ->where('zone_id', $pos_vendor_store->zone_id)
-            ->first()
-        : null;
-    $pos_saver_enabled = (bool) ($pos_module_zone_pivot->additional_delivery_option_status ?? false);
-    $pos_min_charge    = (float) ($pos_module_zone_pivot->minimum_delivery_charge ?? 0);
-
-    $is_charge_eligible = $pos_saver_enabled
-        && $pos_order_type === 'delivery'
-        && $delivery_fee > 0
-        && ($pos_min_charge <= 0 || $delivery_fee >= $pos_min_charge);
-
-    $deliveryType       = session()->get('delivery_type', '');
-    $deliveryTypeCharge = $is_charge_eligible ? (float) session()->get('delivery_type_charge', 0) : 0;
-    $isExpressDelivery  = $is_charge_eligible && $deliveryType === 'express'        && $deliveryTypeCharge > 0;
-    $isSlightlyDelay    = $is_charge_eligible && $deliveryType === 'slightly_delay' && $deliveryTypeCharge > 0;
-
-    $pos_pro_discount             = (float) session()->get('pos_pro_discount', 0);
-    $pos_pro_benefit_type         = session()->get('pos_pro_benefit_type');
-    $pos_pro_delivery_offer_type  = session()->get('pos_pro_delivery_offer_type');
-    $pos_pro_delivery_percentage  = (float) session()->get('pos_pro_delivery_percentage', 0);
-
-    $pos_pro_delivery_savings = 0.0;
-    if ($pos_pro_benefit_type === 'delivery_fee' && !$pos_is_free_delivery && $delivery_fee > 0) {
-        if ($pos_pro_delivery_offer_type === 'partial_free' && $pos_pro_delivery_percentage > 0 && $pos_pro_delivery_percentage < 100) {
-            $pre_pro = $delivery_fee / (1 - ($pos_pro_delivery_percentage / 100));
-            $pos_pro_delivery_savings = max(0, $pre_pro - $delivery_fee);
-        }
-    }
-
-    $adjustedDeliveryFee = $delivery_fee;
-    if ($isExpressDelivery) {
-        $adjustedDeliveryFee = $delivery_fee + $deliveryTypeCharge;
-    } elseif ($isSlightlyDelay) {
-        $adjustedDeliveryFee = max(0, $delivery_fee - $deliveryTypeCharge);
-    }
-
-    $total -= $pos_pro_discount;
-    $total += $adjustedDeliveryFee;
-
-    $deliveryTypeLabels = [
-        'standard'       => translate('messages.standard'),
-        'express'        => translate('messages.express'),
-        'slightly_delay' => translate('messages.slightly_delay'),
-    ];
-    $deliveryTypeSuffix = ($isExpressDelivery || $isSlightlyDelay)
-        ? ' (' . ($deliveryTypeLabels[$deliveryType] ?? '') . ')'
-        : ($pos_is_free_delivery && $pos_order_type === 'delivery' ? ' (' . translate('messages.Free Delivery') . ')' : '');
-
-    $extra_discount_amount=session()->get('extra_discount_amount') ?? 0;
-    $extra_discount_type=session()->get('extra_discount_type');
-    $extra_discount=session()->get('extra_discount')?? 0;
-
-    $total -= $extra_discount_amount;
-
-    if (isset($cart['paid'])) {
-        $paid = $cart['paid'];
-        $change = $total + $tax_amount - $paid;
-    } else {
-        $paid = $total + $tax_amount;
-        $change = 0;
-    }
+if ($tax_included ==  1){
+    $total_tax_amount=0;
+}
+$total = $total + $delivery_fee;
+if (isset($cart['paid'])) {
+    $paid = $cart['paid'];
+    $change = $total + $total_tax_amount - $paid;
+} else {
+    $paid = $total + $total_tax_amount;
+    $change = 0;
+}
 ?>
-@php
-    $cart_has_address = $hasRealDeliveryAddress;
-@endphp
-<input type="hidden" id="cart_delivery_fee" data-value="{{ $delivery_fee_for_selector }}" value="{{ $delivery_fee_for_selector }}">
-<input type="hidden" id="cart_order_type" data-value="{{ $pos_order_type }}" value="{{ $pos_order_type }}">
-<input type="hidden" id="cart_has_address" data-value="{{ $cart_has_address ? 1 : 0 }}" value="{{ $cart_has_address ? 1 : 0 }}">
 <form action="{{ route('vendor.pos.order') }}" id='order_place' method="post">
     @csrf
     <input type="hidden" name="user_id" id="customer_id">
@@ -207,54 +119,28 @@
             <dt class="col-6 font-regular">{{ translate('messages.discount') }} :</dt>
             <dd class="col-6 text-right">-
                 {{ \App\CentralLogics\Helpers::format_currency(round($discount_on_product, 2)) }}</dd>
-            @if ($pos_pro_discount > 0)
-                <dt class="col-6 font-regular">{{ translate('messages.Pro_Discount') }} :</dt>
-                <dd class="col-6 text-right">-
-                    {{ \App\CentralLogics\Helpers::format_currency(round($pos_pro_discount, 2)) }}</dd>
-            @endif
-            <dt class="col-6 font-regular">{{ translate('messages.delivery_fee') }}{{ $deliveryTypeSuffix }}
-                @if ($pos_pro_delivery_savings > 0)
-                    @if ($pos_pro_delivery_offer_type === 'full_free')
-                        <i class="tio-info-outined text-info" data-toggle="tooltip"
-                           title="{{ translate('messages.Pro_Customer_free_delivery_applied') }}"></i>
-                    @else
-                        <i class="tio-info-outined text-info" data-toggle="tooltip"
-                           title="{{ translate('messages.Pro_Customer_partial_delivery_discount_applied') }} ({{ (float) $pos_pro_delivery_percentage }}%)"></i>
-                    @endif
-                @endif
-                :</dt>
+            <dt class="col-6 font-regular">{{ translate('messages.delivery_fee') }} :</dt>
             <dd class="col-6 text-right" id="delivery_price">
-                {{ \App\CentralLogics\Helpers::format_currency($adjustedDeliveryFee) }}</dd>
-            {{-- @if(\App\CentralLogics\Helpers::get_store_data()?->sub_self_delivery)
-                <dd class="col-12">
-                    <small class="text-warning">
-                        <i class="tio-info-outined"></i>
-                        {{ translate('This store delivers on its own — the vendor\'s delivery charge applies.') }}
-                    </small>
-                </dd>
-            @endif --}}
+                {{ \App\CentralLogics\Helpers::format_currency($delivery_fee) }}</dd>
 
             <dt class="col-6 font-regular">{{ translate('messages.extra_discount') }} :</dt>
             <dd class="col-6 text-right"><button class="btn btn-sm" type="button" data-toggle="modal"
                     data-target="#add-discount"><i class="tio-edit"></i></button>-
-                {{ \App\CentralLogics\Helpers::format_currency(round($extra_discount_amount, 2)) }}</dd>
-
-
-
-            @if ($tax_included !=  1)
-                <dt class="col-6 font-regular">{{ translate('messages.tax') }} : </dt>
-                <dd class="col-6 text-right">
-
-                    {{ \App\CentralLogics\Helpers::format_currency(round($tax_amount, 2)) }}
-                </dd>
+                {{ \App\CentralLogics\Helpers::format_currency(round($discount_amount, 2)) }}</dd>
+                @if ($tax_included !=  1)
+            <dt class="col-6 font-regular">{{ translate('messages.tax') }} : </dt>
+            <dd class="col-6 text-right"><button class="btn btn-sm" type="button" data-toggle="modal"
+                    data-target="#add-tax"><i
+                        class="tio-edit"></i></button>{{ \App\CentralLogics\Helpers::format_currency(round($total_tax_amount, 2)) }}
+            </dd>
             @endif
             <dd class="col-12">
                 <hr class="m-0">
             </dd>
-            <input type="hidden" id='total_order_amount' value="{{ round($total + $tax_amount, 2) }}">
+            <input type="hidden" id='total_order_amount' value="{{ round($total + $total_tax_amount, 2) }}">
             <dt class="col-6 font-regular">{{ translate('Total') }}: </dt>
             <dd class="col-6 text-right h4 b">
-                {{ \App\CentralLogics\Helpers::format_currency(round($total + $tax_amount, 2)) }} </dd>
+                {{ \App\CentralLogics\Helpers::format_currency(round($total + $total_tax_amount, 2)) }} </dd>
         </dl>
         <div class="pos--payment-options mt-3 mb-3">
             <h5 class="mb-3">{{ translate($add ? 'messages.Payment Method' : 'Paid by') }}</h5>
@@ -365,16 +251,16 @@
                     <div class="form-group col-sm-6">
                         <label for="discount_input">{{ translate('messages.discount') }}</label>
                         <input type="number" class="form-control" name="discount" min="0"
-                            id="discount_input" value="{{ $extra_discount_type == 'percent' ? $extra_discount  : $extra_discount_amount }}"
-                            max="{{ $extra_discount_type == 'percent' ? 100 : 1000000000 }}">
+                            id="discount_input" value="{{ $discount }}"
+                            max="{{ $discount_type == 'percent' ? 100 : 1000000000 }}">
                     </div>
                     <div class="form-group col-sm-6">
                         <label for="discount_input_type">{{ translate('messages.type') }}</label>
                         <select name="type" class="form-control" id="discount_input_type" >
-                            <option value="amount" {{ $extra_discount_type == 'amount' ? 'selected' : '' }}>
+                            <option value="amount" {{ $discount_type == 'amount' ? 'selected' : '' }}>
                                 {{ translate('messages.amount') }}({{ \App\CentralLogics\Helpers::currency_symbol() }})
                             </option>
-                            <option value="percent" {{ $extra_discount_type == 'percent' ? 'selected' : '' }}>
+                            <option value="percent" {{ $discount_type == 'percent' ? 'selected' : '' }}>
                                 {{ translate('messages.percent') }}(%)</option>
                         </select>
                     </div>
@@ -453,17 +339,20 @@
                                 placeholder="{{ translate('Ex: +3264124565') }}">
                         </div>
                         <div class="col-md-4">
-                            <label class="input-label" for="road">{{ translate('messages.Road') }}</label>
+                            <label class="input-label" for="road">{{ translate('messages.Road') }}<span
+                                    class="input-label-secondary text-danger">*</span></label>
                             <input type="text" id="road" class="form-control" name="road"
                                 value="{{ $old ? $old['road'] : '' }}" placeholder="{{ translate('Ex: 4th') }}">
                         </div>
                         <div class="col-md-4">
-                            <label class="input-label" for="house">{{ translate('messages.House') }}</label>
+                            <label class="input-label" for="house">{{ translate('messages.House') }}<span
+                                    class="input-label-secondary text-danger">*</span></label>
                             <input type="text" id="house" class="form-control" name="house"
                                 value="{{ $old ? $old['house'] : '' }}" placeholder="{{ translate('Ex: 45/C') }}">
                         </div>
                         <div class="col-md-4">
-                            <label class="input-label" for="floor">{{ translate('messages.Floor') }}</label>
+                            <label class="input-label" for="floor">{{ translate('messages.Floor') }}<span
+                                    class="input-label-secondary text-danger">*</span></label>
                             <input type="text" id="floor" class="form-control" name="floor"
                                 value="{{ $old ? $old['floor'] : '' }}" placeholder="{{ translate('Ex: 1A') }}">
                         </div>
@@ -517,3 +406,5 @@
         </div>
     </div>
 </div>
+
+<script src="{{asset('public/assets/admin')}}/js/view-pages/common.js"></script>

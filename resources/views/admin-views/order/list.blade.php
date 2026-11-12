@@ -48,6 +48,9 @@
                         <!-- End Search -->
                     </form>
 
+                    @if(request()->get('search'))
+                        <button type="reset" class="btn btn--primary ml-2 location-reload-to-base" data-url="{{url()->full()}}">{{translate('messages.reset')}}</button>
+                    @endif
 
                     <!-- Datatable Info -->
                     <div id="datatableCounterInfo" class="mr-2 mb-2 mb-sm-0 initial-hidden">
@@ -70,13 +73,13 @@
 
                         <div id="usersExportDropdown" class="hs-unfold-content dropdown-unfold dropdown-menu dropdown-menu-sm-right">
                             <span class="dropdown-header">{{translate('messages.download_options')}}</span>
-                            <a id="export-excel" class="dropdown-item" href="{{route("admin.order.export",['status'=>$status,'file_type'=>'excel','type'=>$parcel_order?'parcel':'order', request()->getQueryString()])}}">
+                            <a id="export-excel" class="dropdown-item" href="javascript:;">
                                 <img class="avatar avatar-xss avatar-4by3 mr-2"
                                         src="{{asset('public/assets/admin')}}/svg/components/excel.svg"
                                         alt="Image Description">
                                 {{translate('messages.excel')}}
                             </a>
-                            <a id="export-csv" class="dropdown-item" href="{{route("admin.order.export",['status'=>$status,'file_type'=>'csv','type'=>$parcel_order?'parcel':'order', request()->getQueryString()])}}">
+                            <a id="export-csv" class="dropdown-item" href="javascript:;">
                                 <img class="avatar avatar-xss avatar-4by3 mr-2"
                                         src="{{asset('public/assets/admin')}}/svg/components/placeholder-csv-format.svg"
                                         alt="Image Description">
@@ -101,7 +104,126 @@
                         </a>
                     </div>
 
+                    @if ($status != 'scheduled')
+                    <div class="hs-unfold">
+                        <a class="js-hs-unfold-invoker btn btn-sm btn-white h--40px" href="javascript:;"
+                            data-hs-unfold-options='{
+                                "target": "#showHideDropdown",
+                                "type": "css-animation"
+                            }'>
+                            <i class="tio-table mr-1"></i> {{translate('messages.columns')}}
+                        </a>
 
+                        <div id="showHideDropdown"
+                                class="hs-unfold-content dropdown-unfold dropdown-menu dropdown-menu-right dropdown-card min--240">
+                            <div class="card card-sm">
+                                <div class="card-body">
+
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="mr-2">{{translate('messages.date')}}</span>
+
+                                        <!-- Checkbox Switch -->
+                                        <label class="toggle-switch toggle-switch-sm" for="toggleColumn_date">
+                                            <input type="checkbox" class="toggle-switch-input"
+                                                    id="toggleColumn_date" checked>
+                                            <span class="toggle-switch-label">
+                                            <span class="toggle-switch-indicator"></span>
+                                            </span>
+                                        </label>
+                                        <!-- End Checkbox Switch -->
+                                    </div>
+
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="mr-2">{{translate('messages.customer')}}</span>
+
+                                        <!-- Checkbox Switch -->
+                                        <label class="toggle-switch toggle-switch-sm"
+                                                for="toggleColumn_customer">
+                                            <input type="checkbox" class="toggle-switch-input"
+                                                    id="toggleColumn_customer" checked>
+                                            <span class="toggle-switch-label">
+                                            <span class="toggle-switch-indicator"></span>
+                                            </span>
+                                        </label>
+                                        <!-- End Checkbox Switch -->
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="mr-2">{{$parcel_order?translate('messages.parcel_category'):translate('messages.store')}}</span>
+
+                                        <!-- Checkbox Switch -->
+                                        <label class="toggle-switch toggle-switch-sm"
+                                                for="toggleColumn_store">
+                                            <input type="checkbox" class="toggle-switch-input"
+                                                    id="toggleColumn_store" checked>
+                                            <span class="toggle-switch-label">
+                                            <span class="toggle-switch-indicator"></span>
+                                            </span>
+                                        </label>
+                                        <!-- End Checkbox Switch -->
+                                    </div>
+                                    @if (!$parcel_order)
+
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="mr-2">{{translate('messages.item_quantity')}}</span>
+                                        <!-- Checkbox Switch -->
+                                        <label class="toggle-switch toggle-switch-sm" for="toggleColumn_item_quantity">
+                                            <input type="checkbox" class="toggle-switch-input"
+                                            id="toggleColumn_item_quantity"   checked>
+                                            <span class="toggle-switch-label">
+                                            <span class="toggle-switch-indicator"></span>
+                                            </span>
+                                        </label>
+                                        <!-- End Checkbox Switch -->
+                                    </div>
+                                    @endif
+
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="mr-2">{{translate('messages.total')}}</span>
+
+                                        <!-- Checkbox Switch -->
+                                        <label class="toggle-switch toggle-switch-sm" for="toggleColumn_total">
+                                            <input type="checkbox" class="toggle-switch-input"
+                                                    id="toggleColumn_total" checked>
+                                            <span class="toggle-switch-label">
+                                            <span class="toggle-switch-indicator"></span>
+                                            </span>
+                                        </label>
+                                        <!-- End Checkbox Switch -->
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="mr-2">{{translate('messages.order_status')}}</span>
+
+                                        <!-- Checkbox Switch -->
+                                        <label class="toggle-switch toggle-switch-sm" for="toggleColumn_order_status">
+                                            <input type="checkbox" class="toggle-switch-input"
+                                                    id="toggleColumn_order_status" checked>
+                                            <span class="toggle-switch-label">
+                                            <span class="toggle-switch-indicator"></span>
+                                            </span>
+                                        </label>
+                                        <!-- End Checkbox Switch -->
+                                    </div>
+
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="mr-2">{{translate('messages.actions')}}</span>
+
+                                        <!-- Checkbox Switch -->
+                                        <label class="toggle-switch toggle-switch-sm"
+                                                for="toggleColumn_actions">
+                                            <input type="checkbox" class="toggle-switch-input"
+                                                    id="toggleColumn_actions" checked>
+                                            <span class="toggle-switch-label">
+                                            <span class="toggle-switch-indicator"></span>
+                                            </span>
+                                        </label>
+                                        <!-- End Checkbox Switch -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @endif
                     <!-- End Unfold -->
                 </div>
             </div>
@@ -109,16 +231,29 @@
 
             <!-- Table -->
             <div class="table-responsive datatable-custom">
-                <table
-                       class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table fz--14px" >
+                <table id="datatable"
+                       class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table fz--14px"
+                       data-hs-datatables-options='{
+                     "columnDefs": [{
+                        "targets": [0],
+                        "orderable": false
+                      }],
+                     "order": [],
+                     "info": {
+                       "totalQty": "#datatableWithPaginationInfoTotalQty"
+                     },
+                     "search": "#datatableSearch",
+                     "entries": "#datatableEntries",
+                     "isResponsive": false,
+                     "isShowPaging": false,
+                     "paging": false
+                   }'>
                     <thead class="thead-light">
                     <tr>
                         <th class="border-0">
                             {{translate('messages.sl')}}
                         </th>
-                        <th class="table-column-pl-0 border-0">
-                            {{translate('messages.order_id')}}                            
-                        </th>
+                        <th class="table-column-pl-0 border-0">{{translate('messages.order_id')}}</th>
                         <th class="border-0">{{translate('messages.order_date')}}</th>
                         @if ($status == 'scheduled')
                         <th class="border-0">{{translate('messages.scheduled_at')}}</th>
@@ -149,12 +284,7 @@
                                 {{$key+$orders->firstItem()}}
                             </td>
                             <td class="table-column-pl-0">
-                                <a href="{{route($parcel_order?'admin.parcel.order.details':'admin.order.details',['id'=>$order['id']])}}">
-                                    {{$order['id']}}
-                                    @if ($order->edited)
-                                        <div class="text-info fs-12 font-weight-medium">{{translate('messages.(Edited)')}}</div>
-                                    @endif
-                                </a>
+                                <a href="{{route($parcel_order?'admin.parcel.order.details':'admin.order.details',['id'=>$order['id']])}}">{{$order['id']}}</a>
                             </td>
                             <td>
                                 <div>
@@ -292,16 +422,13 @@
                                       {{translate('messages.home Delivery')}}
                                     </div>
                                 @endif
-                                <div class="mt-1">
-                                    @include('partials.delivery-type-badge', ['order' => $order])
-                                </div>
                             </td>
                             <td>
-                                <div class="btn--container gap-2 justify-content-center">
-                                    <a class="ml-1 btn btn-sm  btn--primary btn-outline-primary action-btn" href="{{route($parcel_order?'admin.parcel.order.details':'admin.order.details',['id'=>$order['id']])}}">
+                                <div class="btn--container justify-content-center">
+                                    <a class="ml-2 btn btn-sm btn--warning btn-outline-warning action-btn" href="{{route($parcel_order?'admin.parcel.order.details':'admin.order.details',['id'=>$order['id']])}}">
                                         <i class="tio-invisible"></i>
                                     </a>
-                                    <a class="ml-1 btn btn-sm btn-outline-success action-btn" href="{{route($parcel_order?'admin.order.generate-invoice':'admin.order.generate-invoice',['id'=>$order['id']])}}">
+                                    <a class="ml-2 btn btn-sm btn--primary btn-outline-primary action-btn" href="{{route($parcel_order?'admin.order.generate-invoice':'admin.order.generate-invoice',['id'=>$order['id']])}}">
                                         <i class="tio-print"></i>
                                     </a>
                                 </div>
@@ -376,7 +503,7 @@
                             <select name="vendor[]" id="vendor_ids" class="form-control js-select2-custom" multiple="multiple">
                                 @foreach(\App\Models\Store::WithoutModule('rental')->get(['id','name']) as $store)
 
-                                    <option value="{{$store->id}}" data-verified="{{ (int) $store->verified_seller }}"
+                                    <option value="{{$store->id}}"
                                             @if(isset($vendor_ids) && in_array($store->id, $vendor_ids))
                                                 selected
                                         @endif>
@@ -449,7 +576,7 @@
                         </div>
                         <div class="custom-control custom-radio mb-2">
                             <input type="radio" id="delivery" name="order_type" class="custom-control-input" value="delivery" {{isset($order_type)?($order_type=='delivery'?'checked':''):''}}>
-                            <label class="custom-control-label text-uppercase" for="delivery">{{translate('messages.home_delivery')}}</label>
+                            <label class="custom-control-label text-uppercase" for="delivery">{{translate('messages.delivery')}}</label>
                         </div>
                     @endif
 
@@ -506,7 +633,7 @@
 
                 $('#vendor_ids').select2({
                     ajax: {
-                        url: '{{ route('admin.store.get-stores') }}',
+                        url: '{{url('/')}}/admin/store/get-stores',
                         data: function (params) {
                             return {
                                 q: params.term,
@@ -551,7 +678,7 @@
                         className: 'd-none',
                         action: function (e, dt, node, config)
                         {
-                            window.location.href = '';
+                            window.location.href = '{{route("admin.order.export",['status'=>$status,'file_type'=>'csv','type'=>$parcel_order?'parcel':'order', request()->getQueryString()])}}';
                         }
                     },
                     // {

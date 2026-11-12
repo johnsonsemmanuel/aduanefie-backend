@@ -47,7 +47,7 @@
                         <!-- End Search -->
                     </form>
 
-                    @if(request()->input('search'))
+                    @if(request()->get('search'))
                         <button type="reset" class="btn btn--primary ml-2 location-reload-to-base"
                                 data-url="{{url()->full()}}">{{translate('messages.reset')}}</button>
                     @endif

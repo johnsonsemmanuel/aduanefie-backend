@@ -1,6 +1,6 @@
 @extends('layouts.admin.app')
 
-@section('title',translate('messages.Add new main sub category'))
+@section('title',translate('messages.Add new sub category'))
 
 @push('css_or_js')
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -15,7 +15,7 @@
                     <img src="{{asset('public/assets/admin/img/edit.png')}}" class="w--20" alt="">
                 </span>
                 <span>
-                    {{translate('messages.add_new_main_sub_category')}}
+                    {{translate('messages.add_new_sub_category')}}
                 </span>
             </h1>
         </div>
@@ -49,20 +49,20 @@
                                 data-original-title="{{ translate('messages.Required.')}}"> *
                                 </span>
                             </label>
-                            <input type="text" name="name[]" class="form-control" placeholder="{{translate('messages.new_main_sub_category')}}" maxlength="191"  >
+                            <input type="text" name="name[]" class="form-control" placeholder="{{translate('messages.new_sub_category')}}" maxlength="191"  >
                         </div>
                         <input type="hidden" name="lang[]" value="default">
                         @foreach($language as $lang)
                             <div class="form-group d-none lang_form col-sm-6" id="{{$lang}}-form">
                                 <label class="input-label" for="exampleFormControlInput1">{{translate('messages.name')}} ({{strtoupper($lang)}})</label>
-                                <input type="text" name="name[]" class="form-control" placeholder="{{translate('messages.new_main_sub_category')}}" maxlength="191"  >
+                                <input type="text" name="name[]" class="form-control" placeholder="{{translate('messages.new_sub_category')}}" maxlength="191"  >
                             </div>
                             <input type="hidden" name="lang[]" value="{{$lang}}">
                         @endforeach
                     @else
                         <div class="form-group col-sm-6">
                             <label class="input-label" for="exampleFormControlInput1">{{translate('messages.name')}}</label>
-                            <input type="text" name="name" class="form-control" placeholder="{{translate('messages.new_main_sub_category')}}" value="{{old('name')}}" maxlength="191">
+                            <input type="text" name="name" class="form-control" placeholder="{{translate('messages.new_sub_category')}}" value="{{old('name')}}" maxlength="191">
                         </div>
                         <input type="hidden" name="lang[]" value="default">
                     @endif
@@ -79,19 +79,6 @@
                         </div>
                         <input name="position" value="1" hidden>
 
-                          <div class="form-group col-sm-6">
-                                <label class="input-label" for="">
-                                    {{ translate('messages.Priority') }}
-                                </label>
-                                <select required name="priority"
-                                    data-original-title="{{ translate('messages.Select_Priority') }}"
-                                    class="custom-select">
-                                    <option value="0">{{ translate('messages.Normal') }}</option>
-                                    <option value="1">{{ translate('messages.Medium') }}</option>
-                                    <option value="2">{{ translate('messages.High') }}</option>
-                                </select>
-                            </div>
-
                         <div class="col-sm-12">
                             <div class="btn--container justify-content-end">
                                 <button type="reset" id="reset_btn" class="btn btn--reset">{{translate('messages.reset')}}</button>
@@ -105,19 +92,19 @@
         <div class="card mt-2">
             <div class="card-header py-2 border-0">
                 <div class="search--button-wrapper">
-                    <h5 class="card-title">{{translate('messages.main_sub_category_list')}}<span class="badge badge-soft-dark ml-2" id="itemCount">{{$categories->total()}}</span></h5>
+                    <h5 class="card-title">{{translate('messages.sub_category_list')}}<span class="badge badge-soft-dark ml-2" id="itemCount">{{$categories->total()}}</span></h5>
 
                     <form   class="search-form">
                         <!-- Search -->
                         <div class="input-group input--group">
-                            <input id="datatableSearch" data-reload_url="{{url()->full()}}" name="search" value="{{ request()?->search ?? null }}"  type="search" class="form-control" placeholder="{{translate('messages.ex_:_search_main_sub_categories')}}" aria-label="{{translate('messages.ex_:_main_sub_categories')}}">
+                            <input id="datatableSearch" name="search" value="{{ request()?->search ?? null }}"  type="search" class="form-control" placeholder="{{translate('messages.ex_:_search_sub_categories')}}" aria-label="{{translate('messages.ex_:_sub_categories')}}">
                             <input type="hidden" name="position" value="1">
                             <input type="hidden" name="sub_category" value="1">
                             <button type="submit" class="btn btn--secondary"><i class="tio-search"></i></button>
                         </div>
                         <!-- End Search -->
                     </form>
-                    @if(request()->input('search'))
+                    @if(request()->get('search'))
                     <button type="reset" class="btn btn--primary ml-2 location-reload-to-category" data-url="{{url()->full()}}">{{translate('messages.reset')}}</button>
                     @endif
                     <!-- Unfold -->
@@ -134,17 +121,17 @@
                             class="hs-unfold-content dropdown-unfold dropdown-menu dropdown-menu-sm-right">
 
                             <span class="dropdown-header">{{ translate('messages.download_options') }}</span>
-                            <a id="export-excel" class="dropdown-item" href="{{ route('admin.category.export-categories', ['type' => 'excel', request()->getQueryString()]) }}">
+                            <a id="export-excel" class="dropdown-item" href="">
                                 <img class="avatar avatar-xss avatar-4by3 mr-2"
                                     src="{{ asset('public/assets/admin') }}/svg/components/excel.svg"
                                     alt="Image Description">
                                 {{ translate('messages.excel') }}
                             </a>
-                            <a id="export-csv" class="dropdown-item" href="{{ route('admin.category.export-categories', ['type' => 'csv', request()->getQueryString()]) }}">
+                            <a id="export-csv" class="dropdown-item" href="">
                                 <img class="avatar avatar-xss avatar-4by3 mr-2"
                                     src="{{ asset('public/assets/admin') }}/svg/components/placeholder-csv-format.svg"
                                     alt="Image Description">
-                                {{ translate('messages.csv') }}
+                                .{{ translate('messages.csv') }}
                             </a>
 
                         </div>
@@ -167,15 +154,10 @@
                                 <th class="border-0">{{translate('sl')}}</th>
                                 <th class="border-0">{{translate('messages.id')}}</th>
                                 <th class="border-0 w--1">{{translate('messages.main_category')}}</th>
-                                <th class="border-0 text-center">{{translate('messages.main_sub_category')}}</th>
+                                <th class="border-0 text-center">{{translate('messages.sub_category')}}</th>
                                 <th class="border-0 text-center">{{translate('messages.status')}}</th>
-                                @if (Config::get('module.current_module_type') == 'ecommerce')
                                 <th class="border-0 text-center">{{translate('messages.featured')}}</th>
-
-                                @endif
-                                <th class="border-0 text-center">{{translate('messages.priority')}}     <span class="input-label-secondary"
-                                            data-toggle="tooltip" data-placement="right" data-original-title="{{translate('Categories will be displayed based on priority order: High first, then Medium, and finally Low ')}}"><img src="{{asset('public/assets/admin/img/info-circle.svg')}}"
-                                            alt="public/img"></span></th>
+                                <th class="border-0 text-center">{{translate('messages.priority')}}</th>
                                 <th class="border-0 text-center">{{translate('messages.action')}}</th>
                             </tr>
                         </thead>
@@ -187,7 +169,7 @@
                                 <td>{{$category->id}}</td>
                                 <td>
                                     <span class="d-block font-size-sm text-body">
-                                        {{ $category?->parent?->name ? Str::limit($category->parent['name'],20,'...') : translate('Invalid_Main_Category') }}
+                                        {{ $category?->parent?->name ? Str::limit($category->parent['name'],20,'...') : translate('Invalid_Category') }}
                                     </span>
                                 </td>
                                 <td class="text-center">
@@ -203,36 +185,14 @@
                                         </span>
                                     </label>
                                 </td>
-
-                                @if (Config::get('module.current_module_type') == 'ecommerce')
                                 <td>
-                                        <label class="toggle-switch toggle-switch-sm"
-                                            for="featuredCheckbox{{ $category->id }}">
-                                            <input type="checkbox" data-id="featuredCheckbox{{ $category->id }}"
-                                                data-type="status"
-                                                data-image-on="{{ asset('/public/assets/admin/img/status-ons.png') }}"
-                                                data-image-off="{{ asset('/public/assets/admin/img/off-danger.png') }}"
-                                                data-title-on="{{ translate('Do you want to Featured this main sub category ?') }}"
-                                                data-title-off="{{ translate('Don’t you want to Featured this main sub category?') }}"
-                                                data-text-on="<p>{{ translate('If you turn on this main sub category as a featured category it will show in customer app landing page.') }}"
-                                                data-text-off="<p>{{ translate('If you turn off this main sub category from featured category it will not show in customer app landing page.') }}</p>"
-                                                class="toggle-switch-input dynamic-checkbox"
-                                                id="featuredCheckbox{{ $category->id }}"
-                                                {{ $category->featured ? 'checked' : '' }}>
-                                            <span class="toggle-switch-label mx-auto">
-                                                <span class="toggle-switch-indicator"></span>
-                                            </span>
-                                        </label>
-
-                                        <form
-                                            action="{{ route('admin.category.featured', [$category['id'], $category->featured ? 0 : 1]) }}"
-                                            method="get" id="featuredCheckbox{{ $category->id }}_form">
-                                        </form>
-                                    </td>
-
-                                @endif
-
-
+                                    <label class="toggle-switch toggle-switch-sm" for="featuredCheckbox{{$category->id}}">
+                                        <input type="checkbox" data-url="{{route('admin.category.featured',[$category['id'],$category->featured?0:1])}}" class="toggle-switch-input redirect-url" id="featuredCheckbox{{$category->id}}" {{$category->featured?'checked':''}}>
+                                        <span class="toggle-switch-label mx-auto">
+                                            <span class="toggle-switch-indicator"></span>
+                                        </span>
+                                    </label>
+                                </td>
                                 <td>
                                     <form action="{{route('admin.category.priority',$category->id)}}" class="priority-form">
                                         <select name="priority" id="priority" class="form-control priority-select form--control-select mx-auto {{$category->priority == 0 ? 'text-title':''}} {{$category->priority == 1 ? 'text-info':''}} {{$category->priority == 2 ? 'text-success':''}}">
@@ -244,15 +204,11 @@
                                 </td>
                                 <td>
                                     <div class="btn--container justify-content-center">
-                                             <a class="btn action-btn btn-outline-theme-dark offcanvas-trigger data-info-show" href="javascript:void(0)"
-                                                data-id="{{ $category['id'] }}"
-                                                data-url="{{ route('admin.category.edit', [$category['id']]) }}"
-
-                                            data-target="#offcanvas__categoryBtn">
-                                                <i class="tio-edit"></i>
-                                            </a>
+                                        <a class="btn action-btn btn--primary btn-outline-primary"
+                                            href="{{route('admin.category.edit',[$category['id']])}}" title="{{translate('messages.edit_category')}}"><i class="tio-edit"></i>
+                                        </a>
                                         <a class="btn action-btn btn--danger btn-outline-danger form-alert" href="javascript:"
-                                           data-id="category-{{$category['id']}}" data-message="{{ translate('Want to delete this main sub category') }}" title="{{translate('messages.delete_main_sub_category')}}"><i class="tio-delete-outlined"></i>
+                                           data-id="category-{{$category['id']}}" data-message="{{ translate('Want to delete this category') }}" title="{{translate('messages.delete_category')}}"><i class="tio-delete-outlined"></i>
                                         </a>
                                         <form action="{{route('admin.category.delete',[$category['id']])}}" method="post" id="category-{{$category['id']}}">
                                             @csrf @method('delete')
@@ -281,16 +237,21 @@
             @endif
         </div>
     </div>
-        <div id="offcanvas__categoryBtn" class="custom-offcanvas d-flex flex-column justify-content-between">
-         <div id="data-view" class="h-100">
-        </div>
-    </div>
-    <div id="offcanvasOverlay" class="offcanvas-overlay"></div>
-
-
-
 @endsection
 
 @push('script_2')
     <script src="{{asset('public/assets/admin')}}/js/view-pages/sub-category-index.js"></script>
+    <script>
+        "use strict";
+            $('.location-reload-to-category').on('click', function() {
+                const url = $(this).data('url');
+                let nurl = new URL(url);
+                nurl.searchParams.delete('search');
+                location.href = nurl;
+            });
+
+            $('#reset_btn').click(function(){
+            $('#exampleFormControlSelect1').val(null).trigger('change');
+            })
+            </script>
 @endpush

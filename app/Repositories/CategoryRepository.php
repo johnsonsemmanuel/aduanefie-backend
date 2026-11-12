@@ -92,9 +92,8 @@ class CategoryRepository implements CategoryRepositoryInterface
 
     public function getExportList(Request $request): Collection
     {
-        $position=$request->position ?? 0;
         $key = explode(' ', $request['search']);
-        return $this->category->with('module')->where(['position' => $position])->module(Config::get('module.current_module_id'))
+        return $this->category->with('module')->where(['position' => 0])->module(Config::get('module.current_module_id'))
             ->when(isset($key), function ($q) use ($key) {
                 $q->where(function ($q) use ($key) {
                     foreach ($key as $value) {
@@ -125,14 +124,7 @@ class CategoryRepository implements CategoryRepositoryInterface
         return $this->category->where('name', 'like', '%' . $search. '%')
             ->when($request->module_id, function ($query) use ($request) {
                 $query->where('module_id', $request->module_id);
-            })
-            ->when($request->position == 1, function ($query) {
-                $query->where('position', 1);
-            })
-            ->when($request->position != null && $request->position == 0, function ($query) {
-                $query->where('position', 0);
-            })
-            ->limit($dataLimit)->get()
+            })->limit($dataLimit)->get()
             ->map(function ($category) {
                 $data = $category->position == 0 ? translate('messages.main') : translate('messages.sub');
                 return [
@@ -170,7 +162,6 @@ class CategoryRepository implements CategoryRepositoryInterface
     {
         $category = $this->category->find($id);
         if ($category->childes->count() == 0) {
-            $category?->taxVats()->delete();
             $category->translations()->delete();
             $category->delete();
         } else {

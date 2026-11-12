@@ -4,7 +4,7 @@
             <div class="navbar-brand-wrapper justify-content-between">
                 <!-- Logo -->
                 @php($store_logo = \App\Models\BusinessSetting::where(['key' => 'logo'])->first())
-                <a class="navbar-brand" href="#" aria-label="Front">
+                <a class="navbar-brand" href="{{ route('admin.dispatch.dashboard') }}" aria-label="Front">
                        <img class="navbar-brand-logo initial--36 onerror-image onerror-image" data-onerror-image="{{ asset('public/assets/admin/img/160x160/img2.jpg') }}"
                     src="{{\App\CentralLogics\Helpers::get_full_url('business', $store_logo?->value?? '', $store_logo?->storage[0]?->value ?? 'public','favicon')}}"
                     alt="Logo">
@@ -62,7 +62,7 @@
                 <!-- dispatch -->
                 @if (\App\CentralLogics\Helpers::module_permission_check('order'))
                     <!-- Order dispachment -->
-                    @php($modules = \App\Models\Module::whereNotIn('module_type', ['rental','ride-share'])->when(auth('admin')->user()->zone_id, function($query){
+                    @php($modules = \App\Models\Module::where('module_type', '!=' ,'rental')->when(auth('admin')->user()->zone_id, function($query){
                                 $query->whereHas('zones',function($query){
                                     $query->where('zone_id',auth('admin')->user()->zone_id);
                                 });
@@ -158,11 +158,72 @@
                 <!-- End dispatch -->
 
 
+                @include('layouts.admin.partials._sidebar_marketers')
+
                 <li class="nav-item py-5">
 
                 </li>
 
-                    @includeIf('layouts.admin.partials._logout_modal')
+                <li class="__sidebar-hs-unfold px-2" id="tourb-9">
+                    <div class="hs-unfold w-100">
+                        <a class="js-hs-unfold-invoker navbar-dropdown-account-wrapper" href="javascript:;"
+                            data-hs-unfold-options='{
+                                    "target": "#accountNavbarDropdown",
+                                    "type": "css-animation"
+                                }'>
+                            <div class="cmn--media right-dropdown-icon d-flex align-items-center">
+                                <div class="avatar avatar-sm avatar-circle">
+                                   <img class="avatar-img onerror-image"
+                                    data-onerror-image="{{asset('public/assets/admin/img/160x160/img1.jpg')}}"
+
+                                    src="{{ auth('admin')->user()?->toArray()['image_full_url'] }}"
+
+                                    alt="Image Description">
+                                    <span class="avatar-status avatar-sm-status avatar-status-success"></span>
+                                </div>
+                                <div class="media-body pl-3">
+                                    <span class="card-title h5">
+                                        {{auth('admin')->user()->f_name}}
+                                        {{auth('admin')->user()->l_name}}
+                                    </span>
+                                    <span class="card-text">{{auth('admin')->user()->email}}</span>
+                                </div>
+                            </div>
+                        </a>
+
+                        <div id="accountNavbarDropdown"
+                                class="hs-unfold-content dropdown-unfold dropdown-menu dropdown-menu-right navbar-dropdown-menu navbar-dropdown-account min--240">
+                            <div class="dropdown-item-text">
+                                <div class="media align-items-center">
+                                    <div class="avatar avatar-sm avatar-circle mr-2">
+                                        <img class="avatar-img onerror-image"
+                                    data-onerror-image="{{asset('public/assets/admin/img/160x160/img1.jpg')}}"
+
+                                    src="{{auth('admin')->user()?->toArray()['image_full_url']}}"
+
+                                    alt="Image Description">
+                                    </div>
+                                    <div class="media-body">
+                                        <span class="card-title h5">{{auth('admin')->user()->f_name}}</span>
+                                        <span class="card-text">{{auth('admin')->user()->email}}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="dropdown-divider"></div>
+
+                            <a class="dropdown-item" href="{{route('admin.settings')}}">
+                                <span class="text-truncate pr-2" title="Settings">{{translate('messages.settings')}}</span>
+                            </a>
+
+                            <div class="dropdown-divider"></div>
+
+                           <a class="dropdown-item log-out" href="javascript:">
+                                <span class="text-truncate pr-2" title="Sign out">{{translate('messages.sign_out')}}</span>
+                            </a>
+                        </div>
+                    </div>
+                </li>
                 </ul>
             </div>
             <!-- End Content -->
@@ -176,10 +237,89 @@
 
 
 @push('script_2')
+<script>
+    $(window).on('load' , function() {
+        if($(".navbar-vertical-content li.active").length) {
+            $('.navbar-vertical-content').animate({
+                scrollTop: $(".navbar-vertical-content li.active").offset().top - 150
+            }, 10);
+        }
+    });
 
-@if(addon_published_status('Rental'))
-<script src="{{ asset('Modules/Rental/public/assets/js/admin/view-pages/rental-sidebar.js') }}"></script>
-@endif
+    var $rows = $('#navbar-vertical-content li');
+    $('#search-sidebar-menu').keyup(function() {
+        var val = $.trim($(this).val()).replace(/ +/g, ' ').toLowerCase();
 
+        $rows.show().filter(function() {
+            var text = $(this).text().replace(/\s+/g, ' ').toLowerCase();
+            return !~text.indexOf(val);
+        }).hide();
+    });
 
+    $(document).ready(function() {
+            const $searchInput = $('#search');
+            const $suggestionsList = $('#search-suggestions');
+            const $rows = $('#navbar-vertical-content li');
+            const $subrows = $('#navbar-vertical-content li ul li');
+            const suggestions = [ ];
+            const focusInput = () => updateSuggestions($searchInput.val());
+            const hideSuggestions = () => $suggestionsList.slideUp(700);
+            const showSuggestions = () => $suggestionsList.slideDown(700);
+            let clickSuggestion = function() {
+                let suggestionText = $(this).text();
+                $searchInput.val(suggestionText);
+                hideSuggestions();
+                filterItems(suggestionText.toLowerCase());
+                updateSuggestions(suggestionText);
+            };
+            let filterItems = (val) => {
+                let unmatchedItems = $rows.show().filter((index, element) => !~$(element).text().replace(
+                    /\s+/g, ' ').toLowerCase().indexOf(val));
+                let matchedItems = $rows.show().filter((index, element) => ~$(element).text().replace(/\s+/g,
+                    ' ').toLowerCase().indexOf(val));
+                unmatchedItems.hide();
+                matchedItems.each(function() {
+                    let $submenu = $(this).find($subrows);
+                    let keywordCountInRows = 0;
+                    $rows.each(function() {
+                        let rowText = $(this).text().toLowerCase();
+                        let valLower = val.toLowerCase();
+                        let keywordCountRow = rowText.split(valLower).length - 1;
+                        keywordCountInRows += keywordCountRow;
+                    });
+                    if ($submenu.length > 0) {
+                        $subrows.show();
+                        $submenu.each(function() {
+                            let $submenu2 = !~$(this).text().replace(/\s+/g, ' ')
+                                .toLowerCase().indexOf(val);
+                            if ($submenu2 && keywordCountInRows <= 2) {
+                                $(this).hide();
+                            }
+                        });
+                    }
+                });
+            };
+            let updateSuggestions = (val) => {
+                $suggestionsList.empty();
+                suggestions.forEach(suggestion => {
+                    if (suggestion.toLowerCase().includes(val.toLowerCase())) {
+                        $suggestionsList.append(
+                            `<span class="search-suggestion badge badge-soft-light m-1 fs-14">${suggestion}</span>`
+                        );
+                    }
+                });
+                // showSuggestions();
+            };
+            $searchInput.focus(focusInput);
+            $searchInput.on('input', function() {
+                updateSuggestions($(this).val());
+            });
+            $suggestionsList.on('click', '.search-suggestion', clickSuggestion);
+            $searchInput.keyup(function() {
+                filterItems($(this).val().toLowerCase());
+            });
+            $searchInput.on('focusout', hideSuggestions);
+            $searchInput.on('focus', showSuggestions);
+        });
+</script>
 @endpush

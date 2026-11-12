@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\CentralLogics\Helpers;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Support\Carbon;
-use App\Traits\GeneratesSlug;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -22,7 +25,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
  */
 class CommonCondition extends Model
 {
-    use HasFactory, GeneratesSlug;
+    use HasFactory;
 
     /**
      * The attributes that are mass assignable.
@@ -55,7 +58,7 @@ class CommonCondition extends Model
      */
     public function items(): HasMany
     {
-        return $this->hasMany(PharmacyItemDetails::class,'common_condition_id','id')->whereNotNull('item_id');
+        return $this->hasMany(PharmacyItemDetails::class,'common_condition_id','id');
     }
 
     /**
@@ -83,6 +86,23 @@ class CommonCondition extends Model
      * @param $name
      * @return string
      */
+    private function generateSlug($name): string
+    {
+        $slug = Str::slug($name);
+        if ($max_slug = static::where('slug', 'like',"{$slug}%")->latest('id')->value('slug')) {
+
+            if($max_slug == $slug) return "{$slug}-2";
+
+            $max_slug = explode('-',$max_slug);
+            $count = array_pop($max_slug);
+            if (isset($count) && is_numeric($count)) {
+                $max_slug[]= ++$count;
+                return implode('-', $max_slug);
+            }
+        }
+        return $slug;
+    }
+
     /**
      * @param $value
      * @return mixed

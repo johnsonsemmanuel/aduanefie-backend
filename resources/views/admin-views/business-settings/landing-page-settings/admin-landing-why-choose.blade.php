@@ -22,7 +22,7 @@
             </div>
         </div>
     </div>
-    <div class="mb-20 mt-2">
+    <div class="mb-4 mt-2">
         <div class="js-nav-scroller hs-nav-scroller-horizontal">
             @include('admin-views.business-settings.landing-page-settings.top-menu-links.admin-landing-page-links')
         </div>
@@ -49,7 +49,7 @@
     @endif
     <div class="tab-content">
         <div class="tab-pane fade show active">
-            <form action="{{ route('admin.business-settings.admin-landing-page-settings-update', 'why-choose-title') }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ route('admin.business-settings.admin-landing-page-settings', 'why-choose-title') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <div class="card mb-3">
                     <div class="card-body">
@@ -62,11 +62,8 @@
                                                         data-original-title="{{ translate('Write_the_title_within_80_characters') }}">
                                                         <img src="{{ asset('public/assets/admin/img/info-circle.svg') }}"
                                                             alt="">
-                                                    </span><span class="form-label-secondary text-danger"
-                                                                 data-toggle="tooltip" data-placement="right"
-                                                                 data-original-title="{{ translate('messages.Required.')}}"> *
-                                                </span></label>
-                                                <input required id="why_choose_title" type="text" maxlength="80" name="why_choose_title[]" class="form-control" value="{{$why_choose_title?->getRawOriginal('value')}}" placeholder="{{translate('messages.title_here...')}}">
+                                                    </span></label>
+                                                <input id="why_choose_title" type="text" maxlength="80" name="why_choose_title[]" class="form-control" value="{{$why_choose_title?->getRawOriginal('value')}}" placeholder="{{translate('messages.title_here...')}}">
                                 </div>
                             </div>
                             <input type="hidden" name="lang[]" value="default">
@@ -112,14 +109,14 @@
                                 </div>
                                 <input type="hidden" name="lang[]" value="default">
                             @endif
-                        <div class="btn--container justify-content-end mt-20">
+                        <div class="btn--container justify-content-end mt-3">
                             <button type="reset" class="btn btn--reset mb-2">{{translate('Reset')}}</button>
                             <button type="submit"   class="btn btn--primary mb-2">{{translate('Save')}}</button>
                         </div>
                     </div>
                 </div>
             </form>
-                <form action="{{ route('admin.business-settings.admin-landing-page-settings-update', 'special-criteria-list') }}" method="POST" enctype="multipart/form-data">
+                <form action="{{ route('admin.business-settings.admin-landing-page-settings', 'special-criteria-list') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                 <h5 class="card-title mb-3 mt-3">
                     <span class="card-header-icon mr-2"><i class="tio-settings-outlined"></i></span> <span>{{translate('Special Criteria List Section ')}}</span>
@@ -136,13 +133,8 @@
                                                         data-original-title="{{ translate('Write_the_title_within_40_characters') }}">
                                                         <img src="{{ asset('public/assets/admin/img/info-circle.svg') }}"
                                                             alt="">
-                                                    </span>
-                                        <span class="form-label-secondary text-danger"
-                                              data-toggle="tooltip" data-placement="right"
-                                              data-original-title="{{ translate('messages.Required.')}}"> *
-                                                </span></label>
-                                                <input required id="title" type="text" maxlength="40" name="title[]" class="form-control char-count-input" placeholder="{{translate('messages.title_here...')}}">
-                                                <small class="char-count text-muted d-block text-right mt-1"><span class="current">0</span>/40</small>
+                                                    </span></label>
+                                                <input id="title" type="text" maxlength="40" name="title[]" class="form-control" placeholder="{{translate('messages.title_here...')}}">
                                 </div>
                                 <input type="hidden" name="lang[]" value="default">
                                     @foreach(json_decode($language) as $lang)
@@ -154,8 +146,7 @@
                                                         <img src="{{ asset('public/assets/admin/img/info-circle.svg') }}"
                                                             alt="">
                                                     </span></label>
-                                                <input id="title{{$lang}}" type="text" maxlength="40" name="title[]" class="form-control char-count-input" placeholder="{{translate('messages.title_here...')}}">
-                                                <small class="char-count text-muted d-block text-right mt-1"><span class="current">0</span>/40</small>
+                                                <input  id="title{{$lang}}" type="text" maxlength="40" name="title[]" class="form-control" placeholder="{{translate('messages.title_here...')}}">
                                     </div>
                                         <input type="hidden" name="lang[]" value="{{$lang}}">
                                     @endforeach
@@ -168,33 +159,26 @@
                                                         <img src="{{ asset('public/assets/admin/img/info-circle.svg') }}"
                                                             alt="">
                                                     </span></label>
-                                                <input id="title" type="text" maxlength="40" name="title[]" class="form-control char-count-input" placeholder="{{translate('messages.title_here...')}}">
-                                                <small class="char-count text-muted d-block text-right mt-1"><span class="current">0</span>/40</small>
+                                                <input id="title" type="text" maxlength="40" name="title[]" class="form-control" placeholder="{{translate('messages.title_here...')}}">
                                 </div>
                                     <input type="hidden" name="lang[]" value="default">
                                 @endif
                                 <div class="col-sm-6">
                                     <div>
 
-                                        <label class="form-label mb-3">{{translate('Criteria Icon/ Image')}}<span class="form-label-secondary" data-toggle="tooltip" data-placement="right" data-original-title="{{ translate(IMAGE_FORMAT.' ' . 'Less Than 2MB') }}">
+                                        <label class="form-label">{{translate('Criteria Icon/ Image')}}<span class="form-label-secondary" data-toggle="tooltip" data-placement="right" data-original-title="{{ translate('Icon_ratio_(1:1)_and_max_size_2_MB.') }}">
                                             <img src="{{asset('public/assets/admin/img/info-circle.svg')}}" alt="">
-                                        </span>
-                                            <span class="form-label-secondary text-danger"
-                                                  data-toggle="tooltip" data-placement="right"
-                                                  data-original-title="{{ translate('messages.Required.')}}"> *
-                                                </span><div class="fs-12 opacity-70">
-                                                {{ translate(IMAGE_FORMAT.' ' . 'Less Than 2MB') }}
-                                            </div></label>
+                                        </span></label>
                                     </div>
                                     <label class="upload-img-3 m-0">
                                         <div class="img">
                                             <img src="{{asset('/public/assets/admin/img/aspect-1.png')}}" alt="" class="img__aspect-1 min-w-187px max-w-187px">
                                         </div>
-                                          <input class="upload-file__input single_file_input" accept="{{IMAGE_EXTENSION}}" type="file"  name="image" hidden>
+                                          <input type="file"  name="image" hidden>
                                     </label>
                                 </div>
                             </div>
-                            <div class="btn--container justify-content-end mt-20">
+                            <div class="btn--container justify-content-end mt-3">
                                 <button type="reset" class="btn btn--reset mb-2">{{translate('Reset')}}</button>
                                 <button type="submit"   class="btn btn--primary mb-2">{{translate('Add')}}</button>
                             </div>
@@ -299,20 +283,4 @@
     <!-- How it Works -->
     @include('admin-views.business-settings.landing-page-settings.partial.how-it-work')
 @endsection
-
-@push('script_2')
-<script>
-    "use strict";
-    $(document).ready(function() {
-        $('.char-count-input').each(function() {
-            var $input = $(this);
-            var $counter = $input.siblings('.char-count').find('.current');
-            $counter.text($input.val().length);
-        });
-        $(document).on('input', '.char-count-input', function() {
-            $(this).siblings('.char-count').find('.current').text($(this).val().length);
-        });
-    });
-</script>
-@endpush
 

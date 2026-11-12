@@ -31,7 +31,7 @@
                                 title="{{ translate('messages.select_modules') }}">
                                 <option value="" {{ !request('module_id') ? 'selected' : '' }}>
                                     {{ translate('messages.all_modules') }}</option>
-                                @foreach (\App\Models\Module::notParcel()->WithoutAdditionalModules()->get(['id', 'module_name']) as $module)
+                                @foreach (\App\Models\Module::notParcel()->get() as $module)
                                     <option value="{{ $module->id }}"
                                         {{ request('module_id') == $module->id ? 'selected' : '' }}>
                                         {{ $module['module_name'] }}
@@ -55,7 +55,7 @@
                                 data-placeholder="{{ translate('messages.select_store') }}"
                                 class="js-data-example-ajax form-control set-filter" data-url="{{ url()->full() }}" data-filter="store_id">
                                 @if (isset($store))
-                                    <option value="{{ $store->id }}" data-verified="{{ (int) $store->verified_seller }}" selected>{{ $store->name }}</option>
+                                    <option value="{{ $store->id }}" selected>{{ $store->name }}</option>
                                 @else
                                     <option value="all" selected>{{ translate('messages.all_stores') }}</option>
                                 @endif
@@ -222,7 +222,7 @@
                                 <img class="avatar avatar-xss avatar-4by3 mr-2"
                                     src="{{ asset('public/assets/admin/svg/components/placeholder-csv-format.svg') }}"
                                     alt="Image Description">
-                                {{ translate('messages.csv') }}
+                                .{{ translate('messages.csv') }}
                             </a>
 
                         </div>
@@ -246,7 +246,6 @@
                                 <th class="border-top border-bottom">{{ translate('messages.item_discount') }}</th>
                                 <th class="border-top border-bottom">{{ translate('messages.coupon_discount') }}</th>
                                 <th class="border-top border-bottom">{{ translate('messages.referral_discount') }}</th>
-                                <th class="border-top border-bottom">{{ translate('messages.Pro_Discount') }}</th>
                                 <th class="border-top border-bottom">{{ translate('messages.discounted_amount') }}</th>
                                 <th class="border-top border-bottom text-center">{{ translate('messages.tax') }}</th>
                                 <th class="border-top border-bottom text-center">{{ translate('messages.delivery_charge') }}</th>
@@ -295,7 +294,7 @@
                                     <td>
                                         <div class="text-right mw--85px">
                                             <div>
-                                                {{ \App\CentralLogics\Helpers::number_format_short($order['order_amount'] - $order->additional_charge - $order['dm_tips']-$order['total_tax_amount']-\App\CentralLogics\DeliveryFeeLogic::adjustedFeeForOrder($order)['adjusted']+$order['coupon_discount_amount'] + $order['store_discount_amount'] + $order['ref_bonus_amount'] - $order['extra_packaging_amount'] +$order['flash_admin_discount_amount'] +$order['flash_store_discount_amount'] + $order['extra_discount_amount'] + ($order->orderProDiscount?->amount_saved ?? 0) ) }}
+                                                {{ \App\CentralLogics\Helpers::number_format_short($order['order_amount'] - $order->additional_charge - $order['dm_tips']-$order['total_tax_amount']-$order['delivery_charge']+$order['coupon_discount_amount'] + $order['store_discount_amount'] + $order['ref_bonus_amount'] - $order['extra_packaging_amount'] +$order['flash_admin_discount_amount'] +$order['flash_store_discount_amount'] ) }}
                                             </div>
                                             @if ($order->payment_status == 'paid')
                                                 <strong class="text-success">
@@ -309,11 +308,7 @@
                                         </div>
                                     </td>
                                     <td class="text-center mw--85px">
-                                        @if ($order->discount_type == 'flash_sale')
-                                        {{ \App\CentralLogics\Helpers::number_format_short($order['flash_admin_discount_amount'] +$order['flash_store_discount_amount'] ) }}
-                                    @else
-                                        {{ \App\CentralLogics\Helpers::number_format_short($order->details()->sum(DB::raw('discount_on_item * quantity')) ) }}
-                                    @endif
+                                        {{ \App\CentralLogics\Helpers::number_format_short($order->details()->sum(DB::raw('discount_on_item * quantity')) + $order['flash_admin_discount_amount'] +$order['flash_store_discount_amount'] ) }}
                                     </td>
                                     <td class="text-center mw--85px">
                                         {{ \App\CentralLogics\Helpers::number_format_short($order['coupon_discount_amount']) }}
@@ -322,10 +317,7 @@
                                         {{ \App\CentralLogics\Helpers::number_format_short($order['ref_bonus_amount']) }}
                                     </td>
                                     <td class="text-center mw--85px">
-                                        {{ \App\CentralLogics\Helpers::number_format_short($order->orderProDiscount?->amount_saved ?? 0) }}
-                                    </td>
-                                    <td class="text-center mw--85px">
-                                        {{ \App\CentralLogics\Helpers::number_format_short($order['coupon_discount_amount'] + $order['store_discount_amount'] + $order['ref_bonus_amount'] + $order['extra_discount_amount'] + ($order->orderProDiscount?->amount_saved ?? 0))  }}
+                                        {{ \App\CentralLogics\Helpers::number_format_short($order['coupon_discount_amount'] + $order['store_discount_amount'] + $order['ref_bonus_amount'])  }}
                                     </td>
                                     <td class="text-center mw--85px white-space-nowrap">
                                         {{ \App\CentralLogics\Helpers::number_format_short($order['total_tax_amount']) }}
@@ -467,7 +459,7 @@
         $(document).on('ready', function() {
             $('.js-data-example-ajax').select2({
                 ajax: {
-                    url: '{{ route('admin.store.get-stores') }}',
+                    url: '{{ url('/') }}/admin/store/get-stores',
                     data: function(params) {
                         return {
                             q: params.term, // search term
@@ -533,7 +525,33 @@
             });
         });
 
-
+            $('#search-form').on('submit', function (e) {
+            e.preventDefault();
+            let formData = new FormData(this);
+            $.ajaxSetup({
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                }
+            });
+            $.post({
+                url: '{{route('admin.report.search_order_report')}}',
+                data: formData,
+                cache: false,
+                contentType: false,
+                processData: false,
+                beforeSend: function () {
+                    $('#loading').show();
+                },
+                success: function (data) {
+                    $('#set-rows').html(data.view);
+                    $('#countItems').html(data.count);
+                    $('.page-area').hide();
+                },
+                complete: function () {
+                    $('#loading').hide();
+                },
+            });
+        });
     </script>
 @endpush
 

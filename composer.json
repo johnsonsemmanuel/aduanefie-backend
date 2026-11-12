@@ -8,89 +8,75 @@
     ],
     "license": "MIT",
     "require": {
-        "php": "^8.2|^8.3|^8.4",
+        "php": "^7.3|^8.1",
         "ext-curl": "*",
         "ext-json": "*",
         "ext-simplexml": "*",
-        "barryvdh/laravel-dompdf": "^3.1",
+        "beyondcode/laravel-websockets": "^1.14",
         "brian2694/laravel-toastr": "^5.54",
-        "doctrine/dbal": "^4.3",
+        "doctrine/dbal": "^3.3",
         "firebase/php-jwt": "^6.4",
-        "gregwar/captcha": "^1.3",
-        "guzzlehttp/guzzle": "^7.10",
-        "inertiajs/inertia-laravel": "^3.0",
-        "intervention/image": "^3.11",
+        "gregwar/captcha": "^1.1",
+        "guzzlehttp/guzzle": "^7.0.1",
+        "intervention/image": "^2.5",
         "iyzico/iyzipay-php": "^2.0",
         "kreait/firebase-php": "^7.12",
-        "laravel/ai": "^0.6.2",
-        "laravel/framework": "^12.0",
-        "laravel/passport": "^12.0",
-        "laravel/reverb": "^1.0",
-        "laravel/tinker": "^2.10.1",
+        "laravel/framework": "^10.0",
+        "laravel/passport": "^11.0",
+        "laravel/tinker": "^2.5",
+        "laravelpkg/laravelchk": "dev-master",
         "league/flysystem-aws-s3-v3": "^3.0",
         "maatwebsite/excel": "^3.1",
         "madnest/madzipper": "*",
-        "matanyadaev/laravel-eloquent-spatial": "^4.5.0",
-        "mercadopago/dx-php": "3.8.0",
-        "mpdf/mpdf": "^8.1",
-        "nwidart/laravel-modules": "^12.0",
-        "openai-php/laravel": "^0.17",
+        "matanyadaev/laravel-eloquent-spatial": "^4.8",
+        "mercadopago/dx-php": "3.0.7",
+        "mpdf/mpdf": "^8.0",
+        "nwidart/laravel-modules": "9.0",
+        "paypal/paypal-checkout-sdk": "^1.0",
         "phonepe/phonepe-pg-php-sdk": "^1.0",
-        "pusher/pusher-php-server": "^7.2",
-        "rap2hpoutre/fast-excel": "dev-master",
+        "rap2hpoutre/fast-excel": "^5.2",
         "razorpay/razorpay": "^2.8",
         "stripe/stripe-php": "^10.10",
-        "symfony/http-foundation": "^5.4.50 || ^6.4.29 || ^7.3.7",
-        "tightenco/ziggy": "^2.6",
         "twilio/sdk": "^6.39",
+        "unicodeveloper/laravel-paystack": "^1.0",
         "xendit/xendit-php": "^2.19"
     },
     "require-dev": {
         "barryvdh/laravel-debugbar": "^3.5",
-        "fakerphp/faker": "^1.23",
-        "laravel/pail": "^1.2.2",
-        "laravel/pint": "^1.24",
-        "laravel/sail": "^1.41",
-        "mockery/mockery": "^1.6",
-        "nunomaduro/collision": "^8.6",
-        "phpunit/phpunit": "^11.5.3"
+        "fakerphp/faker": "^1.9.1",
+        "laravel/sail": "^1.0.1",
+        "mockery/mockery": "^1.4.2",
+        "nunomaduro/collision": "^7.0",
+        "phpunit/phpunit": "^10.0",
+        "spatie/laravel-ignition": "^2.0"
     },
     "autoload": {
         "files": [
-            "app/CentralLogics/BannerLogic.php",
-            "app/CentralLogics/CategoryLogic.php",
-            "app/CentralLogics/CampaignLogic.php",
-            "app/CentralLogics/ProductLogic.php",
-            "app/CentralLogics/StoreLogic.php",
-            "app/CentralLogics/Helpers.php",
-            "app/CentralLogics/CustomerLogic.php",
+            "app/CentralLogics/banner.php",
+            "app/CentralLogics/category.php",
+            "app/CentralLogics/campaign.php",
+            "app/CentralLogics/item.php",
+            "app/CentralLogics/store.php",
+            "app/CentralLogics/helpers.php",
+            "app/CentralLogics/customer.php",
             "app/helpers.php",
-            "app/CentralLogics/OrderLogic.php",
-            "app/CentralLogics/CouponLogic.php",
-            "app/CentralLogics/SMS_module.php",
-            "app/CentralLogics/FileManagerLogic.php",
+            "app/CentralLogics/order.php",
+            "app/CentralLogics/coupon.php",
+            "app/CentralLogics/sms_module.php",
+            "app/CentralLogics/filemanager.php",
+            "app/Library/Constants.php",
             "app/Library/Constant.php",
             "app/Library/Responses.php",
             "app/Utils/language.php",
             "app/Utils/settings.php",
-            "app/Utils/constant.php",
-            "app/Library/ModuleHelpers.php",
-            "app/Library/ModuleConstants.php",
-            "app/Library/ModuleResponses.php",
-            "app/Library/Notification.php"
+            "app/Utils/constant.php"
         ],
         "psr-4": {
             "App\\": "app/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/",
-            "Modules\\Builder\\": "Modules/Builder/app/",
             "Modules\\": "Modules/"
-        },
-        "exclude-from-classmap": [
-            "Modules/*/Database/Migrations",
-            "Modules/*/database/migrations",
-            "Modules/*/vendor/"
-        ]
+        }
     },
     "autoload-dev": {
         "psr-4": {
@@ -115,22 +101,11 @@
         }
     },
     "config": {
-        "platform": {
-            "php": "8.3.0"
-        },
-        "platform-check": false,
         "optimize-autoloader": true,
         "preferred-install": "dist",
         "sort-packages": true,
         "allow-plugins": {
-            "composer/package-versions-deprecated": true,
-            "php-http/discovery": true,
-            "wikimedia/composer-merge-plugin": true
-        },
-        "audit": {
-            "ignore": {
-                "PKSA-y2cr-5h3j-g3ys": "firebase/php-jwt has no patched release in our constraint range; tracking upstream"
-            }
+            "composer/package-versions-deprecated": true
         }
     },
     "minimum-stability": "stable",

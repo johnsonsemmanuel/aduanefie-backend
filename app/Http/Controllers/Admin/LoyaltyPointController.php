@@ -79,7 +79,7 @@ class LoyaltyPointController extends Controller
         ->when(isset($request->customer_id) && is_numeric($request->customer_id), function($query)use($request){
             $query->where('user_id',$request->customer_id);
         })
-        ->latest()
+        ->latest('balance')
         ->paginate(config('default_pagination'));
 
         return view('admin-views.customer.loyalty-point.report', compact('data','transactions','filter'));

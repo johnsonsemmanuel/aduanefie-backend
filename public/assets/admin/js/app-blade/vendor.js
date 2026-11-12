@@ -56,10 +56,7 @@ $(document).on("ready", function () {
     // INITIALIZATION OF SELECT2
     // =======================================================
     $(".js-select2-custom").each(function () {
-        let verifiedConfig = window.hsSelect2VerifiedTemplate
-            ? { templateResult: window.hsSelect2VerifiedTemplate, templateSelection: window.hsSelect2VerifiedTemplate }
-            : {};
-        let select2 = $.HSCore.components.HSSelect2.init($(this), verifiedConfig);
+        let select2 = $.HSCore.components.HSSelect2.init($(this));
     });
 
     // INITIALIZATION OF DATERANGEPICKER
@@ -197,7 +194,7 @@ $(document).on("ready", function () {
             }
 
             // Attach event listener with debouncing
-            $rendered.find(".select2-search input").off("input").on(
+            $(".select2-search input").on(
                 "input",
                 debounce(function () {
                     const inputValue = $(this).val().toLowerCase();
@@ -211,7 +208,7 @@ $(document).on("ready", function () {
                 }, 100)
             );
 
-            $rendered.find(".select2-search input").off("keydown").on("keydown", function (e) {
+            $(".select2-search input").on("keydown", function (e) {
                 if (e.which === 13) {
                     e.preventDefault();
 
@@ -347,80 +344,3 @@ function initializeTooltipWithHoverContent() {
 $(document).ready(function () {
     initializeTooltipWithHoverContent();
 });
-
-document.addEventListener("DOMContentLoaded", function () {
-    // ---- tabindex priority set logic
-    function assignTabIndexes() {
-        document.querySelectorAll("form").forEach((form) => {
-            let tabIndex = 1;
-
-            // Reset old tabindex
-            form.querySelectorAll("[tabindex]").forEach(el => el.removeAttribute("tabindex"));
-
-            form.querySelectorAll("input, textarea, select").forEach((el) => {
-                if (
-                    el.disabled ||
-                    el.type === "hidden" ||
-                    el.hasAttribute("readonly")
-                ) return;
-
-                if (el.classList.contains("ckeditor")) return;
-                if (el.classList.contains("js-select2-custom")) return;
-
-                el.setAttribute("tabindex", tabIndex++);
-            });
-
-            form.querySelectorAll(".select2-selection").forEach((el) => {
-                el.setAttribute("tabindex", tabIndex++);
-            });
-
-            if (typeof CKEDITOR !== "undefined") {
-                Object.values(CKEDITOR.instances).forEach((editor) => {
-                    const editable = editor.editable();
-                    if (editable && editable.$ && form.contains(editable.$)) {
-                        editable.$.setAttribute("tabindex", tabIndex++);
-                    }
-                });
-            }
-        });
-    }
-
-    assignTabIndexes();
-
-    const observer = new MutationObserver(() => {
-        assignTabIndexes();
-    });
-
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
-    // ---- tabindex priority set logic ends
-});
-
-//New Character Count code ,
-function initTextMaxLimit(selector = 'input[data-maxlength], textarea[data-maxlength], input[maxlength], textarea[maxlength]') {
-    const fields = document.querySelectorAll(selector);
-
-    fields.forEach(function (field) {
-        const maxLength = parseInt(field.getAttribute('data-maxlength') || field.getAttribute('maxlength'), 10);
-        const counter = field.parentElement.querySelector('.text-counting');
-
-        const updateCounter = () => {
-            if (field.value.length > maxLength) {
-                field.value = field.value.slice(0, maxLength);
-            }
-            if (counter) {
-                counter.textContent = `${field.value.length}/${maxLength}`;
-            }
-        };
-
-        field.addEventListener('input', updateCounter);
-        updateCounter();
-    });
-    }
-    document.addEventListener('DOMContentLoaded', function () {
-        initTextMaxLimit();
-    });
-
- 

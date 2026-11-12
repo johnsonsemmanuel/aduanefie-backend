@@ -1,11 +1,15 @@
 @php
     $vendorData = \App\CentralLogics\Helpers::get_store_data();
-    $title = $vendorData?->module_type == 'rental' && addon_published_status('Rental') ? 'Provider' : 'Store';
+    $title = $vendorData?->module_type == 'rental' && rental_module_published_status('Rental') ? 'Provider' : 'Store';
 @endphp
 @extends('layouts.vendor.app')
 @section('title',translate('messages.edit_' . $title))
 @push('css_or_js')
-
+    <!-- Custom styles for this page -->
+    <link href="{{asset('public/assets/admin')}}/vendor/datatables/dataTables.bootstrap4.min.css" rel="stylesheet">
+     <!-- Custom styles for this page -->
+     <link href="{{asset('public/assets/admin/css/croppie.css')}}" rel="stylesheet">
+     <meta name="csrf-token" content="{{ csrf_token() }}">
 @endpush
 @section('content')
     <!-- Content Row -->
@@ -18,9 +22,9 @@
                 </span>
             </h1>
         </div>
-
-        @php($language =\App\CentralLogics\Helpers::get_business_settings('language'))
-
+        @php($language=\App\Models\BusinessSetting::where('key','language')->first())
+        @php($language = $language->value ?? null)
+        @php($defaultLang = 'en')
         <form action="{{route('vendor.shop.update')}}" method="post"
                 enctype="multipart/form-data">
             @csrf
@@ -36,7 +40,7 @@
                                     href="#"
                                     id="default-link">{{ translate('Default') }}</a>
                                 </li>
-                                @foreach ($language as $lang)
+                                @foreach (json_decode($language) as $lang)
                                     <li class="nav-item">
                                         <a class="nav-link lang_link"
                                             href="#"
@@ -52,7 +56,7 @@
                                         <div class="form-group">
                                             <label class="input-label"
                                                 for="default_name">{{ translate('messages.name') }}
-                                                ({{ translate('messages.Default') }}) <span class="text-danger">*</span>
+                                                ({{ translate('messages.Default') }})
                                             </label>
                                             <input type="text" name="name[]" id="default_name"
                                                 class="form-control" placeholder="{{ translate('messages.'.$title.'_name') }}" value="{{$shop->getRawOriginal('name')}}"
@@ -62,11 +66,11 @@
                                         <input type="hidden" name="lang[]" value="default">
                                         <div class="form-group mb-0">
                                             <label class="input-label"
-                                                for="exampleFormControlInput1">{{ translate('messages.address') }} ({{ translate('messages.default') }}) <span class="text-danger">*</span></label>
+                                                for="exampleFormControlInput1">{{ translate('messages.address') }} ({{ translate('messages.default') }})</label>
                                             <textarea type="text" name="address[]" placeholder="{{translate('messages.'.$title)}}" class="form-control min-h-90px ckeditor">{{$shop->getRawOriginal('address')}}</textarea>
                                         </div>
                                     </div>
-                                        @foreach ($language as $lang)
+                                        @foreach (json_decode($language) as $lang)
                                         <?php
                                             if(count($shop['translations'])){
                                                 $translate = [];
@@ -117,14 +121,24 @@
                                             </div>
                                         </div>
                                     @endif
-
+                                    {{-- <div class="form-group">
+                                        <label for="name">{{translate('messages.store_name')}} <span class="text-danger">*</span></label>
+                                        <input type="text" name="name" value="{{$shop->name}}" class="form-control" id="name"
+                                                required>
+                                    </div> --}}
                                     <div class="form-group mt-2">
-                                        <label for="name">{{translate('messages.contact_number')}} <span class="text-danger">*</span></label>
-                                        <input type="tel" name="contact" value="{{$shop->phone}}" class="form-control" id="name"
+                                        <label for="name">{{translate('messages.contact_number')}}<span class="text-danger">*</span></label>
+                                        <input type="text" name="contact" value="{{$shop->phone}}" class="form-control" id="name"
                                                 required>
                                     </div>
                                 </div>
-
+                                {{-- <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="address">{{translate('messages.address')}}<span class="text-danger">*</span></label>
+                                        <textarea type="text" rows="4" name="address" value="" class="form-control" id="address"
+                                                required>{{$shop->address}}</textarea>
+                                    </div>
+                                </div> --}}
                             </div>
                         </div>
                     </div>
@@ -133,11 +147,11 @@
                     <div class="card">
                         <div class="card-header">
                             <h5 class="card-title font-regular">
-                                {{translate('messages.upload_logo')}} <span class="text-danger">*</span>
+                                {{translate('messages.upload_logo')}}
                             </h5>
                         </div>
                         <div class="card-body d-flex flex-column pt-0">
-                            {{-- <div class="text-center my-auto py-4 py-xl-5">
+                            <div class="text-center my-auto py-4 py-xl-5">
                                 <img class="store-banner onerror-image" id="viewer"
                                 data-onerror-image="{{asset('public/assets/admin/img/image-place-holder.png')}}"
                                 src="{{ $shop->logo_full_url }}" alt="Product thumbnail"/>
@@ -146,21 +160,7 @@
                                 <input type="file" name="image" id="customFileUpload" class="custom-file-input"
                                     accept=".webp, .jpg, .png, .jpeg, .gif, .bmp, .tif, .tiff|image/*">
                                 <label class="custom-file-label" for="customFileUpload">{{translate('messages.choose_file')}}</label>
-                            </div> --}}
-
-
-                              <div class="mx-auto text-center">
-                                            @include('admin-views.partials._image-uploader', [
-                                                    'id' => 'image-input',
-                                                    'name' => 'image',
-                                                    'ratio' => '1:1',
-                                                    'isRequired' => true,
-                                                    'existingImage' => $shop->logo_full_url,
-                                                    'imageExtension' => IMAGE_EXTENSION,
-                                                    'imageFormat' => IMAGE_FORMAT,
-                                                    'maxSize' => MAX_FILE_SIZE,
-                                                    ])
-                                        </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -169,11 +169,10 @@
                         <div class="card-header">
                             <h5 class="card-title font-regular">
                                 {{translate('messages.upload_cover_photo')}} <span class="text-danger">({{translate('messages.ratio')}} 2:1)</span>
-                                <span class="text-danger">*</span>
                             </h5>
                         </div>
                         <div class="card-body d-flex flex-column pt-0">
-                            {{-- <div class="text-center my-auto py-4 py-xl-5">
+                            <div class="text-center my-auto py-4 py-xl-5">
                                 <img class="store-banner onerror-image" id="coverImageViewer"
                                 data-onerror-image="{{asset('public/assets/admin/img/restaurant_cover.jpg')}}"
                                 src="{{ $shop->cover_photo_full_url }}" alt="Product thumbnail"/>
@@ -182,20 +181,30 @@
                                 <input type="file" name="photo" id="coverImageUpload" class="custom-file-input"
                                     accept=".webp, .jpg, .png, .jpeg, .gif, .bmp, .tif, .tiff|image/*">
                                 <label class="custom-file-label" for="coverImageUpload">{{translate('messages.choose_file')}}</label>
-                            </div> --}}
-
-                             <div class="mx-auto text-center">
-                                            @include('admin-views.partials._image-uploader', [
-                                                    'id' => 'image-input',
-                                                    'name' => 'photo',
-                                                    'ratio' => '2:1',
-                                                    'isRequired' => true,
-                                                    'existingImage' => $shop->cover_photo_full_url,
-                                                    'imageExtension' => IMAGE_EXTENSION,
-                                                    'imageFormat' => IMAGE_FORMAT,
-                                                    'maxSize' => MAX_FILE_SIZE,
-                                                    ])
-                                        </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row g-3 mt-3">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title font-regular">
+                                {{translate('messages.verification_tier')}}
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group mb-0">
+                                <label class="input-label">{{translate('messages.select_verification_tier')}}</label>
+                                <select name="verification_tier" id="verification_tier" class="form-control">
+                                    <option value="">{{translate('messages.select_tier')}}</option>
+                                    <option value="smallholder" {{ $shop->verification_tier == 'smallholder' ? 'selected' : '' }}>{{translate('messages.smallholder_farmer')}}</option>
+                                    <option value="coop" {{ $shop->verification_tier == 'coop' ? 'selected' : '' }}>{{translate('messages.cooperative')}}</option>
+                                    <option value="aggregator" {{ $shop->verification_tier == 'aggregator' ? 'selected' : '' }}>{{translate('messages.aggregator_processor')}}</option>
+                                    <option value="exporter" {{ $shop->verification_tier == 'exporter' ? 'selected' : '' }}>{{translate('messages.licensed_exporter')}}</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </div>

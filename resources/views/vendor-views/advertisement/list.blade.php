@@ -60,7 +60,7 @@ active
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h1 class="page-header-title d-flex align-items-center gap-2">
             <img src="{{asset('public/assets/admin/img/advertisement.png')}}" alt="">
-            {{ request()?->type == 'pending' ? translate('messages.Ads_pending_list') : translate('messages.Ads_list') }}
+            {{ translate('messages.Ads_list') }}
             <span class="badge badge-soft-dark ml-2">{{ $adds->total() }}</span>
         </h1>
         <a href="{{ route('vendor.advertisement.create') }}" class="btn btn-primary">  <i class="tio-add"></i> {{ translate('New Advertisement') }}</a>
@@ -80,7 +80,7 @@ active
                 @endif
                 <div class="input--group input-group input-group-merge input-group-flush">
 
-                    <input id="datatableSearch" type="search" name="search"  value="{{ request()?->search ?? null }}"  class="form-control" placeholder="{{ translate('Search by ads ID') }}" aria-label="{{translate('messages.search_here')}}">
+                    <input id="datatableSearch" type="search" name="search"  value="{{ request()?->search ?? null }}"  class="form-control" placeholder="{{ translate('Search by ads ID or store name') }}" aria-label="{{translate('messages.search_here')}}">
                     <button type="submit" class="btn btn--secondary"><i class="tio-search"></i></button>
                 </div>
                 <!-- End Search -->

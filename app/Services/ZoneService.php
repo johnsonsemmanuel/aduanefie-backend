@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\ModuleZoneDeliveryOption;
 use MatanYadaev\EloquentSpatial\Objects\LineString;
 use MatanYadaev\EloquentSpatial\Objects\Point;
 use MatanYadaev\EloquentSpatial\Objects\Polygon;
@@ -32,7 +31,6 @@ class ZoneService
             'store_wise_topic' => 'zone_'.$zoneId.'_store',
             'customer_wise_topic' => 'zone_'.$zoneId.'_customer',
             'deliveryman_wise_topic' => 'zone_'.$zoneId.'_delivery_man',
-            'rider_wise_topic' => 'zone_'.$zoneId.'_rider',
             'cash_on_delivery' => $request->cash_on_delivery?1:0,
             'digital_payment' => $request->digital_payment?1:0,
         ];
@@ -58,7 +56,6 @@ class ZoneService
             'store_wise_topic' => 'zone_'.$zoneId.'_store',
             'customer_wise_topic' => 'zone_'.$zoneId.'_customer',
             'deliveryman_wise_topic' => 'zone_'.$zoneId.'_delivery_man',
-            'rider_wise_topic' => 'zone_'.$zoneId.'_rider',
             'coordinates' => new Polygon([new LineString($polygon)]),
         ];
     }
@@ -93,143 +90,12 @@ class ZoneService
         }
         return $data;
     }
-    // Saver delivery time normalize version
-    public function extractSaverOptionsAndNormalisePivot(array &$moduleData, array $selectedModules): array
+
+    public function checkModuleDeliveryCharge(array $moduleData): array
     {
-        $extracted = [];
-        $allowedTypes = [ModuleZoneDeliveryOption::TYPE_EXPRESS, ModuleZoneDeliveryOption::TYPE_SLIGHTLY_DELAY];
-
-        foreach ($moduleData as $moduleId => $entry) {
-            if (!in_array($moduleId, $selectedModules)) {
-                continue;
-            }
-
-            $deliveryTypes = $entry['delivery_types'] ?? [];
-            unset($moduleData[$moduleId]['delivery_types']);
-
-            $status = (int) ($entry['additional_delivery_option_status'] ?? 0) === 1;
-            $moduleData[$moduleId]['additional_delivery_option_status'] = $status ? 1 : 0;
-
-            if ($status) {
-                $minutes = ModuleZoneDeliveryOption::pairToMinutes([
-                    'value' => $entry['minimum_delivery_time']      ?? 0,
-                    'unit'  => $entry['minimum_delivery_time_unit'] ?? 'min',
-                ]);
-                $moduleData[$moduleId]['minimum_delivery_time'] = $minutes;
-                $moduleData[$moduleId]['minimum_delivery_charge'] = is_numeric($entry['minimum_delivery_charge'] ?? null)
-                    ? (float) $entry['minimum_delivery_charge']
-                    : null;
-            } else {
-                $moduleData[$moduleId]['minimum_delivery_time'] = null;
-                $moduleData[$moduleId]['minimum_delivery_charge'] = null;
-            }
-            unset($moduleData[$moduleId]['minimum_delivery_time_unit']);
-
-            $perType = [];
-            foreach ($allowedTypes as $type) {
-                $row = $deliveryTypes[$type] ?? [];
-                $perType[$type] = [
-                    'extra_charge'         => is_numeric($row['extra_charge'] ?? null) ? (float) $row['extra_charge'] : null,
-                    'reduce_charge'        => is_numeric($row['reduce_charge'] ?? null) ? (float) $row['reduce_charge'] : null,
-                    'add_delivery_time'    => ModuleZoneDeliveryOption::pairToMinutes([
-                        'value' => $row['add_delivery_time']      ?? 0,
-                        'unit'  => $row['add_delivery_time_unit'] ?? 'min',
-                    ]),
-                    'reduce_delivery_time' => ModuleZoneDeliveryOption::pairToMinutes([
-                        'value' => $row['reduce_delivery_time']      ?? 0,
-                        'unit'  => $row['reduce_delivery_time_unit'] ?? 'min',
-                    ]),
-                ];
-            }
-
-            $extracted[$moduleId] = [
-                'enabled'               => $status,
-                'minimum_delivery_time' => $moduleData[$moduleId]['minimum_delivery_time'],
-                'delivery_types'        => $perType,
-            ];
-        }
-
-        return $extracted;
-    }
-    // Validate module wise saver delivery type settings
-    public function validateModuleSaverSetup(array $saverData): array
-    {
-        $errors = [];
-        foreach ($saverData as $moduleId => $payload) {
-            if (!($payload['enabled'] ?? false)) {
-                continue;
-            }
-            $express = $payload['delivery_types'][ModuleZoneDeliveryOption::TYPE_EXPRESS]        ?? [];
-            $delayed = $payload['delivery_types'][ModuleZoneDeliveryOption::TYPE_SLIGHTLY_DELAY] ?? [];
-
-            if ((float) ($express['extra_charge'] ?? 0) <= 0 || (int) ($express['reduce_delivery_time'] ?? 0) <= 0) {
-                $errors[$moduleId] = 'express_required';
-                continue;
-            }
-            if ((int) ($payload['minimum_delivery_time'] ?? 0) < (int) ($express['reduce_delivery_time'] ?? 0)) {
-                $errors[$moduleId] = 'min_time_lt_reduce_time';
-                continue;
-            }
-            if ((float) ($delayed['reduce_charge'] ?? 0) <= 0 || (int) ($delayed['add_delivery_time'] ?? 0) <= 0) {
-                $errors[$moduleId] = 'slightly_delay_required';
-            }
-        }
-        return $errors;
-    }
-    // Update saver delivery type 
-    public function upsertModuleSaverOptions(int $moduleId, int $zoneId, array $payload): void
-    {
-        $allowedTypes = [
-            ModuleZoneDeliveryOption::TYPE_STANDARD,
-            ModuleZoneDeliveryOption::TYPE_EXPRESS,
-            ModuleZoneDeliveryOption::TYPE_SLIGHTLY_DELAY,
-        ];
-
-        if (!($payload['enabled'] ?? false)) {
-            ModuleZoneDeliveryOption::for($moduleId, $zoneId)->delete();
-            return;
-        }
-
-        foreach ($allowedTypes as $type) {
-            $row = $payload['delivery_types'][$type] ?? [];
-            ModuleZoneDeliveryOption::updateOrCreate(
-                ['module_id' => $moduleId, 'zone_id' => $zoneId, 'delivery_type' => $type],
-                [
-                    'extra_charge'         => $row['extra_charge']         ?? null,
-                    'reduce_charge'        => $row['reduce_charge']        ?? null,
-                    'add_delivery_time'    => $row['add_delivery_time']    ?? null,
-                    'reduce_delivery_time' => $row['reduce_delivery_time'] ?? null,
-                ]
-            );
-        }
-    }
-
-    public function checkModuleDeliveryCharge(array $moduleData, array $selectedModules): array
-    {
-        foreach ($moduleData as $moduleId => $data) {
-            if (in_array($moduleId, $selectedModules)) {
-                $type = $data['delivery_charge_type'] ?? null;
-    
-                if ($type === 'fixed') {
-                    if (empty($data['fixed_shipping_charge'])) {
-                        return ['flag' => 'fixed_required', 'module_id' => $moduleId];
-                    }
-                } elseif ($type === 'distance') {
-                    if (empty($data['per_km_shipping_charge']) || empty($data['minimum_shipping_charge'])) {
-                        return ['flag' => 'distance_required', 'module_id' => $moduleId];
-                    }
-    
-                    if (
-                        isset($data['maximum_shipping_charge']) &&
-                        is_numeric($data['maximum_shipping_charge']) &&
-                        is_numeric($data['minimum_shipping_charge']) &&
-                        (float)$data['maximum_shipping_charge'] < (float)$data['minimum_shipping_charge']
-                    ) {
-                        return ['flag' => 'max_delivery_charge', 'module_id' => $moduleId];
-                    }
-                } else {
-                    return ['flag' => 'unknown_type', 'module_id' => $moduleId];
-                }
+        foreach($moduleData as $data){
+            if(isset($data['maximum_shipping_charge']) && ((int)$data['maximum_shipping_charge'] < (int)$data['minimum_shipping_charge'])){
+                return ['flag' => 'max_delivery_charge'];
             }
         }
         return [];

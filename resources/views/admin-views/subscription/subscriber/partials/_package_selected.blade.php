@@ -159,7 +159,7 @@
             </div>
 
         </div>
-        <div class="btn--container justify-content-end mt-20">
+        <div class="btn--container justify-content-end mt-3">
             <button type="reset" data-dismiss="modal" class="btn btn--reset">{{ translate('Cancel') }}</button>
             @if ( $store_business_model != 'commission' && $store_subscription?->package_id ==  $package->id)
             <button type="submit" class="btn btn--primary">{{ translate('Renew Subscription Plan') }}</button>

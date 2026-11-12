@@ -2,45 +2,46 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\CentralLogics\CustomerLogic;
+use App\Models\Cart;
+use App\Models\Item;
+use App\Models\User;
+use App\Models\Zone;
 use App\Models\Admin;
-use App\Models\Module;
-use App\Models\ModuleZoneDeliveryOption;
 use App\Models\Order;
 use App\Models\Store;
+use App\Models\Coupon;
 use App\Models\Refund;
-use App\Models\Cart;
-use App\Models\MonthlyOrderReminder;
 use App\Mail\PlaceOrder;
+use App\Models\DMVehicle;
 use App\Mail\RefundRequest;
+use App\Models\OrderDetail;
+use App\Models\ItemCampaign;
 use App\Models\OrderPayment;
 use App\Models\RefundReason;
 use Illuminate\Http\Request;
 use App\CentralLogics\Helpers;
-use App\CentralLogics\OrderLogic;
-use App\CentralLogics\PersonalizationService;
+use App\Models\ParcelCategory;
 use App\Models\BusinessSetting;
 use App\Models\CashBackHistory;
 use App\Models\OfflinePayments;
 use App\Models\AutomatedMessage;
+use App\CentralLogics\OrderLogic;
 use App\Models\OrderCancelReason;
+use App\CentralLogics\CouponLogic;
 use Illuminate\Support\Facades\DB;
 use App\CentralLogics\ProductLogic;
+use App\Mail\OrderVerificationMail;
+use App\CentralLogics\CustomerLogic;
 use App\Http\Controllers\Controller;
 use App\Models\OfflinePaymentMethod;
 use Illuminate\Support\Facades\Mail;
-
-use App\Models\Review;
-use App\Traits\HandlesCartValidation;
-use App\Traits\PlaceNewOrder;
+use App\Models\ParcelDeliveryInstruction;
 use Illuminate\Support\Facades\Validator;
-use Modules\Rental\Entities\Trips;
-use Modules\RideShare\Entities\TripManagement\RideRequest;
+use Illuminate\Validation\Rules\Password;
+use MatanYadaev\EloquentSpatial\Objects\Point;
 
 class OrderController extends Controller
 {
-    use PlaceNewOrder;
-    use HandlesCartValidation;
     public function track_order(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -51,41 +52,33 @@ class OrderController extends Controller
         if ($validator->fails()) {
             return response()->json(['errors' => Helpers::error_processor($validator)], 403);
         }
-        $user_id = $request?->user?->id;
+        $user_id = $request?->user?->id ;
 
         if ($request['contact_number'] && (substr($request['contact_number'], 0, 1) !== '+')) {
             $request['contact_number'] = '+' . $request['contact_number'];
         }
 
-        $order = Order::with(['store', 'store.store_sub', 'delivery_man.rating', 'refund', 'payments','reviews','orderProDiscount'])->withCount('details')
-            ->where('id', $request['order_id'])
-            ->when($request->user, function ($query) use ($user_id) {
-                return $query->where('user_id', $user_id)->where('is_guest', 0);
-            })
-            ->when(!$request->user, function ($query) use ($request) {
-                return $query->whereJsonContains('delivery_address->contact_person_number', $request['contact_number'])->where('is_guest', 1);
-            })
-            ->NotHiddenForCustomer()
-            ->Notpos()->first();
+        $order = Order::with(['store','store.store_sub' ,'delivery_man.rating', 'parcel_category', 'refund','payments'])->withCount('details')
+        ->where('id', $request['order_id'])
+        ->when($request->user, function ($query) use ($user_id) {
+            return $query->where('user_id', $user_id);
+        })
+        ->when(!$request->user, function ($query) use ($request) {
+            return $query->whereJsonContains('delivery_address->contact_person_number', $request['contact_number']);
+        })
+        ->Notpos()->first();
         if ($order) {
             $order['store'] = $order['store'] ? Helpers::store_data_formatting($order['store']) : $order['store'];
             $order['delivery_address'] = $order['delivery_address'] ? json_decode($order['delivery_address']) : $order['delivery_address'];
             $order['delivery_man'] = $order['delivery_man'] ? Helpers::deliverymen_data_formatting([$order['delivery_man']]) : $order['delivery_man'];
             $order['refund_cancellation_note'] = $order['refund'] ? $order['refund']['admin_note'] : null;
             $order['refund_customer_note'] = $order['refund'] ? $order['refund']['customer_note'] : null;
-            $order['min_delivery_time'] =  $order->store ? (int) explode('-', $order->store?->delivery_time)[0] ?? 0 : 0;
-            $order['max_delivery_time'] =  $order->store ? (int) explode('-', $order->store?->delivery_time)[1] ?? 0 : 0;
-            $order['saver_delivery_time'] = $this->get_saver_delivery_time($order);
+            $order['min_delivery_time'] =  $order->store?(int) explode('-',$order->store?->delivery_time)[0] ?? 0:0;
+            $order['max_delivery_time'] =  $order->store?(int) explode('-',$order->store?->delivery_time)[1] ?? 0:0;
             $order['offline_payment'] =  isset($order->offline_payments) ? Helpers::offline_payment_formater($order->offline_payments) : null;
-            $order['is_reviewed'] =   $order->details_count >  Review::whereOrderId($request->order_id)->count() ? False :True ;
-            foreach (Helpers::pro_discount_data($order) as $pro_key => $pro_value) {
-                $order[$pro_key] = $pro_value;
-            }
-
 
             unset($order['offline_payments']);
             unset($order['details']);
-            unset($order['orderProDiscount']);
         } else {
             return response()->json([
                 'errors' => [
@@ -93,8 +86,1484 @@ class OrderController extends Controller
                 ]
             ], 404);
         }
-        $order = gettype($order) == 'object' ? $order->toArray() : $order;
         return response()->json($order, 200);
+    }
+
+    public function place_order(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'order_amount' => 'required',
+            'payment_method' => 'required|in:cash_on_delivery,digital_payment,wallet,offline_payment',
+            'order_type' => 'required|in:take_away,delivery,parcel',
+            'store_id' => 'required_unless:order_type,parcel',
+            'distance' => 'required_unless:order_type,take_away',
+            'address' => 'required_unless:order_type,take_away',
+            'longitude' => 'required_unless:order_type,take_away',
+            'latitude' => 'required_unless:order_type,take_away',
+            'parcel_category_id' => 'required_if:order_type,parcel',
+            'receiver_details' => 'required_if:order_type,parcel',
+            'charge_payer' => 'required_if:order_type,parcel|in:sender,receiver',
+            'dm_tips' => 'nullable|numeric',
+            'currency_code' => 'nullable|string|size:3',
+            'guest_id' => $request->user ? 'nullable' : 'required',
+            'contact_person_name' => $request->user ? 'nullable' : 'required',
+            'contact_person_number' => $request->user ? 'nullable' : 'required',
+            'contact_person_email' => $request->user ? 'nullable' : 'required',
+            'password' => $request->create_new_user ? ['required', Password::min(8)] : 'nullable',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => Helpers::error_processor($validator)], 403);
+        }
+
+        if($request->create_new_user){
+            if(!$request->password){
+                return response()->json([
+                    'errors' => [
+                        ['code' => 'password', 'message' => translate('messages.password_is_required')]
+                    ]
+                ], 403);
+            }
+            if(User::where('phone',$request->contact_person_number)->first()){
+                return response()->json([
+                    'errors' => [
+                        ['code' => 'phone_person_email', 'message' => translate('messages.phone_already_taken')]
+                    ]
+                ], 403);
+            }
+            if(User::where('email',$request->contact_person_email)->first()){
+                return response()->json([
+                    'errors' => [
+                        ['code' => 'contact_person_email', 'message' => translate('messages.email_already_taken')]
+                    ]
+                ], 403);
+            }
+            $user = new User();
+            $user->f_name = $request->contact_person_name;
+            $user->email = $request->contact_person_email;
+            $user->phone = $request->contact_person_number;
+            $user->password = bcrypt($request->password);
+            $user->ref_code = Helpers::generate_referer_code($user);
+            $user->login_medium = 'manual';
+            $user->save();
+
+            try
+            {
+                if (config('mail.status') && $request->contact_person_email && Helpers::get_mail_status('registration_mail_status_user') == '1' && Helpers::getNotificationStatusData('customer','customer_registration','mail_status')) {
+                    Mail::to($request->contact_person_email)->send(new \App\Mail\CustomerRegistration($request->contact_person_name));
+                }
+            }
+            catch(\Exception $ex)
+            {
+                info($ex->getMessage());
+            }
+            if($request->guest_id  && isset($user->id)){
+
+                $userStoreIds = Cart::where('user_id', $request->guest_id)
+                    ->join('items', 'carts.item_id', '=', 'items.id')
+                    ->pluck('items.store_id')
+                    ->toArray();
+
+                Cart::where('user_id', $user->id)
+                    ->whereHas('item', function ($query) use ($userStoreIds) {
+                        $query->whereNotIn('store_id', $userStoreIds);
+                    })
+                    ->delete();
+
+                Cart::where('user_id', $request->guest_id)->update(['user_id' => $user->id,'is_guest' => 0]);
+            }
+
+            $request->is_guest = 0;
+            $request->user = $user;
+        }
+
+
+        if($request->is_guest && !Helpers::get_mail_status('guest_checkout_status')){
+            return response()->json([
+                'errors' => [
+                    ['code' => 'is_guest', 'message' => translate('messages.Guest_order_is_not_active')]
+                ]
+            ], 403);
+        }
+
+
+        $coupon = null;
+        $coupon_created_by = null;
+        $delivery_charge = null;
+        $schedule_at = $request->schedule_at ? \Carbon\Carbon::parse($request->schedule_at) : now();
+        $store = null;
+        $free_delivery_by = null;
+        $distance_data = $request->distance;
+        $increased=0;
+        $maximum_shipping_charge = 0;
+
+        if($request['order_type'] == 'delivery' && !Helpers::get_business_settings('home_delivery_status')){
+            return response()->json([
+                'errors' => [
+                    ['code' => 'order_type', 'message' => translate('messages.home_delivery_is_not_active')]
+                ]
+            ], 403);
+        }
+
+        if($request['order_type'] == 'take_away' && !Helpers::get_business_settings('takeaway_status')){
+            return response()->json([
+                'errors' => [
+                    ['code' => 'order_type', 'message' => translate('messages.take_away_is_not_active')]
+                ]
+            ], 403);
+        }
+
+        if($request->partial_payment && !Helpers::get_business_settings('partial_payment_status')){
+            return response()->json([
+                'errors' => [
+                    ['code' => 'order_method', 'message' => translate('messages.partial_payment_is_not_active')]
+                ]
+            ], 403);
+        }
+
+
+
+
+        if ($request->payment_method == 'offline_payment' &&  Helpers::get_mail_status('offline_payment_status') == 0) {
+            return response()->json([
+                'errors' => [
+                    ['code' => 'offline_payment_status', 'message' => translate('messages.offline_payment_for_the_order_not_available_at_this_time')]
+                ]
+            ], 403);
+        }
+
+
+
+
+    $digital_payment = Helpers::get_business_settings('digital_payment');
+            if($digital_payment['status'] == 0 && $request->payment_method == 'digital_payment'){
+                return response()->json([
+                    'errors' => [
+                        ['code' => 'digital_payment', 'message' => translate('messages.digital_payment_for_the_order_not_available_at_this_time')]
+                    ]
+                ], 403);
+            }
+
+        $data =  DMVehicle::active()->where(function ($query) use ($distance_data) {
+            $query->where('starting_coverage_area', '<=', $distance_data)->where('maximum_coverage_area', '>=', $distance_data)
+            ->orWhere(function ($query) use ($distance_data) {
+                $query->where('starting_coverage_area', '>=', $distance_data);
+            });
+        })
+            ->orderBy('starting_coverage_area')->first();
+
+        $extra_charges = (float) (isset($data) ? $data->extra_charges  : 0);
+        $vehicle_id = (isset($data) ? $data->id  : null);
+
+
+        $zone = null;
+        if ($request->latitude && $request->longitude) {
+            $point = new Point($request->latitude, $request->longitude);
+            if ($request->order_type == 'parcel') {
+            // if(isset($request->sender_zone_id) ){
+                // $zone_id = $request->sender_zone_id;
+                $zone_ids = $request->header('zoneId') ? json_decode($request->header('zoneId'), true) :[];
+                $zone = Zone::whereIn('id', $zone_ids)->whereContains('coordinates', new Point($request->latitude, $request->longitude, POINT_SRID))->wherehas('modules',function($q){
+                    $q->where('module_type','parcel');
+                })->first();
+            } else{
+                $store = Store::with(['discount', 'store_sub'])->selectRaw('*, ' . Store::openSqlExpression($schedule_at))->where('id', $request->store_id)->first();
+
+                if (!$store) {
+                    return response()->json([
+                        'errors' => [
+                            ['code' => 'order_time', 'message' => translate('messages.store_not_found')]
+                        ]
+                    ], 404);
+                }
+                $zone_id = isset($store) ? [$store->zone_id] : json_decode($request->header('zoneId'), true);
+                $zone = Zone::where('id', $zone_id)->whereContains('coordinates', new Point($request->latitude, $request->longitude, POINT_SRID))->first();
+            }
+
+        }
+
+        if (!$zone) {
+            $errors = [];
+            array_push($errors, ['code' => 'coordinates', 'message' => translate('messages.out_of_coverage')]);
+            return response()->json([
+                'errors' => $errors
+            ], 403);
+        }
+        if( $zone && $zone->increased_delivery_fee_status == 1){
+            $increased=$zone->increased_delivery_fee ?? 0;
+        }
+
+        if ($request->order_type !== 'parcel') {
+            if ($request->schedule_at && $schedule_at < now()) {
+                return response()->json([
+                    'errors' => [
+                        ['code' => 'order_time', 'message' => translate('messages.you_can_not_schedule_a_order_in_past')]
+                    ]
+                ], 406);
+            }
+
+
+            if ($request->schedule_at && !$store->schedule_order) {
+                return response()->json([
+                    'errors' => [
+                        ['code' => 'schedule_at', 'message' => translate('messages.schedule_order_not_available')]
+                    ]
+                ], 406);
+            }
+
+            if ($store->open == false) {
+                return response()->json([
+                    'errors' => [
+                        ['code' => 'order_time', 'message' => translate('messages.store_is_closed_at_order_time')]
+                    ]
+                ], 406);
+            }
+
+
+            $store_sub=$store?->store_sub;
+            if ($store->is_valid_subscription) {
+                if($store_sub->max_order != "unlimited" && $store_sub->max_order <= 0){
+                    return response()->json([
+                        'errors' => [
+                            ['code' => 'order-confirmation-error', 'message' => translate('messages.Sorry_the_store_is_unable_to_take_any_order_!')]
+                        ]
+                    ], 403);
+                }
+            }
+            elseif( $store->store_business_model == 'unsubscribed'){
+                return response()->json([
+                    'errors' => [
+                        ['code' => 'order-confirmation-model', 'message' => translate('messages.Sorry_the_store_is_unable_to_take_any_order_!')]
+                    ]
+                ], 403);
+            }
+
+
+
+
+            if ($request['coupon_code']) {
+                $coupon = Coupon::active()->where(['code' => $request['coupon_code']])->first();
+                if (isset($coupon)) {
+
+                    if($request->is_guest){
+                        $staus = CouponLogic::is_valid_for_guest($coupon, $request['store_id']);
+                    }else{
+                        $staus = CouponLogic::is_valide($coupon, $request->user->id, $request['store_id']);
+                    }
+
+                    if ($staus == 407) {
+                        return response()->json([
+                            'errors' => [
+                                ['code' => 'coupon', 'message' => translate('messages.coupon_expire')]
+                            ]
+                        ], 407);
+                    } else if ($staus == 408) {
+                        return response()->json([
+                            'errors' => [
+                                ['code' => 'coupon', 'message' => translate('messages.You_are_not_eligible_for_this_coupon')]
+                            ]
+                        ], 403);
+                    } else if ($staus == 406) {
+                        return response()->json([
+                            'errors' => [
+                                ['code' => 'coupon', 'message' => translate('messages.coupon_usage_limit_over')]
+                            ]
+                        ], 406);
+                    } else if ($staus == 404) {
+                        return response()->json([
+                            'errors' => [
+                                ['code' => 'coupon', 'message' => translate('messages.not_found')]
+                            ]
+                        ], 404);
+                    }
+
+                    $coupon_created_by = $coupon->created_by;
+                    if ($coupon->coupon_type == 'free_delivery') {
+                        $delivery_charge = 0;
+                        $free_delivery_by =  $coupon_created_by;
+                        $coupon_created_by = null;
+                    }
+                } else {
+                    return response()->json([
+                        'errors' => [
+                            ['code' => 'coupon', 'message' => translate('messages.not_found')]
+                        ]
+                    ], 404);
+                }
+            }
+
+            $module_wise_delivery_charge = $store->zone->modules()->where('modules.id', $request->header('moduleId'))->first();
+            if ($module_wise_delivery_charge) {
+                $per_km_shipping_charge = $module_wise_delivery_charge->pivot->per_km_shipping_charge;
+                $minimum_shipping_charge = $module_wise_delivery_charge->pivot->minimum_shipping_charge;
+                $maximum_shipping_charge = $module_wise_delivery_charge->pivot->maximum_shipping_charge;
+            } else {
+                $per_km_shipping_charge = (float)BusinessSetting::where(['key' => 'per_km_shipping_charge'])->first()->value;
+                $minimum_shipping_charge = (float)BusinessSetting::where(['key' => 'minimum_shipping_charge'])->first()->value;
+            }
+
+
+            if ($request['order_type'] != 'take_away' && !$store->free_delivery &&  !isset($delivery_charge) &&  $store->sub_self_delivery == 1) {
+                $per_km_shipping_charge = $store->per_km_shipping_charge;
+                $minimum_shipping_charge = $store->minimum_shipping_charge;
+                $maximum_shipping_charge = $store->maximum_shipping_charge;
+                $extra_charges = 0;
+                $vehicle_id = null;
+                $increased=0;
+            }
+
+            if ($store->free_delivery || $free_delivery_by == 'vendor') {
+                $per_km_shipping_charge = $store->per_km_shipping_charge;
+                $minimum_shipping_charge = $store->minimum_shipping_charge;
+                $maximum_shipping_charge = $store->maximum_shipping_charge;
+                $extra_charges = 0;
+                $increased=0;
+            }
+
+            $original_delivery_charge = (($request->distance * $per_km_shipping_charge) > $minimum_shipping_charge) ? $request->distance * $per_km_shipping_charge  : $minimum_shipping_charge;
+
+            if ($request['order_type'] == 'take_away') {
+                $per_km_shipping_charge = 0;
+                $minimum_shipping_charge = 0;
+                $maximum_shipping_charge = 0;
+                $extra_charges = 0;
+                $distance_data = 0;
+                $vehicle_id = null;
+                $original_delivery_charge = 0;
+                $increased=0;
+            }
+
+            if ($maximum_shipping_charge  >= $minimum_shipping_charge  && $original_delivery_charge >  $maximum_shipping_charge) {
+                $original_delivery_charge = $maximum_shipping_charge;
+            } else {
+                $original_delivery_charge = $original_delivery_charge;
+            }
+
+            if (!isset($delivery_charge)) {
+                $delivery_charge = ($request->distance * $per_km_shipping_charge > $minimum_shipping_charge) ? $request->distance * $per_km_shipping_charge : $minimum_shipping_charge;
+                if ($maximum_shipping_charge  >= $minimum_shipping_charge  && $delivery_charge >  $maximum_shipping_charge) {
+                    $delivery_charge = $maximum_shipping_charge;
+                } else {
+                    $delivery_charge = $delivery_charge;
+                }
+            }
+            $original_delivery_charge = $original_delivery_charge + $extra_charges;
+            $delivery_charge = $delivery_charge + $extra_charges;
+
+
+
+
+        } else {
+            $parcel_category = ParcelCategory::findOrFail($request->parcel_category_id);
+            if (isset($parcel_category) && isset($parcel_category->parcel_minimum_shipping_charge)) {
+                $per_km_shipping_charge = $parcel_category->parcel_per_km_shipping_charge;
+                $minimum_shipping_charge = $parcel_category->parcel_minimum_shipping_charge;
+            } else {
+                $per_km_shipping_charge = (float)BusinessSetting::where(['key' => 'parcel_per_km_shipping_charge'])->first()->value;
+                $minimum_shipping_charge = (float)BusinessSetting::where(['key' => 'parcel_minimum_shipping_charge'])->first()->value;
+            }
+
+            $original_delivery_charge = (($request->distance * $per_km_shipping_charge )> $minimum_shipping_charge) ? ($request->distance * $per_km_shipping_charge )+ $extra_charges : ($minimum_shipping_charge + $extra_charges);
+        }
+
+
+        if($increased > 0 ){
+            if($delivery_charge > 0){
+                $increased_fee = ($delivery_charge * $increased) / 100;
+                $delivery_charge = $delivery_charge + $increased_fee;
+            }
+            if($original_delivery_charge > 0){
+                $increased_fee = ($original_delivery_charge * $increased) / 100;
+                $original_delivery_charge = $original_delivery_charge + $increased_fee;
+            }
+        }
+
+        $address = [
+            'contact_person_name' => $request->contact_person_name ? $request->contact_person_name : ($request->user?$request->user->f_name . ' ' . $request->user->l_name:''),
+            'contact_person_number' => $request->contact_person_number ? $request->contact_person_number : ($request->user?$request->user->phone:''),
+//            'contact_person_number' => $request->contact_person_number ? ($request->user ? $request->contact_person_number :str_replace('+', '', $request->contact_person_number)) : ($request->user?$request->user->phone:''),
+            'contact_person_email' => $request->contact_person_email ? $request->contact_person_email : ($request->user?$request->user->email:''),
+            'address_type' => $request->address_type ? $request->address_type : 'Delivery',
+            'address' => $request?->address??'',
+            'floor' => $request?->floor??'',
+            'road' => $request?->road??'',
+            'house' => $request?->house??'',
+            'longitude' => (string)$request->longitude,
+            'latitude' => (string)$request->latitude,
+        ];
+
+        $total_addon_price = 0;
+        $product_price = 0;
+        $store_discount_amount = 0;
+        $flash_sale_vendor_discount_amount = 0;
+        $flash_sale_admin_discount_amount = 0;
+        $store_discount_amount = 0;
+        $product_data = [];
+
+        $order_details = [];
+        $order = new Order();
+        $order->id = 100000 + Order::count() + 1;
+        if (Order::find($order->id)) {
+            $order->id = Order::orderBy('id', 'desc')->first()->id + 1;
+        }
+
+
+        $order_status ='pending';
+        if(($request->partial_payment && $request->payment_method != 'offline_payment') || $request->payment_method == 'wallet' ){
+            $order_status ='confirmed';
+        }
+
+        $order->user_id = $request->user ? $request->user->id : $request['guest_id'];
+        $order->order_amount = $request['order_amount'];
+        $order->payment_status = ($request->partial_payment ? 'partially_paid' : ($request['payment_method'] == 'wallet' ? 'paid' : 'unpaid'));
+        $order->order_status = $order_status;
+        $order->coupon_code = $request['coupon_code'];
+        $order->payment_method = $request->partial_payment? 'partial_payment' :$request->payment_method;
+        $order->transaction_reference = null;
+        $order->order_note = $request['order_note'];
+        $order->unavailable_item_note = $request['unavailable_item_note'];
+        $order->delivery_instruction = $request['delivery_instruction'];
+        $order->order_type = $request['order_type'];
+        $order->store_id = $request['store_id'];
+        $order->delivery_charge = round($delivery_charge, config('round_up_to_digit')) ?? 0;
+        $order->original_delivery_charge = round($original_delivery_charge, config('round_up_to_digit'));
+        $order->delivery_address = json_encode($address);
+        $order->schedule_at = $schedule_at;
+        $order->scheduled = $request->schedule_at ? 1 : 0;
+        $order->cutlery = $request->cutlery ? 1 : 0;
+        $order->is_guest = $request->user ? 0 : 1;
+        $order->otp = rand(1000, 9999);
+        $order->zone_id = isset($zone) ? $zone->id : end(json_decode($request->header('zoneId'), true));
+        $order->module_id = $request->header('moduleId');
+        $order->parcel_category_id = $request->parcel_category_id;
+        $order->currency_code = $request->currency_code ?? Helpers::get_store_data()->currency ?? 'GHS';
+        $order->receiver_details = json_decode($request->receiver_details);
+
+        if ($order_status == 'confirmed') {
+            $order->confirmed = now();
+        }
+        $order->dm_vehicle_id = $vehicle_id;
+        $order->pending = now();
+        if (!empty($request->file('order_attachment')) && is_array($request->file('order_attachment'))) {
+            $img_names = [];
+            if (!empty($request->file('order_attachment'))) {
+                $images = [];
+                foreach ($request->order_attachment as $img) {
+                    $image_name = Helpers::upload('order/', 'png', $img);
+                    array_push($img_names, ['img'=>$image_name, 'storage'=> Helpers::getDisk()]);
+                }
+                $images = $img_names;
+            }
+        }else{
+            $img_names = [];
+            if (!empty($request->file('order_attachment'))) {
+                $images = [];
+                $image_name = Helpers::upload('order/', 'png', $request->file('order_attachment'));
+                array_push($img_names, ['img'=>$image_name, 'storage'=> Helpers::getDisk()]);
+
+                $images = $img_names;
+            }
+        }
+        if(isset($images)){
+            $order->order_attachment = json_encode($images);
+        }
+        $order->distance = $request->distance;
+        $order->created_at = now();
+        $order->updated_at = now();
+        $order->charge_payer = $request->charge_payer;
+
+        //Added DM TIPS
+        $dm_tips_manage_status = BusinessSetting::where('key', 'dm_tips_status')->first()->value;
+        if ($dm_tips_manage_status == 1) {
+            $order->dm_tips = $request->dm_tips ?? 0;
+        } else {
+            $order->dm_tips = 0;
+        }
+
+        //Added service charge
+        $additional_charge_status = BusinessSetting::where('key', 'additional_charge_status')->first()->value;
+        $additional_charge = BusinessSetting::where('key', 'additional_charge')->first()->value;
+        if ($additional_charge_status == 1) {
+            $order->additional_charge = $additional_charge ?? 0;
+        } else {
+            $order->additional_charge = 0;
+        }
+
+        // extra packaging charge
+        $extra_packaging_data = BusinessSetting::where('key', 'extra_packaging_data')->first()?->value ?? '';
+        $extra_packaging_data =json_decode($extra_packaging_data , true);
+        $order->extra_packaging_amount =  (!empty($extra_packaging_data) && $request?->extra_packaging_amount > 0 && $store && ($extra_packaging_data[$store->module->module_type]=='1') && ($store?->storeConfig?->extra_packaging_status == '1'))?$store?->storeConfig?->extra_packaging_amount:0;
+
+
+        $carts = Cart::where('user_id', $order->user_id)->where('is_guest',$order->is_guest)->where('module_id',$request->header('moduleId'))
+        ->when(isset($request->is_buy_now) && $request->is_buy_now == 1 && $request->cart_id, function ($query) use ($request) {
+            return $query->where('id',$request->cart_id);
+        })
+        ->get()->map(function ($data) {
+            $data->add_on_ids = json_decode($data->add_on_ids,true);
+            $data->add_on_qtys = json_decode($data->add_on_qtys,true);
+            $data->variation = json_decode($data->variation,true);
+			return $data;
+		});
+
+        if(isset($request->is_buy_now) && $request->is_buy_now == 1){
+            $carts = json_decode($request['cart'], true);
+        }
+
+        if ($request->order_type !== 'parcel') {
+            foreach ($carts as $c) {
+                if ($c['item_type'] === 'App\Models\ItemCampaign' || $c['item_type'] === 'AppModelsItemCampaign') {
+                    $product = ItemCampaign::with('module')->active()->find($c['item_id']);
+                    if ($product) {
+
+
+                        if($product->store_id != $order->store_id){
+                            return response()->json([
+                                'errors' => [
+                                    ['code' => 'different_stores', 'message' => translate('messages.Please_select_items_from_the_same_store')]
+                                ]
+                            ], 403);
+                        }
+
+                        if ($product->module->module_type == 'food' && $product->food_variations) {
+                            $product_variations = json_decode($product->food_variations, true);
+                            $variations = [];
+                            if (count($product_variations)) {
+                                $variation_data = Helpers::get_varient($product_variations, $c['variation']);
+                                $price = $product['price'] + $variation_data['price'];
+                                $variations = $variation_data['variations'];
+                            } else {
+                                $price = $product['price'];
+                            }
+                            $product->tax = $store->tax;
+                            $product = Helpers::product_data_formatting($product, false, false, app()->getLocale());
+                            $addon_data = Helpers::calculate_addon_price(\App\Models\AddOn::whereIn('id', $c['add_on_ids'])->get(), $c['add_on_qtys']);
+
+                            $or_d = [
+                                'item_id' => null,
+                                'item_campaign_id' => $c['item_id'],
+                                'item_details' => json_encode($product),
+                                'quantity' => $c['quantity'],
+                                'price' => round($price, config('round_up_to_digit')),
+                                'tax_amount' => Helpers::tax_calculate($product, $price),
+                                'discount_on_item' => Helpers::product_discount_calculate($product, $price, $store)['discount_amount'],
+                                'discount_type' => 'discount_on_product',
+                                'variant' => json_encode($c['variant']),
+                                'variation' => json_encode($variations),
+                                'add_ons' => json_encode($addon_data['addons']),
+                                'total_add_on_price' => $addon_data['total_add_on_price'],
+                                'created_at' => now(),
+                                'updated_at' => now()
+                            ];
+                            $order_details[] = $or_d;
+                            $total_addon_price += $or_d['total_add_on_price'];
+                            $product_price += $price * $or_d['quantity'];
+                            $store_discount_amount += $or_d['discount_on_item'] * $or_d['quantity'];
+                        } else {
+                            if (count(json_decode($product['variations'], true)) > 0) {
+                                $variant_data = Helpers::variation_price($product, json_encode($c['variation']));
+                                $price = $variant_data['price'];
+                                $stock = $variant_data['stock'];
+                            } else {
+                                $price = $product['price'];
+                                $stock = $product->stock;
+                            }
+                            if (config('module.' . $product->module->module_type)['stock']) {
+                                if ($c['quantity'] > $stock) {
+                                    return response()->json([
+                                        'errors' => [
+                                            ['code' => 'campaign', 'message' => translate('messages.product_out_of_stock_warning', ['item' => $product->title])]
+                                        ]
+                                    ], 406);
+                                }
+
+                                $product_data[] = [
+                                    'item' => clone $product,
+                                    'quantity' => $c['quantity'],
+                                    'variant' => count($c['variation']) > 0 ? $c['variation'][0]['type'] : null
+                                ];
+                            }
+
+                            $product->tax = $store->tax;
+                            $product = Helpers::product_data_formatting($product, false, false, app()->getLocale());
+                            $addon_data = Helpers::calculate_addon_price(\App\Models\AddOn::whereIn('id', $c['add_on_ids'])->get(), $c['add_on_qtys']);
+                            $or_d = [
+                                'item_id' => null,
+                                'item_campaign_id' => $c['item_id'],
+                                'item_details' => json_encode($product),
+                                'quantity' => $c['quantity'],
+                                'price' => $price,
+                                'tax_amount' => Helpers::tax_calculate($product, $price),
+                                'discount_on_item' => Helpers::product_discount_calculate($product, $price, $store)['discount_amount'],
+                                'discount_type' => 'discount_on_product',
+                                'variant' => json_encode($c['variant']),
+                                'variation' => json_encode($c['variation']),
+                                'add_ons' => json_encode($addon_data['addons']),
+                                'total_add_on_price' => $addon_data['total_add_on_price'],
+                                'created_at' => now(),
+                                'updated_at' => now()
+                            ];
+                            $order_details[] = $or_d;
+                            $total_addon_price += $or_d['total_add_on_price'];
+                            $product_price += $price * $or_d['quantity'];
+                            $store_discount_amount += $or_d['discount_on_item'] * $or_d['quantity'];
+                        }
+                    } else {
+                        return response()->json([
+                            'errors' => [
+                                ['code' => 'campaign', 'message' => translate('messages.product_unavailable_warning')]
+                            ]
+                        ], 404);
+                    }
+                } else {
+                    $product = Item::with('module')->active()->find($c['item_id']);
+                    if ($product) {
+
+                        if($product->store_id != $order->store_id){
+                            return response()->json([
+                                'errors' => [
+                                    ['code' => 'different_stores', 'message' => translate('messages.Please_select_items_from_the_same_store')]
+                                ]
+                            ], 403);
+                        }
+
+                        if(($product->pharmacy_item_details?->is_prescription_required == '1') && empty($request->file('order_attachment'))){
+                            return response()->json([
+                                'errors' => [
+                                    ['code' => 'prescription', 'message' => translate('messages.prescription_is_required_for_this_order')]
+                                ]
+                            ], 403);
+                        }
+
+
+                        if($product->maximum_cart_quantity && ($c['quantity'] > $product->maximum_cart_quantity)){
+                            return response()->json([
+                                'errors' => [
+                                    ['code' => 'quantity', 'message' => translate('messages.maximum_cart_quantity_limit_over')]
+                                ]
+                            ], 406);
+                        }
+                        if ($product->module->module_type == 'food' && $product->food_variations) {
+                            // if (count(json_decode($product['variations'], true)) > 0) {
+                            //     $price = Helpers::variation_price($product, json_encode($c['variation']));
+                            // } else {
+                            $product_variations = json_decode($product->food_variations, true);
+                            $variations = [];
+                            if (count($product_variations)) {
+                                $variation_data = Helpers::get_varient($product_variations, $c['variation']);
+                                // $price = Helpers::variation_price($product, json_encode($c['variation']));
+                                $price = $product['price'] + $variation_data['price'];
+                                $variations =  $variation_data['variations'];
+                            } else {
+                                $price = $product['price'];
+                            }
+                            $product->tax = $store->tax;
+                            $product = Helpers::product_data_formatting($product, false, false, app()->getLocale());
+                            $addon_data = Helpers::calculate_addon_price(\App\Models\AddOn::whereIn('id', $c['add_on_ids'])->get(), $c['add_on_qtys']);
+                            $product_discount = Helpers::product_discount_calculate($product, $price, $store);
+                            $or_d = [
+                                'item_id' => $c['item_id'],
+                                'item_campaign_id' => null,
+                                'item_details' => json_encode($product),
+                                'quantity' => $c['quantity'],
+                                'price' => round($price, config('round_up_to_digit')),
+                                'tax_amount' => round(Helpers::tax_calculate($product, $price), config('round_up_to_digit')),
+                                'discount_on_item' => $product_discount['discount_amount'],
+                                'discount_type' => $product_discount['discount_type'],
+                                'variant' => json_encode($c['variant']),
+                                'variation' => json_encode($variations),
+
+                                // 'variation' => json_encode($c['variation']),
+                                'add_ons' => json_encode($addon_data['addons']),
+                                'total_add_on_price' => round($addon_data['total_add_on_price'], config('round_up_to_digit')),
+                                'created_at' => now(),
+                                'updated_at' => now()
+                            ];
+                            $total_addon_price += $or_d['total_add_on_price'];
+                            $product_price += $price * $or_d['quantity'];
+                            $store_discount_amount += $or_d['discount_type']!='flash_sale'?$or_d['discount_on_item'] * $or_d['quantity']:0;
+                            $flash_sale_admin_discount_amount += $or_d['discount_type']=='flash_sale'?$product_discount['admin_discount_amount'] * $or_d['quantity']:0;
+                            $flash_sale_vendor_discount_amount += $or_d['discount_type']=='flash_sale'?$product_discount['vendor_discount_amount'] * $or_d['quantity']:0;
+                            $order_details[] = $or_d;
+                        } else {
+
+                            if (count(json_decode($product['variations'], true)) > 0 && count($c['variation'])>0) {
+                                $variant_data = Helpers::variation_price($product, json_encode($c['variation']));
+                                $price = $variant_data['price'];
+                                $stock = $variant_data['stock'];
+                            } else {
+                                $price = $product['price'];
+                                $stock = $product->stock;
+                            }
+
+                            $isPreOrderItem = ($product->farming_status ?? 'in_stock') === 'farming'
+                                && (bool) ($product->pre_order_enabled ?? false);
+
+                            if ($isPreOrderItem) {
+                                $order->is_pre_order_flag = true;
+                                if (! empty($product->expected_harvest_date)) {
+                                    $order->pre_order_harvest_date = $product->expected_harvest_date;
+                                }
+                                if ($product->pre_order_limit && $c['quantity'] > (int) $product->pre_order_limit) {
+                                    return response()->json([
+                                        'errors' => [
+                                            ['code' => 'pre_order_limit', 'message' => translate('messages.maximum_cart_quantity_limit_over')]
+                                        ]
+                                    ], 406);
+                                }
+                            } elseif (config('module.' . $product->module->module_type)['stock']) {
+                                if ($c['quantity'] > $stock) {
+                                    return response()->json([
+                                        'errors' => [
+                                            ['code' => 'campaign', 'message' => translate('messages.product_out_of_stock_warning', ['item' => $product->name])]
+                                        ]
+                                    ], 406);
+                                }
+
+                                $product_data[] = [
+                                    'item' => clone $product,
+                                    'quantity' => $c['quantity'],
+                                    'variant' => count($c['variation']) > 0 ? $c['variation'][0]['type'] : null
+                                ];
+                            }
+
+                            $product->tax = $store->tax;
+                            $product = Helpers::product_data_formatting($product, false, false, app()->getLocale());
+                            $addon_data = Helpers::calculate_addon_price(\App\Models\AddOn::whereIn('id', $c['add_on_ids'])->get(), $c['add_on_qtys']);
+                            $product_discount = Helpers::product_discount_calculate($product, $price, $store);
+                            $or_d = [
+                                'item_id' => $c['item_id'],
+                                'item_campaign_id' => null,
+                                'item_details' => json_encode($product),
+                                'quantity' => $c['quantity'],
+                                'price' => round($price, config('round_up_to_digit')),
+                                'tax_amount' => round(Helpers::tax_calculate($product, $price), config('round_up_to_digit')),
+                                'discount_on_item' => $product_discount['discount_amount'],
+                                'discount_type' => $product_discount['discount_type'],
+                                'variant' => json_encode($c['variant']),
+                                'variation' => json_encode($c['variation']),
+                                'add_ons' => json_encode($addon_data['addons']),
+                                'total_add_on_price' => round($addon_data['total_add_on_price'], config('round_up_to_digit')),
+                                'created_at' => now(),
+                                'updated_at' => now()
+                            ];
+                            $total_addon_price += $or_d['total_add_on_price'];
+                            $product_price += $price * $or_d['quantity'];
+                            $store_discount_amount += $or_d['discount_type']!='flash_sale'?$or_d['discount_on_item'] * $or_d['quantity']:0;
+                            $flash_sale_admin_discount_amount += $or_d['discount_type']=='flash_sale'?$product_discount['admin_discount_amount'] * $or_d['quantity']:0;
+                            $flash_sale_vendor_discount_amount += $or_d['discount_type']=='flash_sale'?$product_discount['vendor_discount_amount'] * $or_d['quantity']:0;
+                            $order_details[] = $or_d;
+                        }
+                    } else {
+                        return response()->json([
+                            'errors' => [
+                                ['code' => 'item', 'message' => translate('messages.product_unavailable_warning')]
+                            ]
+                        ], 404);
+                    }
+                }
+            }
+            $order->discount_on_product_by = 'vendor';
+            $store_discount = Helpers::get_store_discount($store);
+            if (isset($store_discount)) {
+                $order->discount_on_product_by = 'admin';
+                if ($product_price + $total_addon_price < $store_discount['min_purchase']) {
+                    $store_discount_amount = 0;
+                }
+
+                if ($store_discount['max_discount'] != 0 && $store_discount_amount > $store_discount['max_discount']) {
+                    $store_discount_amount = $store_discount['max_discount'];
+                }
+            }
+            $coupon_discount_amount = $coupon ? CouponLogic::get_discount($coupon, $product_price + $total_addon_price - $store_discount_amount - $flash_sale_admin_discount_amount - $flash_sale_vendor_discount_amount) : 0;
+
+
+
+
+            $total_price = $product_price + $total_addon_price - $store_discount_amount - $flash_sale_admin_discount_amount - $flash_sale_vendor_discount_amount  - $coupon_discount_amount;
+
+
+
+            if($order->is_guest  == 0 && $order->user_id ){
+                $user= User::withcount('orders')->find($order->user_id);
+                $discount_data= Helpers::getCusromerFirstOrderDiscount(order_count:$user->orders_count ,user_creation_date:$user->created_at,  refby:$user->ref_by, price: $total_price);
+                    if(data_get($discount_data,'is_valid') == true &&  data_get($discount_data,'calculated_amount') > 0){
+                        $total_price = $total_price - data_get($discount_data,'calculated_amount');
+                        $order->ref_bonus_amount = data_get($discount_data,'calculated_amount');
+                    }
+            }
+
+
+
+
+            $tax = ($store->tax > 0) ? $store->tax : 0;
+            $order->tax_status = 'excluded';
+
+            $tax_included = BusinessSetting::where(['key' => 'tax_included'])->first() ?  BusinessSetting::where(['key' => 'tax_included'])->first()->value : 0;
+            if ($tax_included ==  1) {
+                $order->tax_status = 'included';
+            }
+
+            $total_tax_amount = Helpers::product_tax($total_price, $tax, $order->tax_status == 'included');
+
+            $tax_a = $order->tax_status == 'included' ? 0 : $total_tax_amount;
+
+            if ($store->minimum_order > $product_price + $total_addon_price) {
+                return response()->json([
+                    'errors' => [
+                        ['code' => 'order_time', 'message' => translate('messages.you_need_to_order_at_least'). $store->minimum_order . ' ' . Helpers::currency_code()]
+                    ]
+                ], 406);
+            }
+
+            $free_delivery_over = BusinessSetting::where('key', 'free_delivery_over')->first()->value;
+            if (isset($free_delivery_over)) {
+                if ($free_delivery_over <= $product_price + $total_addon_price - $coupon_discount_amount - $store_discount_amount - $flash_sale_admin_discount_amount - $flash_sale_vendor_discount_amount) {
+                    $order->delivery_charge = 0;
+                    $free_delivery_by = 'admin';
+                }
+            }
+
+            if ($store->free_delivery) {
+                $order->delivery_charge = 0;
+                $free_delivery_by = 'vendor';
+            }
+
+            if ($coupon) {
+                if ($coupon->coupon_type == 'free_delivery') {
+                    if ($coupon->min_purchase <= $product_price + $total_addon_price - $store_discount_amount - $flash_sale_admin_discount_amount - $flash_sale_vendor_discount_amount) {
+                        $order->delivery_charge = 0;
+                        $free_delivery_by = $coupon->created_by;
+                    }
+                }
+                $coupon->increment('total_uses');
+            }
+            $order->coupon_created_by = $coupon_created_by;
+            $order->coupon_discount_amount = round($coupon_discount_amount, config('round_up_to_digit'));
+            $order->coupon_discount_title = $coupon ? $coupon->title : '';
+
+            $order->store_discount_amount = round($store_discount_amount, config('round_up_to_digit'));
+            $order->tax_percentage = $tax;
+            $order->total_tax_amount = round($total_tax_amount, config('round_up_to_digit'));
+            $order->order_amount = round($total_price + $tax_a + $order->delivery_charge, config('round_up_to_digit'));
+            $order->free_delivery_by = $free_delivery_by;
+        } else {
+            $point = new Point(json_decode($request->receiver_details, true)['latitude'], json_decode($request->receiver_details, true)['longitude']);
+            $zone_id =  json_decode($request->receiver_details, true)['zone_id'];
+            $zone = Zone::where('id', $zone_id)->whereContains('coordinates', new Point(json_decode($request->receiver_details, true)['latitude'], json_decode($request->receiver_details, true)['longitude'], POINT_SRID))->first();
+            if (!$zone) {
+                $errors = [];
+                array_push($errors, ['code' => 'receiver_details', 'message' => translate('messages.out_of_coverage')]);
+                return response()->json([
+                    'errors' => $errors
+                ], 403);
+            }
+            $order->delivery_charge = round($original_delivery_charge, config('round_up_to_digit')) ?? 0;
+            $order->original_delivery_charge = round($original_delivery_charge, config('round_up_to_digit'));
+            $order->order_amount = round($order->delivery_charge, config('round_up_to_digit'));
+        }
+        $order->flash_admin_discount_amount = round($flash_sale_admin_discount_amount, config('round_up_to_digit'));
+        $order->flash_store_discount_amount = round($flash_sale_vendor_discount_amount, config('round_up_to_digit'));
+
+        //DM TIPS
+        $order->order_amount = $order->order_amount + $order->dm_tips + $order->additional_charge + $order->extra_packaging_amount;
+        if ($request->payment_method == 'wallet' && $request->user->wallet_balance < $order->order_amount) {
+            return response()->json([
+                'errors' => [
+                    ['code' => 'order_amount', 'message' => translate('messages.insufficient_balance')]
+                ]
+            ], 203);
+        }
+        if ($request->partial_payment && $request->user->wallet_balance > $order->order_amount) {
+            return response()->json([
+                'errors' => [
+                    ['code' => 'partial_payment', 'message' => translate('messages.order_amount_must_be_greater_than_wallet_amount')]
+                ]
+            ], 203);
+        }
+        if (isset($module_wise_delivery_charge) && $request->payment_method == 'cash_on_delivery' && $module_wise_delivery_charge->pivot->maximum_cod_order_amount && $order->order_amount > $module_wise_delivery_charge->pivot->maximum_cod_order_amount) {
+            return response()->json([
+                'errors' => [
+                    ['code' => 'order_amount', 'message' => translate('messages.amount_crossed_maximum_cod_order_amount')]
+                ]
+            ], 203);
+        }
+
+        if (! empty($order->is_pre_order_flag) && \Illuminate\Support\Facades\Schema::hasColumn('orders', 'is_pre_order')) {
+            $order->is_pre_order = true;
+            if (! empty($order->pre_order_harvest_date) && \Illuminate\Support\Facades\Schema::hasColumn('orders', 'expected_harvest_date')) {
+                $order->expected_harvest_date = $order->pre_order_harvest_date;
+            }
+        }
+        unset($order->is_pre_order_flag, $order->pre_order_harvest_date);
+
+        try {
+            DB::beginTransaction();
+            $order->save();
+            if ($request->order_type !== 'parcel') {
+                if (count($order_details) == 0) {
+                    $errors = [];
+                    array_push($errors, ['code' => 'order_details', 'message' => translate('messages.You_can_not_place_empty_orders')]);
+                    DB::rollBack();
+                    return response()->json([
+                        'errors' => $errors
+                    ], 403);
+                }
+
+                foreach ($order_details as $key => $item) {
+                    $order_details[$key]['order_id'] = $order->id;
+
+                    if($store_discount_amount <= 0 ){
+                        $order_details[$key]['discount_on_item'] = 0;
+                    }
+                }
+                OrderDetail::insert($order_details);
+                if (count($product_data) > 0) {
+                    foreach ($product_data as $item) {
+                        ProductLogic::update_stock($item['item'], $item['quantity'], $item['variant'])->save();
+                        ProductLogic::update_flash_stock($item['item'], $item['quantity'])?->save();
+                    }
+                }
+                $store->increment('total_order');
+            }
+            if(!isset($request->is_buy_now) || (isset($request->is_buy_now) && $request->is_buy_now == 0 )){
+                foreach ($carts as $cart) {
+                    $cart->delete();
+                }
+            }
+            if($request->user){
+                $customer = $request->user;
+                $customer->zone_id = $order->zone_id;
+                $customer->save();
+                if ($request->payment_method == 'wallet') CustomerLogic::create_wallet_transaction($order->user_id, $order->order_amount, 'order_place', $order->id);
+
+                if ($request->partial_payment) {
+                    if ($request->user->wallet_balance<=0) {
+                        return response()->json([
+                            'errors' => [
+                                ['code' => 'order_amount', 'message' => translate('messages.insufficient_balance_for_partial_amount')]
+                            ]
+                        ], 203);
+                    }
+                    $p_amount = min($request->user->wallet_balance, $order->order_amount);
+                    $unpaid_amount = $order->order_amount - $p_amount;
+                    $order->partially_paid_amount = $p_amount;
+                    $order->save();
+                    CustomerLogic::create_wallet_transaction($order->user_id, $p_amount, 'partial_payment', $order->id);
+                    OrderLogic::create_order_payment(order_id:$order->id, amount:$p_amount, payment_status:'paid', payment_method:'wallet');
+                    OrderLogic::create_order_payment(order_id:$order->id, amount:$unpaid_amount, payment_status:'unpaid', payment_method:$request->payment_method);
+                }
+            }
+            if($order->is_guest  == 0 && $order->user_id ){
+                $this->createCashBackHistory($order->order_amount, $order->user_id,$order->id);
+            }
+
+            DB::commit();
+
+
+            $payments = $order->payments()->where('payment_method','cash_on_delivery')->exists();
+            $order_mail_status = Helpers::get_mail_status('place_order_mail_status_user');
+            $order_verification_mail_status = Helpers::get_mail_status('order_verification_mail_status_user');
+            //PlaceOrderMail
+            try {
+
+                if(!in_array($order->payment_method, ['digital_payment', 'partial_payment', 'offline_payment'])  || $payments){
+                        Helpers::send_order_notification($order);
+
+                        if( $store?->is_valid_subscription == 1 && $store?->store_sub?->max_order != "unlimited" && $store?->store_sub?->max_order > 0){
+                            $store?->store_sub?->decrement('max_order' , 1);
+                        }
+
+
+                    if ($order->order_status == 'pending' && config('mail.status') && $order_mail_status == '1' && $request->user && Helpers::getNotificationStatusData('customer','customer_order_notification','mail_status')) {
+                        Mail::to($request->user->email)->send(new PlaceOrder($order->id));
+                    }
+                    if ($order->order_status == 'pending' && config('order_delivery_verification') == 1 && $order_verification_mail_status == '1' && $request->user && Helpers::getNotificationStatusData('customer','customer_delivery_verification','mail_status')) {
+                        Mail::to($request->user->email)->send(new OrderVerificationMail($order->otp,$request->user->f_name));
+                    }
+                    if ($order->is_guest == 1 && $order->order_status == 'pending' && config('mail.status') && $order_mail_status == '1' && isset($request->contact_person_email) && Helpers::getNotificationStatusData('customer','customer_order_notification','mail_status')) {
+                        Mail::to($request->contact_person_email)->send(new PlaceOrder($order->id));
+                    }
+                    if ($order->is_guest == 1 && $order->order_status == 'pending' && config('order_delivery_verification') == 1 && $order_verification_mail_status == '1' && isset($request->contact_person_email) && Helpers::getNotificationStatusData('customer','customer_delivery_verification','mail_status') ) {
+                        Mail::to($request->contact_person_email)->send(new OrderVerificationMail($order->otp,$request->contact_person_name));
+                    }
+                }
+            } catch (\Exception $ex) {
+                info($ex->getMessage());
+            }
+            return response()->json([
+                'message' => translate('messages.order_placed_successfully'),
+                'order_id' => $order->id,
+                'total_ammount' => $order->order_amount,
+                'status' => $order->order_status,
+                'created_at' => $order->created_at,
+                'user_id' => (int) $order->user_id,
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([$e], 403);
+        }
+
+        return response()->json([
+            'errors' => [
+                ['code' => 'order_time', 'message' => translate('messages.failed_to_place_order')]
+            ]
+        ], 403);
+    }
+    public function prescription_place_order(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'store_id' => 'required_unless:order_type,parcel',
+            'order_attachment' => 'required',
+            'distance' => 'required_unless:order_type,take_away',
+            'address' => 'required_unless:order_type,take_away',
+            'longitude' => 'required_unless:order_type,take_away',
+            'latitude' => 'required_unless:order_type,take_away',
+            'guest_id' => $request->user ? 'nullable' : 'required',
+            'contact_person_name' => $request->user ? 'nullable' : 'required',
+            'contact_person_number' => $request->user ? 'nullable' : 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => Helpers::error_processor($validator)], 403);
+        }
+
+        $coupon = null;
+        $coupon_created_by = null;
+        $delivery_charge = null;
+        $schedule_at = $request->schedule_at ? \Carbon\Carbon::parse($request->schedule_at) : now();
+        $store = null;
+        $free_delivery_by = null;
+        $distance_data = $request->distance;
+        $increased=0;
+        $maximum_shipping_charge = 0;
+        if($request['order_type'] == 'delivery' && !Helpers::get_business_settings('home_delivery_status')){
+            return response()->json([
+                'errors' => [
+                    ['code' => 'order_type', 'message' => translate('messages.home_delivery_is_not_active')]
+                ]
+            ], 403);
+        }
+
+        $store = Store::with(['discount', 'store_sub'])->selectRaw('*, ' . Store::openSqlExpression($schedule_at))->where('id', $request->store_id)->first();
+
+        if (!$store) {
+            return response()->json([
+                'errors' => [
+                    ['code' => 'order_time', 'message' => translate('messages.store_not_found')]
+                ]
+            ], 404);
+        }
+
+        $store_sub=$store?->store_sub;
+        if ($store->is_valid_subscription) {
+            if($store_sub->max_order != "unlimited" && $store_sub->max_order <= 0){
+                return response()->json([
+                    'errors' => [
+                        ['code' => 'order-confirmation-error', 'message' => translate('messages.Sorry_the_store_is_unable_to_take_any_order_!')]
+                    ]
+                ], 403);
+            }
+        }
+        elseif( $store->store_business_model == 'unsubscribed'){
+            return response()->json([
+                'errors' => [
+                    ['code' => 'order-confirmation-model', 'message' => translate('messages.Sorry_the_store_is_unable_to_take_any_order_!')]
+                ]
+            ], 403);
+        }
+
+
+        $zone = null;
+        if ($request->latitude && $request->longitude) {
+            $point = new Point($request->latitude, $request->longitude);
+            $zone_id = isset($store) ? [$store->zone_id] : json_decode($request->header('zoneId'), true);
+            $zone = Zone::where('id', $zone_id)->whereContains('coordinates', new Point($request->latitude, $request->longitude, POINT_SRID))->first();
+
+            if (!$zone) {
+                $errors = [];
+                array_push($errors, ['code' => 'coordinates', 'message' => translate('messages.out_of_coverage')]);
+                return response()->json([
+                    'errors' => $errors
+                ], 403);
+            }
+        }
+
+        if($zone && $zone->increased_delivery_fee_status == 1){
+            $increased=$zone->increased_delivery_fee ?? 0;
+        }
+
+        $data =  DMVehicle::active()->where(function ($query) use ($distance_data) {
+            $query->where('starting_coverage_area', '<=', $distance_data)->where('maximum_coverage_area', '>=', $distance_data)
+            ->orWhere(function ($query) use ($distance_data) {
+                $query->where('starting_coverage_area', '>=', $distance_data);
+            });
+        })
+            ->orderBy('starting_coverage_area')->first();
+
+        $extra_charges = (float) (isset($data) ? $data->extra_charges  : 0);
+        $vehicle_id = (isset($data) ? $data->id  : null);
+        if ($request->schedule_at && $schedule_at < now()) {
+            return response()->json([
+                'errors' => [
+                    ['code' => 'order_time', 'message' => translate('messages.you_can_not_schedule_a_order_in_past')]
+                ]
+            ], 406);
+        }
+
+
+        if ($request->schedule_at && !$store->schedule_order) {
+            return response()->json([
+                'errors' => [
+                    ['code' => 'schedule_at', 'message' => translate('messages.schedule_order_not_available')]
+                ]
+            ], 406);
+        }
+
+        if ($store->open == false) {
+            return response()->json([
+                'errors' => [
+                    ['code' => 'order_time', 'message' => translate('messages.store_is_closed_at_order_time')]
+                ]
+            ], 406);
+        }
+
+        if ($request['coupon_code']) {
+            $coupon = Coupon::active()->where(['code' => $request['coupon_code']])->first();
+            if (isset($coupon)) {
+                if($request->is_guest){
+                    $staus = CouponLogic::is_valid_for_guest($coupon, $request['store_id']);
+                }else{
+                    $staus = CouponLogic::is_valide($coupon, $request->user->id, $request['store_id']);
+                }
+                if ($staus == 407) {
+                    return response()->json([
+                        'errors' => [
+                            ['code' => 'coupon', 'message' => translate('messages.coupon_expire')]
+                        ]
+                    ], 407);
+                } else if ($staus == 406) {
+                    return response()->json([
+                        'errors' => [
+                            ['code' => 'coupon', 'message' => translate('messages.coupon_usage_limit_over')]
+                        ]
+                    ], 406);
+                } else if ($staus == 404) {
+                    return response()->json([
+                        'errors' => [
+                            ['code' => 'coupon', 'message' => translate('messages.not_found')]
+                        ]
+                    ], 404);
+                }
+
+                $coupon_created_by = $coupon->created_by;
+                if ($coupon->coupon_type == 'free_delivery') {
+                    $delivery_charge = 0;
+                    $free_delivery_by =  $coupon_created_by;
+                    $coupon_created_by = null;
+                }
+            } else {
+                return response()->json([
+                    'errors' => [
+                        ['code' => 'coupon', 'message' => translate('messages.not_found')]
+                    ]
+                ], 404);
+            }
+        }
+
+        $settings =  BusinessSetting::where('key', 'cash_on_delivery')->first();
+        $cod = json_decode($settings?->value, true);
+        if(isset($cod['status']) &&  $cod['status'] != 1 && $store->zone->cash_on_delivery!=1){
+            return response()->json([
+                'errors' => [
+                    ['code' => 'order_time', 'message' => translate('messages.Cash_on_delivery_is_not_active')]
+                ]
+            ], 403);
+
+        }
+
+        $module_wise_delivery_charge = $store->zone->modules()->where('modules.id', $request->header('moduleId'))->first();
+        if ($module_wise_delivery_charge) {
+            $per_km_shipping_charge = $module_wise_delivery_charge->pivot->per_km_shipping_charge;
+            $minimum_shipping_charge = $module_wise_delivery_charge->pivot->minimum_shipping_charge;
+            $maximum_shipping_charge = $module_wise_delivery_charge->pivot->maximum_shipping_charge;
+        } else {
+            $per_km_shipping_charge = (float)BusinessSetting::where(['key' => 'per_km_shipping_charge'])->first()->value;
+            $minimum_shipping_charge = (float)BusinessSetting::where(['key' => 'minimum_shipping_charge'])->first()->value;
+        }
+
+        if ($request['order_type'] != 'take_away' && !$store->free_delivery &&  !isset($delivery_charge) &&  $store->sub_self_delivery == 1) {
+            $per_km_shipping_charge = $store->per_km_shipping_charge;
+            $minimum_shipping_charge = $store->minimum_shipping_charge;
+            $maximum_shipping_charge = $store->maximum_shipping_charge;
+            $extra_charges = 0;
+            $vehicle_id = null;
+            $increased=0;
+        }
+
+        if ($store->free_delivery || $free_delivery_by == 'vendor') {
+            $per_km_shipping_charge = $store->per_km_shipping_charge;
+            $minimum_shipping_charge = $store->minimum_shipping_charge;
+            $maximum_shipping_charge = $store->maximum_shipping_charge;
+            $extra_charges = 0;
+            $vehicle_id = null;
+            $increased=0;
+        }
+
+        $original_delivery_charge = ($request->distance * $per_km_shipping_charge > $minimum_shipping_charge) ? $request->distance * $per_km_shipping_charge  : $minimum_shipping_charge;
+
+        if ($request['order_type'] == 'take_away') {
+            $per_km_shipping_charge = 0;
+            $minimum_shipping_charge = 0;
+            $maximum_shipping_charge = 0;
+            $extra_charges = 0;
+            $distance_data = 0;
+            $vehicle_id = null;
+            $original_delivery_charge = 0;
+            $increased=0;
+        }
+
+        if ($maximum_shipping_charge  >= $minimum_shipping_charge  && $original_delivery_charge >  $maximum_shipping_charge) {
+            $original_delivery_charge = $maximum_shipping_charge;
+        } else {
+            $original_delivery_charge = $original_delivery_charge;
+        }
+
+        if (!isset($delivery_charge)) {
+            $delivery_charge = ($request->distance * $per_km_shipping_charge > $minimum_shipping_charge) ? $request->distance * $per_km_shipping_charge : $minimum_shipping_charge;
+            if ($maximum_shipping_charge  >= $minimum_shipping_charge  && $delivery_charge >  $maximum_shipping_charge) {
+                $delivery_charge = $maximum_shipping_charge;
+            } else {
+                $delivery_charge = $delivery_charge;
+            }
+        }
+        $original_delivery_charge = $original_delivery_charge + $extra_charges;
+        $delivery_charge = $delivery_charge + $extra_charges;
+
+
+        if($increased > 0 ){
+            if($delivery_charge > 0){
+                $increased_fee = ($delivery_charge * $increased) / 100;
+                $delivery_charge = $delivery_charge + $increased_fee;
+            }
+            if($original_delivery_charge > 0){
+                $increased_fee = ($original_delivery_charge * $increased) / 100;
+                $original_delivery_charge = $original_delivery_charge + $increased_fee;
+            }
+        }
+
+        $address = [
+            'contact_person_name' => $request->contact_person_name ? $request->contact_person_name : $request->user->f_name . ' ' . $request->user->f_name,
+            'contact_person_number' => $request->contact_person_number ? $request->contact_person_number : $request->user->phone,
+            'address_type' => $request->address_type ? $request->address_type : 'Delivery',
+            'address' => $request?->address??'',
+            'floor' => $request?->floor??'',
+            'road' => $request?->road??'',
+            'house' => $request?->house??'',
+            'longitude' => (string)$request->longitude,
+            'latitude' => (string)$request->latitude,
+        ];
+
+        if (!empty($request->file('order_attachment'))) {
+            $img_names = [];
+            $images = [];
+            foreach ($request->order_attachment as $img) {
+                $image_name = Helpers::upload('order/', 'png', $img);
+                array_push($img_names, ['img'=>$image_name, 'storage'=> Helpers::getDisk()]);
+            }
+            $images = $img_names;
+        }
+
+        $total_addon_price = 0;
+        $product_price = 0;
+        $store_discount_amount = 0;
+        $order = new Order();
+        $order->id = 100000 + Order::count() + 1;
+        if (Order::find($order->id)) {
+            $order->id = Order::orderBy('id', 'desc')->first()->id + 1;
+        }
+        $order->user_id = $request->user ? $request->user->id : $request['guest_id'];
+        $order->payment_status = 'unpaid';
+        $order->order_status = 'pending';
+        $order->coupon_code = $request['coupon_code'];
+        $order->payment_method = 'cash_on_delivery';
+        $order->transaction_reference = null;
+        $order->order_note = $request['order_note'];
+        $order->order_type = 'delivery';
+        $order->store_id = $request['store_id'];
+        $order->delivery_charge = round($delivery_charge, config('round_up_to_digit')) ?? 0;
+        $order->original_delivery_charge = round($original_delivery_charge, config('round_up_to_digit'));
+        $order->delivery_address = json_encode($address);
+        $order->schedule_at = $schedule_at;
+        $order->scheduled = $request->schedule_at ? 1 : 0;
+        $order->otp = rand(1000, 9999);
+        $order->zone_id = isset($zone) ? $zone->id : end(json_decode($request->header('zoneId'), true));
+        $order->module_id = $request->header('moduleId');
+        $order->pending = now();
+        if(isset($images)){
+            $order->order_attachment = json_encode($images);
+        }
+        $order->distance = $request->distance;
+        $order->delivery_instruction = $request['delivery_instruction'];
+        $order->dm_vehicle_id = $vehicle_id;
+        $order->prescription_order = 1;
+        $order->is_guest = $request->user ? 0 : 1;
+        $order->created_at = now();
+        $order->updated_at = now();
+
+        //Added service charge
+        $additional_charge_status = BusinessSetting::where('key', 'additional_charge_status')->first()->value;
+        $additional_charge = BusinessSetting::where('key', 'additional_charge')->first()->value;
+        if ($additional_charge_status == 1) {
+            $order->additional_charge = $additional_charge ?? 0;
+        } else {
+            $order->additional_charge = 0;
+        }
+
+        //Added DM TIPS
+        $dm_tips_manage_status = BusinessSetting::where('key', 'dm_tips_status')->first()->value;
+        if ($dm_tips_manage_status == 1) {
+            $order->dm_tips = $request->dm_tips ?? 0;
+        } else {
+            $order->dm_tips = 0;
+        }
+        $order->discount_on_product_by = 'vendor';
+        $store_discount = Helpers::get_store_discount($store);
+        if (isset($store_discount)) {
+            $order->discount_on_product_by = 'admin';
+            if ($product_price + $total_addon_price < $store_discount['min_purchase']) {
+                $store_discount_amount = 0;
+            }
+
+            if ($store_discount['max_discount'] != 0 && $store_discount_amount > $store_discount['max_discount']) {
+                $store_discount_amount = $store_discount['max_discount'];
+            }
+        }
+        $coupon_discount_amount = $coupon ? CouponLogic::get_discount($coupon, $product_price + $total_addon_price - $store_discount_amount) : 0;
+        $total_price = $product_price + $total_addon_price - $store_discount_amount - $coupon_discount_amount;
+
+
+        if($order->is_guest  == 0 && $order->user_id ){
+            $user= User::withcount('orders')->find($order->user_id);
+            $discount_data= Helpers::getCusromerFirstOrderDiscount(order_count:$user->orders_count ,user_creation_date:$user->created_at, refby:$user->ref_by, price:  $total_price);
+                if(data_get($discount_data,'is_valid') == true &&  data_get($discount_data,'calculated_amount') > 0){
+                    $total_price =  $total_price - data_get($discount_data,'calculated_amount');
+                    $order->ref_bonus_amount = data_get($discount_data,'calculated_amount');
+                }
+        }
+
+
+
+        $tax = ($store->tax > 0) ? $store->tax : 0;
+        $order->tax_status = 'excluded';
+
+        $tax_included = BusinessSetting::where(['key' => 'tax_included'])->first() ?  BusinessSetting::where(['key' => 'tax_included'])->first()->value : 0;
+        if ($tax_included ==  1) {
+            $order->tax_status = 'included';
+        }
+
+        $total_tax_amount = Helpers::product_tax($total_price, $tax, $order->tax_status == 'included');
+
+        $tax_a = $order->tax_status == 'included' ? 0 : $total_tax_amount;
+
+        $free_delivery_over = BusinessSetting::where('key', 'free_delivery_over')->first()->value;
+        if (isset($free_delivery_over)) {
+            if ($free_delivery_over <= $product_price + $total_addon_price - $coupon_discount_amount - $store_discount_amount) {
+                $order->delivery_charge = 0;
+                $free_delivery_by = 'admin';
+            }
+        }
+
+        if ($store->free_delivery) {
+            $order->delivery_charge = 0;
+            $free_delivery_by = 'vendor';
+        }
+
+        if ($coupon) {
+            if ($coupon->coupon_type == 'free_delivery') {
+                if ($coupon->min_purchase <= $product_price + $total_addon_price - $store_discount_amount) {
+                    $order->delivery_charge = 0;
+                    $free_delivery_by = $coupon->created_by;
+                }
+            }
+            $coupon->increment('total_uses');
+        }
+        $order->coupon_created_by = $coupon_created_by;
+
+        $order->coupon_discount_amount = round($coupon_discount_amount, config('round_up_to_digit'));
+        $order->coupon_discount_title = $coupon ? $coupon->title : '';
+
+        $order->store_discount_amount = round($store_discount_amount, config('round_up_to_digit'));
+        $order->tax_percentage = $tax;
+        $order->total_tax_amount = round($total_tax_amount, config('round_up_to_digit'));
+        $order->order_amount = round($total_price + $tax_a + $order->delivery_charge, config('round_up_to_digit'));
+        $order->free_delivery_by = $free_delivery_by;
+
+
+
+
+
+
+        $order->order_amount = $order->order_amount + $order->dm_tips + $order->additional_charge;
+
+        if (! empty($order->is_pre_order_flag) && \Illuminate\Support\Facades\Schema::hasColumn('orders', 'is_pre_order')) {
+            $order->is_pre_order = true;
+            if (! empty($order->pre_order_harvest_date) && \Illuminate\Support\Facades\Schema::hasColumn('orders', 'expected_harvest_date')) {
+                $order->expected_harvest_date = $order->pre_order_harvest_date;
+            }
+        }
+        unset($order->is_pre_order_flag, $order->pre_order_harvest_date);
+
+        try {
+            DB::beginTransaction();
+            $order->save();
+            $store->increment('total_order');
+            $customer = $request->user;
+            if($customer){
+                $customer->zone_id = $order->zone_id;
+                $customer->save();
+            }
+
+            if($order->is_guest  == 0 && $order->user_id ){
+                $this->createCashBackHistory($order->order_amount, $order->user_id,$order->id);
+            }
+            DB::commit();
+            if($order->payment_method != 'digital_payment'){
+                Helpers::send_order_notification($order);
+                if( $store?->is_valid_subscription == 1 && $store?->store_sub?->max_order != "unlimited" && $store?->store_sub?->max_order > 0){
+                    $store?->store_sub?->decrement('max_order' , 1);
+                }
+
+            }
+            $mail_status = Helpers::get_mail_status('place_order_mail_status_user');
+            //PlaceOrderMail
+            try {
+                if ($order->order_status == 'pending' && config('mail.status') && $mail_status == '1' && $request->user && Helpers::getNotificationStatusData('customer','customer_order_notification','mail_status')) {
+                    Mail::to($request->user->email)->send(new PlaceOrder($order->id));
+                }
+            } catch (\Exception $ex) {
+                info($ex->getMessage());
+            }
+            //PlaceOrderMail end
+            return response()->json([
+                'message' => translate('messages.order_placed_successfully'),
+                'order_id' => $order->id,
+                'total_ammount' => $order->order_amount,
+                'offline_payments' => isset($order->offline_payments) ? Helpers::offline_payment_formater($order->offline_payments) : null,
+                'status' => $order->order_status,
+                'created_at' => $order->created_at,
+                'user_id' => (int) $order->user_id,
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([$e], 403);
+        }
+
+        return response()->json([
+            'errors' => [
+                ['code' => 'order_time', 'message' => translate('messages.failed_to_place_order')]
+            ]
+        ], 403);
     }
 
     public function get_order_list(Request $request)
@@ -110,170 +1579,32 @@ class OrderController extends Controller
         }
         $user_id = $request->user ? $request->user->id : $request['guest_id'];
 
-        $type = $request->query('type', 'previous');
-        if (! in_array($type, ['previous', 'running', 'all'], true)) {
-            $type = 'previous';
-        }
+        $paginator = Order::with(['store', 'delivery_man.rating', 'parcel_category', 'refund:order_id,admin_note,customer_note'])->withCount('details')->where(['user_id' => $user_id])->whereIn('order_status', ['delivered', 'canceled', 'refund_requested', 'refund_request_canceled', 'refunded', 'failed'])
 
-        $moduleHeader = $request->header('moduleId');
-        $module_id = $moduleHeader ? getModuleId($moduleHeader) : null;
+        // ->when(!isset($request->user) , function($query){
+        //     $query->where('is_guest' , 1);
+        // })
 
-        $module_type = is_numeric($module_id) ? Module::where('id', $module_id)->value('module_type') : null;
+        ->when(isset($request->user)  , function($query){
+            $query->where('is_guest' , 0);
+        })
 
-        if ($module_type === 'ride-share' && addon_published_status('RideShare')) {
-            return $this->get_ride_order_list($request, $user_id, $type, (int) $module_id);
-        }
-        if ($module_type === 'rental' && addon_published_status('Rental')) {
-            return $this->get_trip_order_list($request, $user_id, $type, (int) $module_id);
-        }
-
-        $previous_statuses = ['delivered', 'canceled', 'refund_requested', 'refund_request_canceled', 'refunded', 'failed', 'returned'];
-
-        $paginator = Order::with([
-                'store',
-                'delivery_man.rating',
-                'refund:order_id,admin_note,customer_note',
-                'details:id,order_id,item_id,quantity,item_campaign_id',
-                'details.item:id,name,image,store_id',
-                'orderProDiscount',
-            ])
-            ->withCount('details')
-            ->where(['user_id' => $user_id])
-            ->NotHiddenForCustomer()
-            ->when($type === 'previous', fn ($q) => $q->whereIn('order_status', $previous_statuses))
-            ->when($type === 'running', fn ($q) => $q->whereNotIn('order_status', $previous_statuses))
-            ->when(is_numeric($module_id), fn ($q) => $q->where('module_id', $module_id))
-            ->when(isset($request->user), function ($query) {
-                $query->where('is_guest', 0);
-            })
-            ->Notpos()
-            ->latest()
-            ->paginate($request['limit'], ['*'], 'page', $request['offset']);
-
+        ->Notpos()->latest()->paginate($request['limit'], ['*'], 'page', $request['offset']);
         $orders = array_map(function ($data) {
-            $card = OrderLogic::format_order_card($data);
             $data['delivery_address'] = $data['delivery_address'] ? json_decode($data['delivery_address']) : $data['delivery_address'];
             $data['store'] = $data['store'] ? Helpers::store_data_formatting($data['store']) : $data['store'];
             $data['delivery_man'] = $data['delivery_man'] ? Helpers::deliverymen_data_formatting([$data['delivery_man']]) : $data['delivery_man'];
-            $refund = $data['refund'] ?? null;
-            $data['refund_cancellation_note'] = $refund ? $refund['admin_note'] : null;
-            $data['refund_customer_note'] = $refund ? $refund['customer_note'] : null;
-            $data['items_preview'] = $card['items_preview'];
-            $data['extra_items_count'] = $card['extra_items_count'];
-            $data['item_count'] = $card['item_count'];
-            $data['can_reorder'] = $data->can_reorder;
-            foreach (Helpers::pro_discount_data($data) as $pro_key => $pro_value) {
-                $data[$pro_key] = $pro_value;
-            }
-            unset($data['orderProDiscount']);
+            $data['refund_cancellation_note'] = $data['refund'] ? $data['refund']['admin_note'] : null;
+            $data['refund_customer_note'] = $data['refund'] ? $data['refund']['customer_note'] : null;
             return $data;
         }, $paginator->items());
-
-        $baseCounter = fn () => Order::where('user_id', $user_id)
-            ->NotHiddenForCustomer()
-            ->when(is_numeric($module_id), fn ($q) => $q->where('module_id', $module_id))
-            ->when(isset($request->user), fn ($q) => $q->where('is_guest', 0))
-            ->Notpos();
-
-        $all_count = (int) $baseCounter()->count();
-        $previous_count = (int) $baseCounter()->whereIn('order_status', $previous_statuses)->count();
-        $running_count = (int) $baseCounter()->whereNotIn('order_status', $previous_statuses)->count();
-
         $data = [
             'total_size' => $paginator->total(),
             'limit' => $request['limit'],
             'offset' => $request['offset'],
-            'type' => $type,
-            'module_id' => is_numeric($module_id) ? (int) $module_id : null,
-            'running_count' => $running_count,
-            'previous_count' => $previous_count,
-            'all_count' => $all_count,
-            'orders' => $orders,
+            'orders' => $orders
         ];
         return response()->json($data, 200);
-    }
-
-    private function get_ride_order_list(Request $request, $user_id, string $type, int $module_id)
-    {
-        $previous_statuses = ['completed', 'cancelled'];
-
-        $base = RideRequest::where('customer_id', $user_id)
-            ->NotHiddenForCustomer()
-            ->where('module_id', $module_id);
-
-        $paginator = (clone $base)
-            ->with([
-                'driver',
-                'vehicle.model',
-                'vehicleCategory',
-                'time',
-                'coordinate',
-                'fee',
-            ])
-            ->when($type === 'previous', fn ($q) => $q->whereIn('current_status', $previous_statuses))
-            ->when($type === 'running', fn ($q) => $q->whereNotIn('current_status', $previous_statuses))
-            ->latest()
-            ->paginate($request['limit'], ['*'], 'page', $request['offset']);
-
-        $orders = array_map(function ($ride) {
-            $ride->order_type = 'ride';
-            return $ride;
-        }, $paginator->items());
-
-        $all_count = (int) (clone $base)->count();
-        $previous_count = (int) (clone $base)->whereIn('current_status', $previous_statuses)->count();
-        $running_count = (int) (clone $base)->whereNotIn('current_status', $previous_statuses)->count();
-
-        return response()->json([
-            'total_size' => $paginator->total(),
-            'limit' => $request['limit'],
-            'offset' => $request['offset'],
-            'type' => $type,
-            'module_id' => $module_id,
-            'running_count' => $running_count,
-            'previous_count' => $previous_count,
-            'all_count' => $all_count,
-            'orders' => $orders,
-        ], 200);
-    }
-
-    private function get_trip_order_list(Request $request, $user_id, string $type, int $module_id)
-    {
-        $previous_statuses = ['completed', 'canceled'];
-        $is_guest = $request->user ? 0 : 1;
-
-        $base = Trips::where('user_id', $user_id)
-            ->NotHiddenForCustomer()
-            ->where('is_guest', $is_guest)
-            ->where('module_id', $module_id);
-
-        $paginator = (clone $base)
-            ->with('provider:id,name,logo,cover_photo,phone')
-            ->when($type === 'previous', fn ($q) => $q->whereIn('trip_status', $previous_statuses))
-            ->when($type === 'running', fn ($q) => $q->whereNotIn('trip_status', $previous_statuses))
-            ->latest()
-            ->paginate($request['limit'], ['*'], 'page', $request['offset']);
-
-        $orders = array_map(function ($trip) {
-            $trip->order_type = 'trip';
-            return $trip;
-        }, $paginator->items());
-
-        $all_count = (int) (clone $base)->count();
-        $previous_count = (int) (clone $base)->whereIn('trip_status', $previous_statuses)->count();
-        $running_count = (int) (clone $base)->whereNotIn('trip_status', $previous_statuses)->count();
-
-        return response()->json([
-            'total_size' => $paginator->total(),
-            'limit' => $request['limit'],
-            'offset' => $request['offset'],
-            'type' => $type,
-            'module_id' => $module_id,
-            'running_count' => $running_count,
-            'previous_count' => $previous_count,
-            'all_count' => $all_count,
-            'orders' => $orders,
-        ], 200);
     }
 
 
@@ -289,23 +1620,21 @@ class OrderController extends Controller
         }
         $user_id = $request->user ? $request->user->id : $request['guest_id'];
 
-        $paginator = Order::with(['store', 'delivery_man.rating', 'orderProDiscount'])
-            ->when(isset($request->user), function ($query) {
-                $query->where('is_guest', 0);
-            })
-            ->withCount('details')
-            ->where(['user_id' => $user_id])->whereNotIn('order_status', ['delivered', 'canceled', 'refund_requested', 'refund_request_canceled', 'refunded', 'failed','returned'])
-            ->NotHiddenForCustomer()
-            ->Notpos()->latest()->paginate($request['limit'], ['*'], 'page', $request['offset']);
+        $paginator = Order::with(['store', 'delivery_man.rating', 'parcel_category'])
+        // ->when(!isset($request->user) , function($query){
+        //     $query->where('is_guest' , 1);
+        // })
+
+        ->when(isset($request->user)  , function($query){
+            $query->where('is_guest' , 0);
+        })
+
+        ->withCount('details')->where(['user_id' => $user_id])->whereNotIn('order_status', ['delivered', 'canceled', 'refund_requested', 'refund_request_canceled', 'refunded', 'failed'])->Notpos()->latest()->paginate($request['limit'], ['*'], 'page', $request['offset']);
 
         $orders = array_map(function ($data) {
             $data['delivery_address'] = $data['delivery_address'] ? json_decode($data['delivery_address']) : $data['delivery_address'];
             $data['store'] = $data['store'] ? Helpers::store_data_formatting($data['store']) : $data['store'];
             $data['delivery_man'] = $data['delivery_man'] ? Helpers::deliverymen_data_formatting([$data['delivery_man']]) : $data['delivery_man'];
-            foreach (Helpers::pro_discount_data($data) as $pro_key => $pro_value) {
-                $data[$pro_key] = $pro_value;
-            }
-            unset($data['orderProDiscount']);
             return $data;
         }, $paginator->items());
         $data = [
@@ -326,33 +1655,35 @@ class OrderController extends Controller
         if ($validator->fails()) {
             return response()->json(['errors' => Helpers::error_processor($validator)], 403);
         }
-        $user_id = $request?->user?->id;
+        $user_id = $request?->user?->id ;
 
-        $order = Order::with('details', 'offline_payments', 'orderProDiscount')
-            ->when(isset($request->user), function ($query) {
-                $query->where('is_guest', 0);
-            })
+        $order = Order::with('details', 'offline_payments','parcel_category')
+//        ->when(!isset($request->user) , function($query){
+//            $query->where('is_guest' , 1);
+//        })
+
+        ->when(isset($request->user)  , function($query){
+            $query->where('is_guest' , 0);
+        })
             ->when($request->user, function ($query) use ($user_id) {
                 return $query->where('user_id', $user_id);
-            })->NotHiddenForCustomer()->findOrFail($request->order_id);
-            // Get saver delivery time for order
-        $saver_delivery_time = $this->get_saver_delivery_time($order);
-        $pro_data = Helpers::pro_discount_data($order);
+            })->findOrFail($request->order_id);
 
         $details = isset($order->details) ? $order->details : null;
         if ($details != null && $details->count() > 0) {
             $details = Helpers::order_details_data_formatting($details);
-            $details[0]['is_guest']               = (int)$order->is_guest;
-            $details[0]['saver_delivery_time']    = $saver_delivery_time;
-            $details[0]['delivery_type']          = $order->delivery_type;
-            $details[0]['delivery_type_charge']   = (float) ($order->delivery_type_charge ?? 0);
-            $details[0]['delivery_charge']        = (float) ($order->delivery_charge ?? 0);
-            $details[0]['original_delivery_charge'] = (float) ($order->original_delivery_charge ?? 0);
-            $details[0]['free_delivery_by']       = $order->free_delivery_by;
-            foreach ($pro_data as $pro_key => $pro_value) {
-                $details[0][$pro_key] = $pro_value;
-            }
+            $details[0]['is_guest'] = (int)$order->is_guest;
+            // $details['store'] = $order['store'] ? Helpers::store_data_formatting($order['store']) : $order['store'];
+            // $details['delivery_man'] = $order['delivery_man'] ? Helpers::deliverymen_data_formatting([$order['delivery_man']]) : $order['delivery_man'];
             return response()->json($details, 200);
+        } else if ($order->order_type == 'parcel' || $order->prescription_order == 1) {
+            // $order['store'] = $order['store'] ? Helpers::store_data_formatting($order['store']) : $order['store'];
+            // $order['delivery_man'] = $order['delivery_man'] ? Helpers::deliverymen_data_formatting([$order['delivery_man']]) : $order['delivery_man'];
+            $order->delivery_address = json_decode($order->delivery_address, true);
+            if ($order->prescription_order && $order->order_attachment) {
+                $order->order_attachment = json_decode($order->order_attachment, true);
+            }
+            return response()->json(($order), 200);
         }
 
         return response()->json([
@@ -362,48 +1693,10 @@ class OrderController extends Controller
         ], 404);
     }
 
-    public function delete_order(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'order_id' => 'required',
-            'guest_id' => $request->user ? 'nullable' : 'required',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => Helpers::error_processor($validator)], 403);
-        }
-
-        $user_id = $request->user ? $request->user->id : $request['guest_id'];
-        $is_guest = $request->user ? 0 : 1;
-        $order_ids = is_array($request['order_id']) ? $request['order_id'] : [$request['order_id']];
-
-        $previous_statuses = ['delivered', 'canceled', 'refund_requested', 'refund_request_canceled', 'refunded', 'failed', 'returned'];
-
-        $matching = Order::whereIn('id', $order_ids)
-            ->where('user_id', $user_id)
-            ->where('is_guest', $is_guest)
-            ->whereIn('order_status', $previous_statuses)
-            ->Notpos()
-            ->pluck('id')
-            ->all();
-
-        if (empty($matching)) {
-            return response()->json([
-                'errors' => [
-                    ['code' => 'order', 'message' => translate('messages.not_found')]
-                ]
-            ], 404);
-        }
-
-        DB::table('orders')->whereIn('id', $matching)->update(['is_hidden' => 1]);
-
-        return response()->json(['message' => translate('messages.order_removed_successfully')], 200);
-    }
-
     public function cancel_order(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'order_id' => 'required',
+            'reason' => 'required|max:255',
             'guest_id' => $request->user ? 'nullable' : 'required',
         ]);
 
@@ -412,60 +1705,42 @@ class OrderController extends Controller
         }
         $user_id = $request->user ? $request->user->id : $request['guest_id'];
 
-        if($request->note == null && $request->reason == null) {
-            return response()->json([
-                'errors' => [
-                    ['code' => 'order', 'message' => translate('You Must Enter Note Or Reason')]
-                ]
-            ], 403);
-        }
-
         $order = Order::where(['user_id' => $user_id, 'id' => $request['order_id']])
-            ->when(isset($request->user), function ($query) {
-                $query->where('is_guest', 0);
-            })->Notpos()->first();
 
+        // ->when(!isset($request->user) , function($query){
+        //     $query->where('is_guest' , 1);
+        // })
+
+        ->when(isset($request->user)  , function($query){
+            $query->where('is_guest' , 0);
+        })
+
+
+
+        ->Notpos()->first();
         if (!$order) {
             return response()->json([
                 'errors' => [
                     ['code' => 'order', 'message' => translate('messages.not_found')]
                 ]
             ], 403);
-        } else if ($order->order_status == 'pending' || $order->order_status == 'failed' || $order->order_status == 'canceled') {
-                $hasStock = config('module.' . $order->module->module_type)['stock'];
-            $hasFlashDiscount = $order->flash_admin_discount_amount > 0 && $order->flash_store_discount_amount > 0;
-
-            if ($hasStock || $hasFlashDiscount) {
+        } else if ($order->order_status == 'pending' || $order->order_status == 'failed'|| $order->order_status == 'canceled') {
+            if (config('module.' . $order->module->module_type)['stock']) {
                 foreach ($order->details as $detail) {
-
-                    $item = $detail->campaign ?? $detail->item;
-
-                    if ($hasStock) {
-                        $variant = json_decode($detail->variation, true);
-                        $variantType = !empty($variant) ? $variant[0]['type'] : null;
-                        ProductLogic::update_stock($item, -$detail->quantity, $variantType)?->save();
+                    $variant = json_decode($detail['variation'], true);
+                    $item = $detail->item;
+                    if ($detail->campaign) {
+                        $item = $detail->campaign;
                     }
-
-                    if ($hasFlashDiscount) {
-                        ProductLogic::update_flash_stock($detail->item, $detail->quantity, true)?->save();
-                    }
+                    ProductLogic::update_stock($item, -$detail->quantity, count($variant) ? $variant[0]['type'] : null)->save();
                 }
-            }
-
-
-
-            if($order->is_guest == 0){
-
-                OrderLogic::refund_before_delivered($order);
             }
             $order->order_status = 'canceled';
             $order->canceled = now();
             $order->cancellation_reason = $request->reason;
-            $order->cancellation_note = $request->note;
             $order->canceled_by = 'customer';
             $order->save();
-            $order?->store ?
-            Helpers::increment_order_count($order?->store) : '';
+            $order?->store ?   Helpers::increment_order_count($order?->store) : '';
 
             Helpers::send_order_notification($order);
             return response()->json(['message' => translate('messages.order_canceled_successfully')], 200);
@@ -496,10 +1771,17 @@ class OrderController extends Controller
         }
 
         $order = Order::where(['user_id' => $request->user->id, 'id' => $request['order_id']])
-            ->when(isset($request->user), function ($query) {
-                $query->where('is_guest', 0);
-            })
-            ->Notpos()->first();
+
+        // ->when(!isset($request->user) , function($query){
+        //     $query->where('is_guest' , 1);
+        // })
+
+        ->when(isset($request->user)  , function($query){
+            $query->where('is_guest' , 0);
+        })
+
+
+        ->Notpos()->first();
         if (!$order) {
             return response()->json([
                 'errors' => [
@@ -512,7 +1794,7 @@ class OrderController extends Controller
             if (!empty($request->file('image'))) {
                 foreach ($request->image as $img) {
                     $image = Helpers::upload('refund/', 'png', $img);
-                    array_push($id_img_names, ['img' => $image, 'storage' => Helpers::getDisk()]);
+                    array_push($id_img_names, ['img'=>$image, 'storage'=> Helpers::getDisk()]);
                 }
                 $image = json_encode($id_img_names);
             } else {
@@ -536,14 +1818,14 @@ class OrderController extends Controller
             $refund->save();
             $order->save();
             DB::commit();
-            $admin = Admin::where('role_id', 1)->first();
+            $admin = Admin::where('role_id',1)->first();
             $mail_status = Helpers::get_mail_status('refund_request_mail_status_admin');
             try {
-                if (config('mail.status') && $admin['email'] && $mail_status == '1' && Helpers::getNotificationStatusData('admin', 'order_refund_request', 'mail_status')) {
-                    Mail::to($admin?->getRawOriginal('email'))->send(new RefundRequest($order->id));
+                if (config('mail.status') && $admin['email'] && $mail_status == '1' && Helpers::getNotificationStatusData('admin','order_refund_request','mail_status')) {
+                    Mail::to($admin['email'])->send(new RefundRequest($order->id));
                 }
-            } catch (\Exception $exception) {
-                info([$exception->getFile(), $exception->getLine(), $exception->getMessage()]);
+            } catch (\Exception $ex) {
+                info($ex->getMessage());
             }
             return response()->json(['message' => translate('messages.refund_request_placed_successfully')], 200);
         }
@@ -572,22 +1854,20 @@ class OrderController extends Controller
             ], 403);
         }
 
+
         $user_id = $request->user ? $request->user->id : $request['guest_id'];
         $order = Order::where(['user_id' => $user_id, 'id' => $request['order_id']])->Notpos()->first();
         if ($order) {
-            if ($order->payment_method != 'partial_payment') {
+            if($order->payment_method != 'partial_payment') {
                 Order::where(['user_id' => $user_id, 'id' => $request['order_id']])->update([
-                    'payment_method' => 'cash_on_delivery',
-                    'order_status' => 'pending',
-                    'pending' => now()
+                    'payment_method' => 'cash_on_delivery', 'order_status' => 'pending', 'pending' => now()
                 ]);
-            } else {
+            }else{
                 Order::where(['user_id' => $user_id, 'id' => $request['order_id']])->update([
-                    'order_status' => 'pending',
-                    'pending' => now(),
+                    'order_status' => 'pending', 'pending' => now()
                 ]);
-                $payment = OrderPayment::where('payment_status', 'unpaid')->where('order_id', $request['order_id'])->first();
-                if ($payment) {
+                $payment = OrderPayment::where('payment_status','unpaid')->where('order_id',$request['order_id'])->first();
+                if($payment){
                     $payment->payment_method = 'cash_on_delivery';
                 }
                 $payment->save();
@@ -602,14 +1882,16 @@ class OrderController extends Controller
             try {
                 Helpers::send_order_notification($order);
 
-                if ($order->is_guest == 0 && config('mail.status') && $order_mail_status == '1' && $order->customer && Helpers::getNotificationStatusData('customer', 'customer_order_notification', 'mail_status')) {
-                    Mail::to($order->customer?->getRawOriginal('email'))->send(new PlaceOrder($order->id));
+                if ($order->is_guest == 0 && config('mail.status') && $order_mail_status == '1'&& $order->customer && Helpers::getNotificationStatusData('customer','customer_order_notification','mail_status')) {
+                    Mail::to($order->customer->email)->send(new PlaceOrder($order->id));
                 }
-                if ($order->is_guest == 1 && config('mail.status') && $order_mail_status == '1' && isset($address['contact_person_email']) && Helpers::getNotificationStatusData('customer', 'customer_order_notification', 'mail_status')) {
+                if ($order->is_guest == 1 && config('mail.status') && $order_mail_status == '1' && isset($address['contact_person_email']) && Helpers::getNotificationStatusData('customer','customer_order_notification','mail_status')) {
                     Mail::to($address['contact_person_email'])->send(new PlaceOrder($order->id));
                 }
-            } catch (\Exception $exception) {
-                info([$exception->getFile(), $exception->getLine(), $exception->getMessage()]);
+
+
+            } catch (\Exception $e) {
+                info($e->getMessage());
             }
             return response()->json(['message' => translate('messages.payment_method_updated_successfully')], 200);
         }
@@ -646,14 +1928,31 @@ class OrderController extends Controller
         return response()->json($data, 200);
     }
 
+    public function parcel_instructions(Request $request)
+    {
+        $limit = $request->query('limit', 25);
+        $offset = $request->query('offset', 1);
+
+        $instructions = ParcelDeliveryInstruction::where('status', 1)->paginate($limit, ['*'], 'page', $offset);
+
+        $data = [
+            'total_size' => $instructions->total(),
+            'limit' => $limit,
+            'offset' => $offset,
+            'data' => $instructions->items()
+        ];
+        return response()->json($data, 200);
+    }
+
     public function most_tips()
     {
-        $data = Order::whereNot('dm_tips', 0)->get()->mode('dm_tips');
-        $data = ($data && (count($data) > 0)) ? $data[0] : null;
+        $data = Order::whereNot('dm_tips',0)->get()->mode('dm_tips');
+        $data = ($data && (count($data)>0))?$data[0]:null;
         return response()->json([
             'most_tips_amount' => $data
         ], 200);
     }
+
 
     public function offline_payment(Request $request)
     {
@@ -677,59 +1976,62 @@ class OrderController extends Controller
         $order = Order::findOrFail($request->order_id);
 
         $offline_payment_info = [];
-        $method = OfflinePaymentMethod::where(['id' => $request->method_id, 'status' => 1])->first();
-        try {
-            if (isset($method)) {
+        $method = OfflinePaymentMethod::where(['id'=>$request->method_id,'status'=>1])->first();
+        try{
+            if(isset($method))
+            {
                 $fields = array_column($method->method_informations, 'customer_input');
                 $values = $request->all();
 
                 $offline_payment_info['method_id'] = $request->method_id;
                 $offline_payment_info['method_name'] = $method->method_name;
                 foreach ($fields as $field) {
-                    if (key_exists($field, $values)) {
+                    if(key_exists($field, $values)) {
                         $offline_payment_info[$field] = $values[$field];
                     }
                 }
             }
 
-            $OfflinePayments = OfflinePayments::firstOrNew(['order_id' => $order->id]);
+            // $order->payment_status= 'paid';
 
-            $OfflinePayments->payment_info = json_encode($offline_payment_info);
+            $OfflinePayments= OfflinePayments::firstOrNew(['order_id' => $order->id]);
+
+            $OfflinePayments->payment_info =json_encode($offline_payment_info);
             $OfflinePayments->customer_note = $request->customer_note;
             $OfflinePayments->method_fields = json_encode($method?->method_fields);
             DB::beginTransaction();
             $OfflinePayments->save();
-
-            $order->order_status = 'pending';
-            $order->payment_method = 'offline_payment';
             $order->save();
             DB::commit();
 
-            $data = [
-                'title' => translate('Order_Notification'),
-                'description' => translate('New order alert, confirm to proceed'),
-                'order_id' => $order->id,
-                'image' => '',
-                'module_id' => $order->module_id,
-                'order_type' => $order->order_type,
-                'zone_id' => $order->zone_id,
-                'type' => 'new_order',
-            ];
-            Helpers::send_push_notif_to_topic($data, 'admin_message', 'order_request', url('/') . '/admin/order/list/all');
+
+
+
+                $data = [
+                    'title' => translate('Order_Notification'),
+                    'description' => translate('messages.new_order_push_description'),
+                    'order_id' => $order->id,
+                    'image' => '',
+                    'module_id' => $order->module_id,
+                    'order_type' => $order->order_type,
+                    'zone_id' => $order->zone_id,
+                    'type' => 'new_order',
+                ];
+                Helpers::send_push_notif_to_topic($data, 'admin_message', 'order_request', url('/').'/admin/order/list/all');
 
             return response()->json([
                 'payment' => 'success'
             ], 200);
-        } catch (\Exception $exception) {
-            info([$exception->getFile(), $exception->getLine(), $exception->getMessage()]);
+
+        } catch (\Exception $e) {
+            info($e->getMessage());
             DB::rollBack();
-            return response()->json(['payment' => $exception->getMessage()], 403);
+            return response()->json([ 'payment' => $e->getMessage()], 403);
         }
     }
 
 
-    public function update_offline_payment_info(Request $request)
-    {
+    public function update_offline_payment_info(Request $request){
         $validator = Validator::make($request->all(), [
             'order_id' => 'required',
         ]);
@@ -737,476 +2039,91 @@ class OrderController extends Controller
         if ($validator->fails()) {
             return response()->json(['errors' => Helpers::error_processor($validator)], 403);
         }
-        $order = Order::where('id', $request->order_id)->firstOrfail();
+        $order= Order::where('id' , $request->order_id)->firstOrfail();
 
-        $info = OfflinePayments::where('order_id', $request->order_id)->firstOrfail();
-        $old_data =   json_decode($info->payment_info, true);
-        $method_id = data_get($old_data, 'method_id', null);
-        $offline_payment_info = [];
-        $method = OfflinePaymentMethod::where('id', $method_id)->first();
-        if (isset($method)) {
-            $fields = array_column($method->method_informations, 'customer_input');
-            $values = $request->all();
+        $info= OfflinePayments::where('order_id' , $request->order_id)->firstOrfail();
+            $old_data =   json_decode($info->payment_info , true) ;
+            $method_id= data_get($old_data,'method_id',null);
+                $offline_payment_info = [];
+                $method = OfflinePaymentMethod::where('id', $method_id)->first();
+                if(isset($method))
+                {
+                    $fields = array_column($method->method_informations, 'customer_input');
+                    $values = $request->all();
 
-            $offline_payment_info['method_id'] = $method->id;
-            $offline_payment_info['method_name'] = $method->method_name;
-            foreach ($fields as $field) {
-                if (key_exists($field, $values)) {
-                    $offline_payment_info[$field] = $values[$field];
+                    $offline_payment_info['method_id'] =$method->id;
+                    $offline_payment_info['method_name'] = $method->method_name;
+                    foreach ($fields as $field) {
+                        if(key_exists($field, $values)) {
+                            $offline_payment_info[$field] = $values[$field];
+                        }
+                    }
                 }
-            }
-        }
 
-        $info->customer_note = $request->customer_note ?? $info->customer_note;
-        $info->payment_info = json_encode($offline_payment_info);
-        $info->status = 'pending';
-        $info->save();
+            $info->customer_note = $request->customer_note ?? $info->customer_note;
+            $info->payment_info =json_encode($offline_payment_info);
+            $info->status = 'pending';
+            $info->save();
 
-        if($request->update_payment_info){
-
-            if($order->is_guest){
-                 $user_fcm = $order->guest->fcm_token;
-            }else{
-                 $user_fcm = $order?->customer?->cm_firebase_token;
-            }
-            if (Helpers::getNotificationStatusData('customer','customer_order_notification','push_notification_status') && $user_fcm) {
-                $data = [
-                    'title' => translate('Payment_Info'),
-                    'description' => translate('Your_offline_payment_info_updated_successfully'),
-                    'order_id' => $order->id,
-                    'image' => '',
-                    'type' => 'order_status',
-                ];
-                Helpers::send_push_notif_to_device($user_fcm, $data);
-                DB::table('user_notifications')->insert([
-                    'data' => json_encode($data),
-                    'user_id' => $order->user_id,
-                    'created_at' => now(),
-                    'updated_at' => now()
-                ]);
-            }
-
-
-
-
-        } else {
             Helpers::send_order_notification($order);
-        }
 
-
-        return response()->json(['payment' => 'Payment_Info_Updated_successfully'], 200);
+        return response()->json([ 'payment' => 'Payment_Info_Updated_successfully' ], 200);
     }
 
 
 
-    public function order_again(Request $request)
-    {
-        Helpers::setZoneIds($request);
+    public function order_again(Request $request){
+        if (!$request->hasHeader('zoneId')) {
+            $errors = [];
+            array_push($errors, ['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]);
+            return response()->json([
+                'errors' => $errors
+            ], 403);
+        }
 
-        $longitude = $request->header('longitude') ?? 0;
-        $latitude = $request->header('latitude') ?? 0;
+        $longitude= $request->header('longitude') ?? 0;
+        $latitude= $request->header('latitude') ?? 0;
 
-        $zone_id = json_decode($request->header('zoneId'), true);
-        $query = Store::withOpen($longitude, $latitude)->wherehas('orders', function ($q) use ($request) {
-            $q->where('user_id', $request->user()->id)->where('is_guest', 0)->latest();
+        $zone_id= json_decode($request->header('zoneId'), true);
+        $data = Store::withOpen($longitude,$latitude)->
+        wherehas('orders' ,function($q) use($request){
+            $q->where('user_id',$request->user()->id)->where('is_guest' , 0)->latest();
         })
-            ->where('module_id', getModuleId($request->header('moduleId')))
-            ->withcount('items')
-            ->with(['itemsForReorder'])
-            ->Active()
-            ->whereIn('zone_id', $zone_id);
+        ->where('module_id' , $request->header('moduleId'))
+        ->withcount('items')
+        ->with(['itemsForReorder'])
+        ->Active()
+        ->whereIn('zone_id', $zone_id)
+        ->take(20)
 
-        // Rank the user's previously-ordered stores by their personalization
-        // score first (most-engaged stores surface to the top), then by open
-        // status as the tiebreaker.
-        $query = PersonalizationService::applyStorePersonalization($query, $request->user()?->id);
-
-        $data = $query->take(20)
-            ->orderBy('open', 'desc')
-            ->get()
-            ->map(function ($data) {
-                $data->items = $data->itemsForReorder->take(5);
-                unset($data->itemsForReorder);
-                return $data;
-            });
+        ->orderBy('open', 'desc')
+        ->get()
+		->map(function ($data) {
+			$data->items = $data->itemsForReorder->take(5);
+            unset($data->itemsForReorder);
+			return $data;
+		});
 
         return response()->json(Helpers::store_data_formatting($data, true), 200);
     }
 
-    public function listMonthlySubscriptions(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'limit'       => 'nullable|integer|min:1|max:100',
-            'offset'      => 'nullable|integer|min:1',
-            'module_type' => 'nullable|string|in:grocery',
-        ]);
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => Helpers::error_processor($validator)], 403);
-        }
-
-        $userId     = $request->user()->id;
-        $limit      = (int) ($request->query('limit', 10));
-        $offset     = (int) ($request->query('offset', 1));
-        $moduleType = $request->query('module_type');
-
-        $query = MonthlyOrderReminder::active()
-            ->where('user_id', $userId)
-            ->when($moduleType, fn($q) => $q->where('module_type', $moduleType))
-            ->with([
-                'order:id,store_id,module_id',
-                'order.store:id,name,logo,module_id',
-                'order.details:id,order_id,item_id,item_campaign_id,item_details,quantity,price,variation,discount_on_item',
-            ])
-            ->orderBy('remind_at', 'asc');
-
-        $totalSize = (clone $query)->count();
-
-        $reminders = $query->skip(($offset - 1) * $limit)->take($limit)->get();
-
-        $items = $reminders->map(function ($reminder) {
-            return $this->formatMonthlySubscriptionRow($reminder, previewLimit: 4);
-        })->values();
-
-        return response()->json([
-            'total_size' => $totalSize,
-            'limit'      => $limit,
-            'offset'     => $offset,
-            'items'      => $items,
-        ], 200);
-    }
-
-    public function monthlySubscriptionDetails(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'id' => 'required|integer',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => Helpers::error_processor($validator)], 403);
-        }
-
-        $userId = $request->user()->id;
-
-        $reminder = MonthlyOrderReminder::active()
-            ->where('id', $request->query('id'))
-            ->where('user_id', $userId)
-            ->with([
-                'order:id,store_id,module_id',
-                'order.store:id,name,logo,module_id',
-                'order.details',
-                'order.details.item:id,name,image,price,discount,discount_type,store_id,status,stock,maximum_cart_quantity',
-                'order.details.campaign:id,name,image,price,discount,discount_type,store_id,status',
-            ])
-            ->first();
-
-        if (!$reminder) {
-            return response()->json([
-                'errors' => [['code' => 'not_found', 'message' => translate('messages.not_found')]],
-            ], 404);
-        }
-
-        return response()->json(
-            $this->formatMonthlySubscriptionRow($reminder, previewLimit: null, includeFullItems: true),
-            200
-        );
-    }
-
-    public function removeMonthlySubscription(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'id' => 'required|integer',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => Helpers::error_processor($validator)], 403);
-        }
-
-        $userId = $request->user()->id;
-
-        $reminder = MonthlyOrderReminder::where('id', $request->input('id'))
-            ->where('user_id', $userId)
-            ->first();
-
-        if (!$reminder) {
-            return response()->json([
-                'errors' => [['code' => 'not_found', 'message' => translate('messages.not_found')]],
-            ], 404);
-        }
-
-        if ($reminder->status !== 'cancelled') {
-            $reminder->update(['status' => 'cancelled']);
-        }
-
-        return response()->json([
-            'message' => translate('messages.monthly_subscription_removed'),
-        ], 200);
-    }
-
-    private function formatMonthlySubscriptionRow(MonthlyOrderReminder $reminder, ?int $previewLimit = 4, bool $includeFullItems = false): array
-    {
-        $order   = $reminder->order;
-        $store   = $order?->store;
-        $details = $order?->details ?? collect();
-
-        $itemsPayload = [];
-        $totalAmount  = 0.0;
-
-        $detailsToFormat = $previewLimit !== null ? $details->take($previewLimit) : $details;
-
-        foreach ($detailsToFormat as $detail) {
-            $isCampaign = !empty($detail->item_campaign_id);
-            $catalog    = $isCampaign ? $detail->campaign : $detail->item;
-
-            $snapshot = null;
-            if (!empty($detail->item_details)) {
-                $snapshot = is_string($detail->item_details)
-                    ? json_decode($detail->item_details, true)
-                    : $detail->item_details;
-            }
-
-            $name  = $catalog?->name ?? ($snapshot['name'] ?? null);
-            $image = $catalog?->image_full_url ?? null;
-            if (!$image && !empty($snapshot['image_full_url'])) {
-                $image = $snapshot['image_full_url'];
-            }
-
-            $unitPrice   = (float) ($detail->price ?? 0);
-            $catalogPrice = $catalog ? (float) ($catalog->price ?? 0) : null;
-            $oldPrice    = ($catalogPrice !== null && $catalogPrice > $unitPrice) ? $catalogPrice : null;
-
-            $quantity = (int) ($detail->quantity ?? 0);
-            $lineTotal = $unitPrice * $quantity;
-            $totalAmount += $lineTotal;
-
-            $row = [
-                'id'              => $isCampaign ? (int) $detail->item_campaign_id : (int) $detail->item_id,
-                'item_type'       => $isCampaign ? 'campaign' : 'item',
-                'name'            => $name,
-                'image'           => $image,
-                'price'           => $unitPrice,
-                'old_price'       => $oldPrice,
-                'quantity'        => $quantity,
-                'is_available'    => $this->isCatalogAvailable($catalog),
-            ];
-
-            if ($includeFullItems) {
-                $row['variation']  = json_decode($detail->variation ?? '[]', true) ?: [];
-                $row['line_total'] = $lineTotal;
-            }
-
-            $itemsPayload[] = $row;
-        }
-
-        $payload = [
-            'id'           => (int) $reminder->id,
-            'order_id'     => (int) $reminder->order_id,
-            'module_id'    => (int) $reminder->module_id,
-            'module_type'  => (string) $reminder->module_type,
-            'remind_at'    => optional($reminder->remind_at)->toDateString(),
-            'status'       => (string) $reminder->status,
-            'store'        => $store ? [
-                'id'   => (int) $store->id,
-                'name' => $store->name,
-                'logo' => $store->logo_full_url ?? null,
-            ] : null,
-            'items_count'  => $details->count(),
-        ];
-
-        if ($includeFullItems) {
-            $payload['items']        = $itemsPayload;
-            $payload['total_amount'] = round($totalAmount, 2);
-        } else {
-            $payload['items_preview'] = $itemsPayload;
-        }
-
-        return $payload;
-    }
-
-    private function isCatalogAvailable($catalog): bool
-    {
-        if (!$catalog) {
-            return false;
-        }
-        if ((int) ($catalog->status ?? 0) !== 1) {
-            return false;
-        }
-        return true;
-    }
-
-    public function reorderMonthly(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'reminder_id' => 'required|integer',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => Helpers::error_processor($validator)], 403);
-        }
-
-        $userId = $request->user()->id;
-
-        $reminder = MonthlyOrderReminder::where('id', $request->reminder_id)
-            ->where('user_id', $userId)
-            ->first();
-
-        if (!$reminder) {
-            return response()->json([
-                'errors' => [['code' => 'not_found', 'message' => translate('messages.not_found')]],
-            ], 404);
-        }
-
-        $order = Order::with(['details.item'])->find($reminder->order_id);
-
-        if (!$order) {
-            return response()->json([
-                'errors' => [['code' => 'not_found', 'message' => translate('messages.not_found')]],
-            ], 404);
-        }
-
-        return $this->respondReorder($order, $userId);
-    }
-
-    public function reorderFromOrder(Request $request)
-    {
-        if (!Helpers::get_business_settings('repeat_order_option')) {
-            return response()->json(
-                ['errors' => [['code' => 'feature_disabled', 'message' => translate('Repeat order is currently disabled.')]]],
-                403
-            );
-        }
-
-        $validator = Validator::make($request->all(), [
-            'order_id' => 'required|integer',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => Helpers::error_processor($validator)], 403);
-        }
-
-        $userId = $request->user()->id;
-
-        $order = Order::with(['details.item'])
-            ->where('id', $request->order_id)
-            ->where('user_id', $userId)
-            ->where('is_guest', 0)
-            ->first();
-
-        if (!$order) {
-            return response()->json([
-                'errors' => [['code' => 'not_found', 'message' => translate('messages.not_found')]],
-            ], 404);
-        }
-
-        return $this->respondReorder($order, $userId);
-    }
-
-    private function respondReorder(Order $order, int $userId)
-    {
-        $moduleId = (int) $order->module_id;
-        $storeId  = (int) $order->store_id;
-
-        Cart::where('user_id', $userId)
-            ->where('is_guest', 0)
-            ->where('module_id', $moduleId)
-            ->where('store_id', $storeId)
-            ->delete();
-
-        $results = $this->processOrderDetailsToCart(
-            details: $order->details,
-            userId: $userId,
-            isGuest: 0,
-            moduleId: $moduleId,
-        );
-
-        $cartCount = Cart::where('user_id', $userId)
-            ->where('is_guest', 0)
-            ->where('module_id', $moduleId)
-            ->count();
-
-        if (count($results['added']) === 0) {
-            return response()->json([
-                'errors'            => [['code' => 'no_item_added', 'message' => translate('No item could be added to cart')]],
-                'cart_count'        => $cartCount,
-                'added_count'       => 0,
-                'skipped_count'     => count($results['skipped']),
-                'unavailable_items' => array_map(function ($r) {
-                    return [
-                        'id'      => $r['item_id'],
-                        'name'    => $r['item_name'],
-                        'code'    => $r['code'],
-                        'message' => $r['message'],
-                    ];
-                }, $results['unavailable']),
-                'skipped_items'     => array_map(function ($r) {
-                    return [
-                        'id'      => $r['item_id'],
-                        'name'    => $r['item_name'],
-                        'code'    => $r['code'],
-                        'message' => $r['message'],
-                    ];
-                }, $results['skipped']),
-            ], 403);
-        }
-
-        return response()->json([
-            'cart_count'        => $cartCount,
-            'added_count'       => count($results['added']),
-            'skipped_count'     => count($results['skipped']),
-            'unavailable_items' => array_map(function ($r) {
-                return [
-                    'id'      => $r['item_id'],
-                    'name'    => $r['item_name'],
-                    'code'    => $r['code'],
-                    'message' => $r['message'],
-                ];
-            }, $results['unavailable']),
-            'skipped_items'     => array_map(function ($r) {
-                return [
-                    'id'      => $r['item_id'],
-                    'name'    => $r['item_name'],
-                    'code'    => $r['code'],
-                    'message' => $r['message'],
-                ];
-            }, $results['skipped']),
-            'message'           => translate('Items added to cart'),
-        ], 200);
-    }
-
-    public function get_recent_ordered_items(Request $request)
-    {
-        Helpers::setZoneIds($request);
-
-        $zone_id = $request->header('zoneId');
-        $module_id = getModuleId($request->header('moduleId'));
-        $type = $request->query('type', 'all');
-        $limit = $request->query('limit', 10);
-        $offset = $request->query('offset', 1);
-
-        $items = ProductLogic::recent_ordered_items($request->user()->id, $zone_id, $limit, $offset, $type, $module_id);
-        $items['items'] = Helpers::productListDataFormatting($items['items']);
-
-        return response()->json($items, 200);
-    }
-
-
-    private function createCashBackHistory($order_amount, $user_id, $order_id)
-    {
-        $cashBack =  Helpers::getCalculatedCashBackAmount(amount: $order_amount, customer_id: $user_id);
-        if (data_get($cashBack, 'calculated_amount') > 0) {
+    private function createCashBackHistory($order_amount, $user_id,$order_id){
+        $cashBack =  Helpers::getCalculatedCashBackAmount(amount:$order_amount, customer_id:$user_id);
+        if(data_get($cashBack,'calculated_amount') > 0){
             $CashBackHistory = new CashBackHistory();
             $CashBackHistory->user_id = $user_id;
             $CashBackHistory->order_id = $order_id;
-            $CashBackHistory->calculated_amount = data_get($cashBack, 'calculated_amount');
-            $CashBackHistory->cashback_amount = data_get($cashBack, 'cashback_amount');
-            $CashBackHistory->cash_back_id = data_get($cashBack, 'id');
-            $CashBackHistory->cashback_type = data_get($cashBack, 'cashback_type');
-            $CashBackHistory->min_purchase = data_get($cashBack, 'min_purchase');
-            $CashBackHistory->max_discount = data_get($cashBack, 'max_discount');
+            $CashBackHistory->calculated_amount = data_get($cashBack,'calculated_amount');
+            $CashBackHistory->cashback_amount = data_get($cashBack,'cashback_amount');
+            $CashBackHistory->cash_back_id = data_get($cashBack,'id');
+            $CashBackHistory->cashback_type = data_get($cashBack,'cashback_type');
+            $CashBackHistory->min_purchase = data_get($cashBack,'min_purchase');
+            $CashBackHistory->max_discount = data_get($cashBack,'max_discount');
             $CashBackHistory->save();
 
             $CashBackHistory?->order()->update([
-                'cash_back_id' => $CashBackHistory->id
+                'cash_back_id'=> $CashBackHistory->id
             ]);
         }
         return true;
@@ -1217,8 +2134,8 @@ class OrderController extends Controller
     {
         $limit = $request->query('limit', 25);
         $offset = $request->query('offset', 1);
-        $messages = AutomatedMessage::orderBy('id', 'desc')->where('status', 1)->select(['id', 'message'])
-            ->paginate($limit, ['*'], 'page', $offset);
+        $messages = AutomatedMessage::orderBy('id', 'desc')->where('status',1)->select(['id','message'])
+        ->paginate($limit, ['*'], 'page', $offset);
         $messages->makeHidden(['translations']);
         $data = [
             'total_size' => $messages->total(),
@@ -1228,224 +2145,6 @@ class OrderController extends Controller
         ];
 
         return response()->json($data, 200);
-    }
-
-
-    public function place_order(Request $request)
-    {
-        $this->normalizeDeliveryTypeInput($request);
-        return $this->new_place_order($request);
-    }
-
-    private function normalizeDeliveryTypeInput(Request $request): void
-    {
-        $value = $request->input('delivery_type');
-        if ($value === null || $value === '') {
-            return;
-        }
-        if (is_numeric($value)) {
-            $option = ModuleZoneDeliveryOption::query()->find((int) $value);
-            if ($option) {
-                $request->merge(['delivery_type' => $option->delivery_type]);
-            }
-        }
-    }
-
-    private function get_saver_delivery_time($order): ?string
-    {
-        $type = $order->delivery_type ?? null;
-        if (!\in_array($type, ['express', 'slightly_delay'], true)) {
-            return null;
-        }
-        if (!$order->store?->delivery_time || $order->order_type !== 'delivery') {
-            return null;
-        }
-
-        $option = ModuleZoneDeliveryOption::for((int) $order->module_id, (int) $order->zone_id)
-            ->where('delivery_type', $type)
-            ->first();
-        if (!$option) {
-            return null;
-        }
-
-        $raw = (string) $order->store->delivery_time;
-        $parts = preg_split('/[-\s]+/', trim($raw));
-        $numeric = array_values(array_filter($parts, 'is_numeric'));
-        if (count($numeric) < 2) {
-            return $raw;
-        }
-
-        $min = (int) $numeric[0];
-        $max = (int) $numeric[1];
-        $unitToken = strtolower(end($parts) ?: 'min');
-        $isHour = str_contains($unitToken, 'hour');
-        if ($isHour) {
-            return $raw;
-        }
-
-        $pivot = $order->store->module_id && $order->zone_id
-            ? \App\Models\ModuleZone::query()->where('module_id', $order->module_id)->where('zone_id', $order->zone_id)->first()
-            : null;
-        $floorMin = (int) ($pivot->minimum_delivery_time ?? 0);
-
-        if ($type === 'express') {
-            $reduce = (int) ($option->getRawOriginal('reduce_delivery_time') ?? 0);
-            $min = max($floorMin, $min - $reduce);
-            $max = max($floorMin, $max - $reduce);
-        } else {
-            $add = (int) ($option->getRawOriginal('add_delivery_time') ?? 0);
-            $min += $add;
-            $max += $add;
-        }
-
-        return $min . '-' . $max . ' min';
-    }
-    public function prescription_place_order(Request $request)
-    {
-        return $this->new_place_order($request, true);
-    }
-
-    public function getTaxFromCart(Request $request)
-    {
-        return $this->getCalculatedTax($request);
-    }
-
-    public function getSurgePriceAmount(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'zone_id' => 'required',
-            'module_id' => 'required',
-            'date_time' => 'required'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => Helpers::error_processor($validator)], 403);
-        }
-
-        return $this->getSurgePrice($request->zone_id, $request->module_id, $request->date_time);
-    }
-
-
-    public function walletPayment(Request $request){
-        $validator = Validator::make($request->all(), [
-            'order_id' => 'required',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => Helpers::error_processor($validator)], 403);
-        }
-
-        $order = Order::where(['id' => $request->order_id])->first();
-        if($order->payment_status == 'paid'){
-            return response()->json(['message' => translate('messages.Order_payment_successfully')], 200);
-        }
-
-        $walletTransaction = CustomerLogic::create_wallet_transaction($order->user_id, $order->order_amount, 'order_place', $order->id);
-        if($walletTransaction){
-            $order->order_status = 'confirmed';
-            $order->payment_status = 'paid';
-            $order->payment_method = 'wallet';
-            $order->update();
-
-            return response()->json(['message' => translate('messages.Order_payment_successfully')], 200);
-        }
-
-        return response()->json(['message' => translate('messages.some_thing_went_wrong')], 400);
-    }
-
-    public function get_all_running_orders(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'guest_id' => $request->user ? 'nullable' : 'required',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => Helpers::error_processor($validator)], 403);
-        }
-
-        $user_id = $request->user ? $request->user->id : $request['guest_id'];
-
-        $orders = Order::when(isset($request->user), function ($query) {
-                $query->where('is_guest', 0);
-            })
-            ->where('user_id', $user_id)
-            ->whereNotIn('order_status', [
-                'delivered', 'canceled', 'refund_requested',
-                'refund_request_canceled', 'refunded', 'failed'
-            ])
-            ->NotHiddenForCustomer()
-            ->Notpos()
-            ->latest()
-            ->get()
-            ->map(function ($order) {
-                return [
-                    'id' => (int)$order->id,
-                    'order_type' => 'order',
-                    'status' => $order->order_status,
-                    'is_repeat' => 0,
-                    'created_at' => $order->created_at,
-                ];
-            });
-
-        if(addon_published_status('RideShare')){
-            $rides = RideRequest::where('customer_id', $user_id)
-                ->where(fn($query) => $query->whereNotIn('current_status', ['completed', 'cancelled'])
-                ->orWhere(fn($query) => $query->whereNotNull('driver_id')
-                    ->whereHas('fee', function ($query) {
-                        $query->where(function ($q) {
-                            $q->where('cancelled_by', '!=', 'driver')
-                            ->orWhereNull('cancelled_by');
-                        });
-                    })
-                    ->whereIn('current_status', ['completed', 'cancelled'])
-                    ->where('payment_status', 'unpaid')
-                ))
-                ->latest()
-                ->get()
-                ->map(function ($ride) {
-                    return [
-                        'id' => (int)$ride->ref_id,
-                        'order_type' => 'ride',
-                        'status' => $ride->current_status,
-                        'is_repeat' => 0,
-                        'created_at' => $ride->created_at,
-                    ];
-                });
-        }else{
-            $rides = [];
-        }
-
-        if(addon_published_status('Rental')){
-            $trips = Trips::where('user_id', $user_id)
-                ->where(fn($query) => $query->whereNotIn('trip_status', ['completed', 'cancelled']))
-                ->latest()
-                ->get()
-                ->map(function ($ride) {
-                    return [
-                        'id' => (int)$ride->id,
-                        'order_type' => 'trip',
-                        'status' => $ride->trip_status,
-                        'is_repeat' => 0,
-                        'created_at' => $ride->created_at,
-                    ];
-                });
-        }else{
-            $trips = [];
-        }
-
-        // $merged = $orders->merge($rides)->merge($bookings);
-        // $sorted = collect(array_merge($orders->toArray(), $rides->toArray(), $bookings->toArray()))
-        //     ->sortByDesc('created_at')
-        //     ->take(50)
-        //     ->values();
-
-        $merged = $orders->concat($rides)->concat($trips);
-
-        $sorted = $merged->sortByDesc('created_at')->values()->take(50);
-
-        return response()->json([
-            'data' => $sorted
-        ], 200);
     }
 
     public function get_last_orders(Request $request)
@@ -1470,18 +2169,20 @@ class OrderController extends Controller
             })
             ->pluck('id');
 
+        if ($latest_ids->isEmpty()) {
+            return response()->json([], 200);
+        }
+
         $orders = Order::whereIn('id', $latest_ids)
             ->with([
                 'store:id,name,logo,module_id,zone_id,slug',
                 'details:id,order_id,item_id,quantity,item_campaign_id',
-                'details.item:id,name,image,store_id',
+                'details.item',
             ])
-            ->latest()
+            ->latest('id')
             ->take(10)
             ->get();
 
-        $formatted = OrderLogic::format_order_cards($orders);
-
-        return response()->json($formatted, 200);
+        return response()->json(OrderLogic::format_order_cards($orders), 200);
     }
 }

@@ -12,15 +12,13 @@ class DatabaseSettingController extends Controller
 {
     public function db_index()
     {
-        $tables = DB::select('SHOW TABLES');
-        $tables = array_map('current', $tables);
 
+        $tables = DB::connection()->getDoctrineSchemaManager()->listTableNames();
         $filter_tables = array('module_types','admin_roles','admins','business_settings','colors','currencies',
-            'failed_jobs','migrations','oauth_access_tokens','oauth_auth_codes',
-            'oauth_clients','oauth_personal_access_clients','oauth_refresh_tokens',
-            'password_resets','personal_access_tokens','phone_or_email_verifications',
-            'social_medias','soft_credentials','users','jobs','data_settings');
-
+                                'failed_jobs','migrations','oauth_access_tokens','oauth_auth_codes',
+                                'oauth_clients','oauth_personal_access_clients','oauth_refresh_tokens',
+                                'password_resets','personal_access_tokens','phone_or_email_verifications',
+                                'social_medias','soft_credentials','users','jobs','data_settings');
         $tables = array_values(array_diff($tables, $filter_tables));
 
         $rows = [];
@@ -32,8 +30,8 @@ class DatabaseSettingController extends Controller
         return view('admin-views.business-settings.db-index', compact('tables', 'rows'));
     }
     public function clean_db(Request $request)
-    {
-        if (getEnvMode() == 'demo') {
+    { 
+        if (env('APP_MODE') == 'demo') {
             Toastr::info(translate('messages.update_option_is_disable_for_demo'));
             return back();
         }

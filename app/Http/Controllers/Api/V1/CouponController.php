@@ -8,24 +8,24 @@ use App\Http\Controllers\Controller;
 use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Store;
-use App\Traits\ManagesProCustomerSubscription;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
 class CouponController extends Controller
 {
-    use ManagesProCustomerSubscription;
-
     public function list(Request $request)
     {
-       Helpers::setZoneIds($request);
+        if (!$request->hasHeader('zoneId')) {
+            $errors = [];
+            array_push($errors, ['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]);
+            return response()->json([
+                'errors' => $errors
+            ], 403);
+        }
         $customer_id=Auth::user()?->id ?? $request->customer_id ?? null;
-        $store_id = $request->store_id ?? null;
         $zone_id= $request->header('zoneId');
         $data = [];
-        $proOffer = $this->getProCustomerOffer(userId: $customer_id);
-        $proCouponEligible = ($proOffer['status'] ?? false) && (($proOffer['benefit']['type'] ?? null) === 'coupon');
         // try {
             $coupons = Coupon::with('store:id,name')->active()
             ->when(config('module.current_module_data'), function($query){
@@ -36,26 +36,17 @@ class CouponController extends Controller
             {
                 if($coupon->coupon_type == 'store_wise')
                 {
-                    $coupon_stores = json_decode($coupon->data, true) ?? [];
-                    if($store_id && !in_array($store_id, $coupon_stores)){
-                        continue;
-                    }
                     $temp = Store::active()
                     ->when(config('module.current_module_data'), function($query)use($zone_id){
                         if(!config('module.current_module_data')['all_zone_service']) {
                             $query->whereIn('zone_id', json_decode($zone_id, true));
                         }
                     })
-                    ->with('storeConfig:id,store_id,verified_seller')
-                    ->when($store_id, fn($query) => $query->where('id', $store_id))
-                    ->whereIn('id', $coupon_stores)->first();
+                    ->whereIn('id', json_decode($coupon->data, true))->first();
                     if($temp && (in_array("all", json_decode($coupon->customer_id, true)) || in_array($customer_id,json_decode($coupon->customer_id, true))))
                     {
                         $coupon->data = $temp->name;
                         $coupon['store_id'] = (int)$temp->id;
-                        $temp['verified_seller'] = Helpers::get_verified_seller_status($temp, $temp?->storeConfig);
-                        unset($temp['storeConfig']);
-                        $coupon->setRelation('store', $temp);
                         $data[] = $coupon;
                     }
                 }
@@ -66,25 +57,8 @@ class CouponController extends Controller
                         $data[] = $coupon;
                     }
                 }
-                else if($coupon->coupon_type == 'first_order')
-                {
-                    if($customer_id  && Order::where('user_id', $customer_id)->where('is_guest', '0')->doesntExist())
-                    {
-                        $data[] = $coupon;
-                    }
-                }
-                else if($coupon->coupon_type == 'pro_customer')
-                {
-                    if($proCouponEligible)
-                    {
-                        $data[] = $coupon;
-                    }
-                }
                 else if(isset($coupon->store_id) )
                 {
-                    if($store_id && $coupon->store_id != $store_id){
-                        continue;
-                    }
                     $temp = Store::active()->when(config('module.current_module_data'), function($query)use($zone_id){
                         if(!config('module.current_module_data')['all_zone_service']) {
                             $query->whereIn('zone_id', json_decode($zone_id, true));
@@ -92,22 +66,12 @@ class CouponController extends Controller
                     })->where('id', $coupon->store_id)->exists();
 
                     if($temp){
-                        $coupon->store?->loadMissing('storeConfig:id,store_id,verified_seller');
-                        if ($coupon->store) {
-                            $coupon->store['verified_seller'] = Helpers::get_verified_seller_status($coupon->store, $coupon->store?->storeConfig);
-                            unset($coupon->store['storeConfig']);
-                        }
                         $data[] = $coupon;
                     }
 
                 }
                 else{
                     if((in_array("all", json_decode($coupon->customer_id, true)) || in_array($customer_id,json_decode($coupon->customer_id, true))) ){
-                        $coupon->store?->loadMissing('storeConfig:id,store_id,verified_seller');
-                        if ($coupon->store) {
-                            $coupon->store['verified_seller'] = Helpers::get_verified_seller_status($coupon->store, $coupon->store?->storeConfig);
-                            unset($coupon->store['storeConfig']);
-                        }
                         $data[] = $coupon;
                     }
                 }
@@ -134,7 +98,7 @@ class CouponController extends Controller
         try {
             $coupon = Coupon::active()->where(['code' => $request['code']])->first();
             if (isset($coupon)) {
-                $staus = CouponLogic::is_valide($coupon, $request->user()->id ,$request['store_id'], null, $request['order_amount']);
+                $staus = CouponLogic::is_valide($coupon, $request->user()->id ,$request['store_id']);
 
                 switch ($staus) {
                 case 200:
@@ -157,29 +121,17 @@ class CouponController extends Controller
                             ['code' => 'coupon', 'message' => translate('messages.You_are_not_eligible_for_this_coupon')]
                         ]
                     ], 403);
-                case 409:
-                    return response()->json([
-                        'errors' => [
-                            ['code' => 'coupon', 'message' => translate('messages.coupon_not_valid_for_this_zone')]
-                        ]
-                    ], 403);
-                case 410:
-                    return response()->json([
-                        'errors' => [
-                            ['code' => 'coupon', 'message' => translate('messages.free_delivery_already_covered_by_pro')]
-                        ]
-                    ], 403);
                 default:
                     return response()->json([
                         'errors' => [
-                            ['code' => 'coupon', 'message' => translate('messages.coupon_not_found')]
+                            ['code' => 'coupon', 'message' => translate('messages.not_found')]
                         ]
                     ], 404);
                 }
             } else {
                 return response()->json([
                     'errors' => [
-                        ['code' => 'coupon', 'message' => translate('Invalid coupon code.')]
+                        ['code' => 'coupon', 'message' => translate('messages.not_found')]
                     ]
                 ], 404);
             }

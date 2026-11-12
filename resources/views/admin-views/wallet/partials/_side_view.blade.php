@@ -103,7 +103,7 @@
         </div>
         @elseif($withdraw->approved == 2)
     </div> <div class="">
-        <h5 class="font-medium">{{translate('Denial_Note')}}</h5>
+        <h5 class="font-medium">{{translate('Dental_Note')}}</h5>
         <div class="rounded bg-light p-3">
             {{str_replace('_' ,' ' ,$withdraw->transaction_note)}}
         </div>

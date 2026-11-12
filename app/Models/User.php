@@ -3,11 +3,8 @@
 namespace App\Models;
 
 use App\CentralLogics\Helpers;
-use App\Models\DataSetting;
-use App\Scopes\HostScope;
 use App\Scopes\StoreScope;
 use App\Scopes\ZoneScope;
-use App\Traits\DemoMaskable;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
@@ -16,14 +13,10 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
 use Laravel\Passport\HasApiTokens;
 use Modules\Rental\Entities\Trips;
-use Modules\RideShare\Entities\PromotionManagement\AppliedCoupon;
-use Modules\RideShare\Entities\TripManagement\RideRequest;
-use App\Models\UserAccount;
-use Modules\RideShare\Entities\UserManagement\UserLastLocation;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasApiTokens, DemoMaskable;
+    use HasFactory, Notifiable, HasApiTokens;
 
     /**
      * The attributes that are mass assignable.
@@ -57,7 +50,6 @@ class User extends Authenticatable
         'wallet_balance' => 'float',
         'loyalty_point' => 'integer',
         'ref_by' => 'integer',
-        'pro_status' => 'boolean',
     ];
     protected $appends = ['image_full_url'];
     public function getImageFullUrlAttribute(){
@@ -92,26 +84,6 @@ class User extends Authenticatable
         return $this->hasMany(Trips::class)->where('is_guest', 0);
     }
 
-    public function customerRides()
-    {
-        return $this->hasMany(RideRequest::class, 'customer_id');
-    }
-
-    public function lastLocations()
-    {
-        return $this->hasOne(UserLastLocation::class, 'user_id')->where('type', 'customer');
-    }
-
-    public function appliedCoupon()
-    {
-        return $this->hasOne(AppliedCoupon::class);
-    }
-
-    // public function userAccount()
-    // {
-    //     return $this->hasOne(UserAccount::class, 'user_id');
-    // }
-
     public function addresses(){
         return $this->hasMany(CustomerAddress::class);
     }
@@ -137,35 +109,6 @@ class User extends Authenticatable
         static::addGlobalScope('storage', function ($builder) {
             $builder->with('storage');
         });
-
-        // Per-storefront identity scoping. Default-filters User queries to
-        // host rows (`tenant_id = 0 AND sub_tenant_id = 0`). Backend
-        // operators (admin/vendor/vendor_employee guards) auto-bypass.
-        // Storefront adapter applies its own scope via withoutGlobalScope.
-        static::addGlobalScope(new HostScope());
-
-        static::retrieved(function () {
-            static $checked = false;
-            if ($checked) {
-                return;
-            }
-            $checked = true;
-
-            $lastRun = DataSetting::where([
-                'key' => 'subscription_expiry_last_run_at',
-                'type' => 'notification_settings',
-            ])->first()?->value;
-
-            if ($lastRun && \Illuminate\Support\Carbon::parse($lastRun)->isAfter(now()->subDay())) {
-                return;
-            }
-
-            try {
-                (new class { use \App\Traits\ManagesProCustomerSubscription; })->expireDueSubscriptions();
-            } catch (\Throwable $e) {
-                info('subscription_expiry_user_booted: ' . $e->getMessage());
-            }
-        });
     }
     protected static function boot()
     {
@@ -186,25 +129,5 @@ class User extends Authenticatable
             }
         });
 
-    }
-
-    public function item_visit_log()
-    {
-        return $this->morphedByMany(Item::class ,'visitor_log' );
-    }
-
-    public function proCustomerSubscriptions()
-    {
-        return $this->hasMany(\App\Models\ProCustomerSubscription::class);
-    }
-
-    public function activeProCustomerSubscription()
-    {
-        return $this->hasOne(\App\Models\ProCustomerSubscription::class)->where('status', 'active')->latestOfMany();
-    }
-
-    public function proCustomerTransactions()
-    {
-        return $this->hasMany(\App\Models\ProCustomerTransaction::class);
     }
 }

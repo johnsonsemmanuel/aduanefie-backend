@@ -33,9 +33,9 @@ class StoreCategoryExport implements  FromView, ShouldAutoSize, WithStyles ,With
 
 
     public function styles(Worksheet $sheet) {
-        $sheet->getStyle('A2:F2')->getFont()->setBold(true);
-        $sheet->getStyle('A3:F3')->getFont()->setBold(true);
-        $sheet->getStyle('A3:F3')->getFill()->applyFromArray([
+        $sheet->getStyle('A2:E2')->getFont()->setBold(true);
+        $sheet->getStyle('A3:E3')->getFont()->setBold(true);
+        $sheet->getStyle('A3:E3')->getFill()->applyFromArray([
             'fillType' => 'solid',
             'rotation' => 0,
             'color' => ['rgb' => '9F9F9F'],
@@ -52,10 +52,10 @@ class StoreCategoryExport implements  FromView, ShouldAutoSize, WithStyles ,With
             'fillType' => 'solid',
             'rotation' => 0,
         ];
-        $sheet->getStyle('A1:F1')->applyFromArray($styleArray);
+        $sheet->getStyle('A1:E1')->applyFromArray($styleArray);
         return [
             // Define the style for cells with data
-            'A1:F'.$this->data['data']->count() +3 => [
+            'A1:E'.$this->data['data']->count() +3 => [
                 'borders' => [
                     'allBorders' => [
                         'borderStyle' => Border::BORDER_THIN,
@@ -71,7 +71,7 @@ class StoreCategoryExport implements  FromView, ShouldAutoSize, WithStyles ,With
     {
         return [
             AfterSheet::class => function(AfterSheet $event) {
-                $event->sheet->getStyle('A1:F1') // Adjust the range as per your needs
+                $event->sheet->getStyle('A1:E1') // Adjust the range as per your needs
                     ->getAlignment()
                     ->setHorizontal(Alignment::HORIZONTAL_CENTER)
                     ->setVertical(Alignment::VERTICAL_CENTER);
@@ -84,19 +84,19 @@ class StoreCategoryExport implements  FromView, ShouldAutoSize, WithStyles ,With
                     ->setHorizontal(Alignment::HORIZONTAL_CENTER)
                     ->setVertical(Alignment::VERTICAL_CENTER);
 
-                $event->sheet->getStyle('A3:F'.$this->data['data']->count() +3)
+                $event->sheet->getStyle('A3:E'.$this->data['data']->count() +3)
                     ->getAlignment()
                     ->setHorizontal(Alignment::HORIZONTAL_CENTER)
                     ->setVertical(Alignment::VERTICAL_CENTER);
-                $event->sheet->getStyle('C2:F2')
+                $event->sheet->getStyle('C2:E2')
                     ->getAlignment()
                     ->setHorizontal(Alignment::HORIZONTAL_LEFT)
                     ->setVertical(Alignment::VERTICAL_CENTER);
 
 
-                    $event->sheet->mergeCells('A1:F1');
+                    $event->sheet->mergeCells('A1:E1');
                     $event->sheet->mergeCells('A2:B2');
-                    $event->sheet->mergeCells('C2:F2');
+                    $event->sheet->mergeCells('C2:E2');
 
 
                     $event->sheet->getDefaultRowDimension()->setRowHeight(30);

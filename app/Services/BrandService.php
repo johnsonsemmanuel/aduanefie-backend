@@ -12,7 +12,6 @@ class BrandService
     public function getAddData(Object $request): array
     {
         return [
-            'status' => $request->brand_status ? 1 : 0,
             'name' => $request->name[array_search('default', $request->lang)],
             'image' => $this->upload('brand/', 'png', $request->file('image')),
         ];
@@ -21,7 +20,6 @@ class BrandService
     {
         $slug = Str::slug($request->name[array_search('default', $request->lang)]);
         return [
-            'status' => $request->brand_status ? 1 : 0,
             'slug' => $brand->slug? $brand->slug :"{$slug}{$brand->id}",
             'name' => $request->name[array_search('default', $request->lang)],
             'image' => $request->has('image') ? $this->updateAndUpload('brand/', $brand->image, 'png', $request->file('image')) : $brand->image,

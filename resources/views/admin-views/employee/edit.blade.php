@@ -4,10 +4,6 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 @endpush
 
-@section('employee_list')
-active
-@endsection
-
 @section('content')
 <div class="content container-fluid">
     <!-- Page Heading -->
@@ -62,8 +58,8 @@ active
                             data-original-title="{{ translate('messages.Required.')}}"> *
                             </span> </label>
                                     <select name="zone_id" id="zone_id" class="form-control js-select2-custom">
-                                        @if(!auth('admin')?->user()?->zone_id)
-                                            <option value="" {{!$employee->zone_id?'selected':''}}>{{translate('messages.all')}}</option>
+                                        @if(!isset(auth('admin')->user()->zone_id))
+                                            <option value="" {{!isset($employee->zone_id)?'selected':''}}>{{translate('messages.all')}}</option>
                                         @endif
                                         @foreach($zones as $zone)
                                             <option value="{{$zone['id']}}" {{$employee->zone_id == $zone->id?'selected':''}}>{{$zone['name']}}</option>
@@ -90,7 +86,7 @@ active
                             data-toggle="tooltip" data-placement="right"
                             data-original-title="{{ translate('messages.Required.')}}"> *
                             </span> </label>
-                                <input type="tel" value="{{$employee['phone']}}" required name="phone" class="form-control" id="phone"
+                                <input type="number" value="{{$employee['phone']}}" required name="phone" class="form-control" id="phone"
                                         placeholder="{{ translate('messages.Ex:') }} +88017********">
                             </div>
                         </div>
@@ -221,7 +217,7 @@ active
         });
     });
         $('#reset_btn').click(function(){
-            $('#viewer').attr('src', "{{asset('storage/admin')}}/{{$employee['image']}}') }}");
+            $('#viewer').attr('src', "{{asset('storage/app/public/admin')}}/{{$employee['image']}}') }}");
             $('#customFileUpload').val(null);
             $('#zone_id').val("{{ $employee->zone_id  }}").trigger('change');
             $('#role_id').val("{{ $employee['role_id'] }}").trigger('change');

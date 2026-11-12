@@ -136,8 +136,6 @@ class Advertisement extends Model
         parent::boot();
 
         static::saved(function ($model) {
-            Helpers::deleteCacheData('advertisement_');
-
             if($model->isDirty('video_attachment')){
                 $value = Helpers::getDisk();
 
@@ -178,16 +176,6 @@ class Advertisement extends Model
                 ]);
             }
         });
-        static::created(function () {
-            Helpers::deleteCacheData('advertisement_');
-        });
-        static::deleted(function(){
-            Helpers::deleteCacheData('advertisement_');
-        });
-
-        static::updated(function(){
-            Helpers::deleteCacheData('advertisement_');
-        });
     }
 
     protected static function booted()
@@ -201,6 +189,5 @@ class Advertisement extends Model
                 return $query->where('locale', app()->getLocale());
             }]);
         });
-
     }
 }

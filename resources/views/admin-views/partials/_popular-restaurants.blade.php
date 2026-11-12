@@ -27,11 +27,9 @@
                             data-onerror-image="{{ asset('public/assets/admin/img/100x100/1.png') }}"
                             src="{{ $item->store['logo_full_url'] ?? asset('public/assets/admin/img/100x100/1.png') }}"
                             alt="{{ translate('store') }}" title="{{ $item?->store?->name }}">
-                        <a href="{{ route('admin.store.view', $item->store_id) }}">
-                            <span class="text-hover--primary ml-2" title="{{ $item?->store?->name }}">
-                                {{ Str::limit($item->store->name ?? translate('messages.store deleted!'), 20, '...') }}
-                            </span>
-                        </a>
+                        <span class="ml-2" title="{{ $item?->store?->name }}">
+                            {{ Str::limit($item->store->name ?? translate('messages.store deleted!'), 20, '...') }}
+                        </span>
                     </div>
                     <div>
                         <span class="text-FF6D6D">{{ $item['count'] }} <i class="tio-heart"></i></span>
@@ -40,19 +38,14 @@
             @endforeach
         </ul>
     @else
-        <!-- <div class="empty--data">
+        <div class="empty--data">
             <img src="{{ asset('/public/assets/admin/svg/illustrations/empty-state.svg') }}" alt="public">
             <h5>
                 {{ translate('no_data_found') }}
-            </h5>
-        </div> -->
-        <div class="empty--data d-flex flex-column align-items-center justify-content-center h-100 w-100">
-            <img src="{{ asset('/public/assets/admin/img/no-store.png') }}" alt="public">
-            <h5 class="secondary-clr">
-                {{ translate('No stores available') }}
             </h5>
         </div>
     @endif
 
 
 </div>
+<script src="{{ asset('public/assets/admin') }}/js/view-pages/common.js"></script>

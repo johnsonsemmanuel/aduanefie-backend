@@ -4028,7 +4028,7 @@ input[type="submit"].btn-block {
 .dropdown-item:hover {
     color: #121314;
     text-decoration: none;
-    background-color: rgba(213, 223, 238, 0.3);
+    background-color: rgba(189, 197, 209, 0.3);
 }
 
 .dropdown-item.active,

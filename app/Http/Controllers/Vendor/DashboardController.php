@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Vendor;
 use Carbon\Carbon;
 use App\Models\Item;
 use App\Models\Order;
+use App\Models\Store;
 use App\Models\Vendor;
 use Illuminate\Http\Request;
 use App\CentralLogics\Helpers;
@@ -17,14 +18,6 @@ class DashboardController extends Controller
 {
     public function dashboard(Request $request)
     {
-        $employee_landing = Helpers::employee_landing_url();
-        if ($employee_landing) {
-            return redirect($employee_landing);
-        }
-        if(Helpers::get_store_data()->module_type == 'rental'){
-            return to_route('vendor.providerDashboard');
-
-        }
         $params = [
             'statistics_type' => $request['statistics_type'] ?? 'overall'
         ];
@@ -35,10 +28,10 @@ class DashboardController extends Controller
         $commission = [];
         $from = Carbon::now()->startOfYear()->format('Y-m-d');
         $to = Carbon::now()->endOfYear()->format('Y-m-d');
-        $store_earnings = OrderTransaction::NotRefunded()->where(['vendor_id' => Helpers::get_store_data()->vendor_id])->select(
-            DB::raw('IFNULL(sum(store_amount),0) as earning'),
-            DB::raw('IFNULL(sum(admin_commission + admin_expense - delivery_fee_comission),0) as commission'),
-            DB::raw('YEAR(created_at) year, MONTH(created_at) month')
+        $store_earnings = OrderTransaction::NotRefunded()->where(['vendor_id' => Helpers::get_vendor_id()])->select(
+            DB::raw('COALESCE(sum(store_amount),0) as earning'),
+            DB::raw('COALESCE(sum(admin_commission + admin_expense - delivery_fee_comission),0) as commission'),
+            DB::raw('EXTRACT(YEAR FROM created_at) AS "year", EXTRACT(MONTH FROM created_at) AS "month"')
         )->whereBetween('created_at', [$from, $to])->groupby('year', 'month')->get()->toArray();
         for ($inc = 1; $inc <= 12; $inc++) {
             $earning[$inc] = 0;
@@ -61,10 +54,10 @@ class DashboardController extends Controller
         $data['top_sell'] = $top_sell;
         $data['most_rated_items'] = $most_rated_items;
 
-        if( Helpers::get_store_data()?->storeConfig?->show_low_stock_count && Helpers::get_store_data()?->storeConfig?->minimum_stock_for_warning > 0){
+        if( Helpers::get_store_data()?->storeConfig?->minimum_stock_for_warning > 0){
             $items=  Item::where('stock' ,'<=' , Helpers::get_store_data()->storeConfig->minimum_stock_for_warning );
         } else{
-            $items=  Item::whereRaw('1 = 0');
+            $items=  Item::where('stock',0 );
         }
 
         $out_of_stock_count=  Helpers::get_store_data()->module->module_type != 'food' ?  $items->orderby('stock')->latest()->count() : null;
@@ -213,13 +206,5 @@ class DashboardController extends Controller
         $vendor->save();
 
         return response()->json(['Token successfully stored.']);
-    }
-
-    public function verifiedBadgePopupSeen(Request $request)
-    {
-        $store = Helpers::get_store_data();
-        Helpers::mark_verified_badge_popup_seen($store);
-
-        return response()->json(['success' => 1]);
     }
 }

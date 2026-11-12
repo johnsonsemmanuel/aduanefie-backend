@@ -199,7 +199,7 @@
                         @endif
                     </span>
                     <span class="copyright" id="mail-copyright">
-                        {{ $copyright_text ?? translate('Copyright 2023 Aduanefie. All right reserved') }}
+                        {{ $copyright_text ?? translate('Copyright 2023 aduanefie. All right reserved') }}
                     </span>
                 </td>
             </tr>

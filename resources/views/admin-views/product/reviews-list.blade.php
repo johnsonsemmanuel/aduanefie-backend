@@ -23,10 +23,10 @@
         <!-- Card -->
         <div class="card">
             <!-- Header -->
-            <div class="card-header border-0 py-2 flex-wrap flex-lg-nowrap gap-2">
+            <div class="card-header border-0 py-2">
                 <h5 class="card-title">
                     {{translate('messages.Review_list')}}<span class="badge badge-soft-dark ml-2" id="itemCount">{{$reviews->total()}}</span></h5>
-                <div class="search--button-wrapper justify-content-lg-end">
+                <div class="search--button-wrapper justify-content-end">
                     <form  class="search-form">
                         <!-- Search -->
                         <div class="input-group input--group">
@@ -36,12 +36,12 @@
                         <!-- End Search -->
                     </form>
 
-                    @if(request()->input('search'))
+                    @if(request()->get('search'))
                     <button type="reset" class="btn btn--primary ml-2 location-reload-to-base" data-url="{{url()->full()}}">{{translate('messages.reset')}}</button>
                     @endif
 
                     <div class="hs-unfold mr-2">
-                        <a class="js-hs-unfold-invoker btn btn-sm btn-white dropdown-toggle min-height-40 w-max-content" href="javascript:;"
+                        <a class="js-hs-unfold-invoker btn btn-sm btn-white dropdown-toggle min-height-40" href="javascript:;"
                             data-hs-unfold-options='{
                                     "target": "#usersExportDropdown",
                                     "type": "css-animation"
@@ -63,7 +63,7 @@
                                 <img class="avatar avatar-xss avatar-4by3 mr-2"
                                     src="{{ asset('public/assets/admin') }}/svg/components/placeholder-csv-format.svg"
                                     alt="Image Description">
-                                {{ translate('messages.csv') }}
+                                .{{ translate('messages.csv') }}
                             </a>
 
                         </div>
@@ -80,18 +80,13 @@
                            data-hs-datatables-options='{
                                     "order": [],
                                     "orderCellsTop": true,
-                                    "paging": false,
-                                    "columnDefs": [{
-                                        "targets": [8],
-                                        "width": "5%",
-                                        "orderable": false
-                                    }],
+                                    "paging": false
                                 }'>
                         <thead class="thead-light">
                         <tr>
                             <th>{{ translate('messages.sl') }}</th>
                             <th>{{ translate('messages.Review_Id') }}</th>
-                            <th class="w-20p">{{translate('messages.item')}}</th>
+                            <th class="w-10p">{{translate('messages.item')}}</th>
                             <th class="w-20p">{{translate('messages.customer')}}</th>
                             <th class="w-30p">{{translate('messages.review')}}</th>
                             <th>{{translate('messages.date')}}</th>
@@ -108,7 +103,7 @@
 
                                 <td class="d-flex">
                                     @if ($review->item)
-                                        <a class="media align-items-center min-w-60px d-block mb-1" href="{{route('admin.item.view',[$review->item['id']])}}">
+                                        <a class="media align-items-center mb-1" href="{{route('admin.item.view',[$review->item['id']])}}">
                                             <img class="avatar avatar-lg mr-3 onerror-image"
                                                  src="{{ $review->item['image_full_url'] ?? asset('public/assets/admin/img/160x160/img2.jpg') }}"
                                                  data-onerror-image="{{asset('public/assets/admin/img/160x160/img2.jpg')}}"

@@ -41,212 +41,6 @@ $(function () {
     }
 });
 
-//slider inside arrow
-$(function () {
-    let owl = $(".single-item-slider2");
-    owl.owlCarousel({
-        autoplay: false,
-        items: 1,
-        onInitialized: counter,
-        onTranslated: counter,
-        autoHeight: true,
-        dots: true,
-        nav: false,
-    });
-
-    // Custom nav buttons
-    $(".custom-next").click(function () {
-        owl.trigger("next.owl.carousel");
-    });
-    $(".custom-prev").click(function () {
-        owl.trigger("prev.owl.carousel");
-    });
-    function counter(event) {
-        let element = event.target;
-        let items = event.item.count;
-        let item = event.item.index + 1;
-        if (item > items) {
-            item = item - items;
-        }
-        $(".slide-counter").html(+item + "/" + items);
-    }
-});
-
-// Open offcanvas
-$(document).ready(function () {
-    $('.offcanvas-trigger').on('click', function (e) {
-        e.preventDefault();
-        var target = $(this).data('target');
-        $(target).addClass('open');
-        $('#offcanvasOverlay').addClass('show');
-    });
-
-    // Close offcanvas on close button or overlay click
-    $('.offcanvas-close, #offcanvasOverlay').on('click', function () {
-        $('.custom-offcanvas').removeClass('open');
-        $('#offcanvasOverlay').removeClass('show');
-        $('body').removeClass('modal-open');
-    });
-});
-
-//View Details
-$(".view-btn").on("click", function () {
-    var container = $(this).closest(".view-details-container");
-    var details = container.find(".view-details");
-    var icon = $(this).find("i");
-
-    $(this).toggleClass("active");
-    details.slideToggle(300);
-    icon.toggleClass("rotate-180deg");
-});
-$(".section-toggle").on("change", function () {
-    if ($(this).is(':checked')) {
-        $(this).closest(".view-details-container").find(".view-details").slideDown(300);
-    } else {
-        $(this).closest(".view-details-container").find(".view-details").slideUp(300);
-    }
-});
-
-//Select2 Data Add
-$(document).ready(function() {
-    $('#tax__rate').select2({
-        placeholder: 'Select tax rate',
-        allowClear: true // Optional: adds a clear (×) button
-    });
-    $('#service__charge').select2({
-        placeholder: 'Select tax rate',
-        allowClear: true // Optional: adds a clear (×) button
-    });
-    $('.service__charge').select2({
-        placeholder: 'Select tax rate',
-        allowClear: true // Optional: adds a clear (×) button
-    });
-});
-
-//Custom Slider Menu
-function checkNavOverflow() {
-    try {
-        $(".step-integration-inner").each(function () {
-            let $nav = $(this);
-            let $btnNext = $nav
-                .closest(".position-relative")
-                .find(".slide-cus__next");
-            let $btnPrev = $nav
-                .closest(".position-relative")
-                .find(".slide-cus__prev");
-            let isRTL = $("html").attr("dir") === "rtl";
-            let navScrollWidth = $nav[0].scrollWidth;
-            let navClientWidth = $nav[0].clientWidth;
-            let scrollLeft = Math.abs($nav.scrollLeft());
-
-            if (isRTL) {
-                let maxScrollLeft = navScrollWidth - navClientWidth;
-                let scrollRight = maxScrollLeft - scrollLeft;
-
-                $btnNext.toggle(scrollRight > 1);
-                $btnPrev.toggle(scrollLeft > 1);
-            } else {
-                $btnNext.toggle(
-                    navScrollWidth > navClientWidth &&
-                        scrollLeft + navClientWidth < navScrollWidth
-                );
-                $btnPrev.toggle(scrollLeft > 1);
-            }
-        });
-    } catch (error) {
-        console.error(error);
-    }
-}
-$(".step-integration-inner").each(function () {
-    let $nav = $(this);
-    checkNavOverflow($nav);
-    $(window).on("resize", function () {
-        checkNavOverflow($nav);
-    });
-    $nav.on("scroll", function () {
-        checkNavOverflow($nav);
-    });
-    $nav.siblings(".slide-cus__next").on("click", function () {
-        let scrollWidth = $nav.find("li").outerWidth(true);
-        let isRTL = $("html").attr("dir") === "rtl";
-        if (isRTL) {
-            $nav.animate(
-                { scrollLeft: $nav.scrollLeft() - scrollWidth },
-                300,
-                function () {
-                    checkNavOverflow($nav);
-                }
-            );
-        } else {
-            $nav.animate(
-                { scrollLeft: $nav.scrollLeft() + scrollWidth },
-                300,
-                function () {
-                    checkNavOverflow($nav);
-                }
-            );
-        }
-    });
-    $nav.siblings(".slide-cus__prev").on("click", function () {
-        let scrollWidth = $nav.find("li").outerWidth(true);
-        let isRTL = $("html").attr("dir") === "rtl";
-
-        if (isRTL) {
-            $nav.animate(
-                { scrollLeft: $nav.scrollLeft() + scrollWidth },
-                300,
-                function () {
-                    checkNavOverflow($nav);
-                }
-            );
-        } else {
-            $nav.animate(
-                { scrollLeft: $nav.scrollLeft() - scrollWidth },
-                300,
-                function () {
-                    checkNavOverflow($nav);
-                }
-            );
-        }
-    });
-});
-
-//Custom Copy Text
-let copyText = document.querySelector(".custom-copy-text");
-if(copyText){
-    copyText.querySelector(".copy-btn").addEventListener("click", function () {
-        let input = copyText.querySelector("input.text-inside");
-        input.select();
-        document.execCommand("copy");
-        copyText.classList.add("active");
-        window.getSelection().removeAllRanges();
-        setTimeout(function () {
-            copyText.classList.remove("active");
-        }, 2500);
-    });
-}
-
-//Just toggle 
-$(".view_toggle_btn").on("click", function () {
-    var container = $(this).closest(".card-container");
-    var details = container.find(".card-details-body");
-    var icon = $(this).find("i");
-
-    $(this).toggleClass("active");
-
-    if (details.hasClass("d-none")) {
-        details.removeClass("d-none").hide().slideDown(300);
-    } else {
-        details.slideUp(300, function () {
-            details.addClass("d-none");
-        });
-    }
-    icon.toggleClass("rotate-180deg");
-});
-
-
-
-
 $(document).on("ready", function () {
     // ONLY DEV
     // =======================================================
@@ -304,17 +98,13 @@ $(document).on("ready", function () {
     // INITIALIZATION OF SELECT2
     // =======================================================
     $(".js-select2-custom").each(function () {
-        if ($.HSCore && $.HSCore.components && $.HSCore.components.HSSelect2) {
-            let verifiedConfig = window.hsSelect2VerifiedTemplate
-                ? { templateResult: window.hsSelect2VerifiedTemplate, templateSelection: window.hsSelect2VerifiedTemplate }
-                : {};
-            let select2 = $.HSCore.components.HSSelect2.init($(this), verifiedConfig);
-        }
+        let select2 = $.HSCore.components.HSSelect2.init($(this));
     });
 
     // INITIALIZATION OF DATERANGEPICKER
     // =======================================================
     $(".js-daterangepicker").daterangepicker();
+
     $(".js-daterangepicker-times").daterangepicker({
         timePicker: true,
         startDate: moment().startOf("hour"),
@@ -323,6 +113,7 @@ $(document).on("ready", function () {
             format: "M/DD hh:mm A",
         },
     });
+
     let start = moment();
     let end = moment();
 
@@ -499,7 +290,7 @@ function getUrlParameter(sParam) {
 }
 
 $.fn.select2DynamicDisplay = function () {
-    const limit = 50;
+    const limit = 5;
     function updateDisplay($element) {
         var $rendered = $element
             .siblings(".select2-container")
@@ -578,7 +369,7 @@ $.fn.select2DynamicDisplay = function () {
         }
 
         // Attach event listener with debouncing
-        $rendered.find(".select2-search input").off("input").on(
+        $(".select2-search input").on(
             "input",
             debounce(function () {
                 const inputValue = $(this).val().toLowerCase();
@@ -592,7 +383,7 @@ $.fn.select2DynamicDisplay = function () {
             }, 100)
         );
 
-        $rendered.find(".select2-search input").off("keydown").on("keydown", function (e) {
+        $(".select2-search input").on("keydown", function (e) {
             if (e.which === 13) {
                 e.preventDefault();
 
@@ -625,16 +416,8 @@ $.fn.select2DynamicDisplay = function () {
             maximumSelectionLength: limit,
         });
 
+        // Bind change event to update display
         $this.on("change", function () {
-        let selected_items = $this.val() || [];
-
-        if (selected_items.includes("all") && selected_items.length > 1) {
-            $this.val(["all"]).trigger("change.select2");
-        }
-
-        if (!selected_items.includes("all") && selected_items.length > 0) {
-            $this.val(selected_items.filter(v => v !== "all")).trigger("change.select2");
-        }
             updateDisplay($this);
         });
 
@@ -693,7 +476,6 @@ $(function () {
         endDate: $(this).data("endDate"),
         autoUpdateInput: false,
         locale: {
-            format: "MM/DD/YYYY",
             cancelLabel: "Clear",
         },
         alwaysShowCalendars: true,
@@ -737,13 +519,9 @@ $(document).ready(function () {
                     .find(".select2-selection--multiple")
                     .addClass("custom-select");
             }, 10);
-        });
-    // Only trigger/close if select2 is already initialized
-    $("select.js-select2-custom, select.multiple-select2").each(function () {
-        if ($(this).data('select2')) {
-            $(this).trigger("select2:open").select2("close");
-        }
-    });
+        })
+        .trigger("select2:open")
+        .select2("close");
 });
 
 function initializeTooltipWithHoverContent() {
@@ -796,100 +574,3 @@ function initializeTooltipWithHoverContent() {
 $(document).ready(function () {
     initializeTooltipWithHoverContent();
 });
-
-
-
-//Tour & Guideline Button
-$(document).on('click', '.tour-guide_btn', function () {
-    const $parent = $(this).closest('.toggle-tour');
-    $parent.toggleClass('active');
-});
-
-
-document.addEventListener("DOMContentLoaded", function () {
-    // ---- tabindex priority set logic
-    function assignTabIndexes() {
-        document.querySelectorAll("form").forEach((form) => {
-            let tabIndex = 1;
-
-            // Reset old tabindex
-            form.querySelectorAll("[tabindex]").forEach(el => el.removeAttribute("tabindex"));
-
-            form.querySelectorAll("input, textarea, select").forEach((el) => {
-                if (
-                    el.disabled ||
-                    el.type === "hidden" ||
-                    el.hasAttribute("readonly")
-                ) return;
-
-                if (el.classList.contains("ckeditor")) return;
-                if (el.classList.contains("js-select2-custom")) return;
-
-                el.setAttribute("tabindex", tabIndex++);
-            });
-
-            form.querySelectorAll(".select2-selection").forEach((el) => {
-                el.setAttribute("tabindex", tabIndex++);
-            });
-
-            if (typeof CKEDITOR !== "undefined") {
-                Object.values(CKEDITOR.instances).forEach((editor) => {
-                    const editable = editor.editable();
-                    if (editable && editable.$ && form.contains(editable.$)) {
-                        editable.$.setAttribute("tabindex", tabIndex++);
-                    }
-                });
-            }
-        });
-    }
-
-    assignTabIndexes();
-
-    const observer = new MutationObserver(() => {
-        assignTabIndexes();
-    });
-
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
-    // ---- tabindex priority set logic ends
-});
-function initCharCounter(selector = '.char-counter') {
-    $(selector).each(function () {
-        const $input = $(this);
-        const maxLength = $input.attr('maxlength');
-        const target = $input.data('target');
-        const $counter = $(target);
-        if (!maxLength || !$counter.length) return;
-        $input.on('input', function () {
-            const currentLength = $input.val().length;
-            $counter.text(`${currentLength}/${maxLength}`);
-        }).trigger('input');
-    });
-}
-
-//New Character Count code ,
-function initTextMaxLimit(selector = 'input[data-maxlength], textarea[data-maxlength], input[maxlength], textarea[maxlength]') {
-    const fields = document.querySelectorAll(selector);
-
-    fields.forEach(function (field) {
-        const maxLength = parseInt(field.getAttribute('data-maxlength') || field.getAttribute('maxlength'), 10);
-        const counter = field.parentElement.querySelector('.text-counting');
-
-        const updateCounter = () => {
-            if (field.value.length > maxLength) {
-                field.value = field.value.slice(0, maxLength);
-            }
-            if (counter) {
-                counter.textContent = `${field.value.length}/${maxLength}`;
-            }
-        };
-
-        field.addEventListener('input', updateCounter);
-        updateCounter();
-    });
-    }
-    document.addEventListener('DOMContentLoaded', function () {
-        initTextMaxLimit();
-    });

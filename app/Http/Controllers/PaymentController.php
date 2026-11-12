@@ -55,7 +55,7 @@ class PaymentController extends Controller
         if($order->is_guest){
             $customer_details = json_decode($order['delivery_address'],true);
         }else{
-            $customer = User::withoutGlobalScope(\App\Scopes\HostScope::class)->find($request['customer_id']);
+            $customer = User::find($request['customer_id']);
         }
 
         //guest user check
@@ -69,10 +69,7 @@ class PaymentController extends Controller
             ]);
 
         } else {
-            $customer = User::withoutGlobalScope(\App\Scopes\HostScope::class)->find($request['customer_id']);
-            if (!$customer) {
-                return response()->json(['errors' => ['message' => 'Customer not found']], 403);
-            }
+            $customer = User::find($request['customer_id']);
             $customer = collect([
                 'first_name' => $customer['f_name'],
                 'last_name' => $customer['l_name'],

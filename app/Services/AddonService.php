@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\AddOn;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
@@ -10,13 +9,13 @@ use Rap2hpoutre\FastExcel\FastExcel;
 
 class AddonService
 {
+
     public function getAddData(Object $request): array
     {
         return [
             'name' => $request->name[array_search('default', $request->lang)],
             'price' => $request->price,
             'store_id' => $request->store_id,
-            'addon_category_id' => $request->category_id,
         ];
     }
 
@@ -68,26 +67,6 @@ class AddonService
             ];
         }
         return $data;
-    }
-
-    public function getCurrentDomain(): string
-    {
-        return str_replace(["http://", "https://", "www."], "", url('/'));
-    }
-
-    public function addonActivationProcess(object $request): array
-    {
-        return [
-            'status' => 1,
-            'activation_status' => 1,
-            'username' => $request['username'] ?? '',
-            'purchase_code' => $request['purchase_code'] ?? '',
-        ];
-    }
-
-    public function checkAddonExistsForThisStore(int|string $storeId, string $addonName): bool
-    {
-        return AddOn::where('store_id', $storeId)->where('name', $addonName)->exists();
     }
 
 }

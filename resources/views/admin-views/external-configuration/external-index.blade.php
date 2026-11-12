@@ -13,7 +13,7 @@
                     </span>
                 </h1>
                 <p class="m-0">
-                    {{translate('connect_drivemond_system_with_Aduanefie')}}
+                    {{translate('connect_drivemond_system_with_aduanefie')}}
                 </p>
             </div>
             <div class="text--primary-2 py-1 d-flex flex-wrap align-items-center" type="button" data-toggle="modal"
@@ -108,7 +108,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="btn--container justify-content-end mt-20">
+                            <div class="btn--container justify-content-end mt-3">
                                 <button type="reset" id="reset_btn"
                                         class="btn btn--reset">{{ translate('messages.reset') }}</button>
                                 <button type="submit" id="submit"

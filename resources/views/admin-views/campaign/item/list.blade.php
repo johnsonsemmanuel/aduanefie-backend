@@ -27,19 +27,6 @@
             <div class="card-header border-0 py-2">
                 <div class="search--button-wrapper">
                     <h5 class="card-title">{{translate('messages.campaign_list')}}<span class="badge badge-soft-dark ml-2" id="itemCount">{{$campaigns->total()}}</span></h5>
-
-                            <div class="col-sm-6 col-md-3">
-                            <select name="store_id" data-url="{{ url()->full() }}"  data-filter="store_id"
-                                data-placeholder="{{ translate('messages.select_store') }}"
-                                data-search-placeholder="{{ translate('messages.search_store') }}"
-                                class="js-data-example-ajax form-control set-filter">
-                                @if (isset($store))
-                                    <option value="{{ $store->id }}" data-verified="{{ (int) $store->verified_seller }}" selected>{{ $store->name }}</option>
-                                @else
-                                    <option value="all" selected>{{ translate('messages.all_stores') }}</option>
-                                @endif
-                            </select>
-                        </div>
                     <form class="search-form min--270">
 
                         <!-- Search -->
@@ -52,7 +39,9 @@
                         <!-- End Search -->
                     </form>
 
-
+                    @if(request()->get('search'))
+                    <button type="reset" class="btn btn--primary ml-2 location-reload-to-base" data-url="{{url()->full()}}">{{translate('messages.reset')}}</button>
+                    @endif
 
 
                     <div class="hs-unfold mr-2">
@@ -81,7 +70,7 @@
                                 <img class="avatar avatar-xss avatar-4by3 mr-2"
                                     src="{{ asset('public/assets/admin') }}/svg/components/placeholder-csv-format.svg"
                                     alt="Image Description">
-                                {{ translate('messages.csv') }}
+                                .{{ translate('messages.csv') }}
                             </a>
                         </div>
                     </div>
@@ -118,10 +107,10 @@
                                     <a href="{{route('admin.campaign.view',['item',$campaign->id])}}" title="{{ $campaign['title'] }}" class="d-block text-body" >{{Str::limit($campaign['title'],25,'...')}}</a>
                                 </td>
                                 <td>
-                                    <span class="bg-gradient-light text-dark">{{$campaign->start_date? \App\CentralLogics\Helpers::date_format($campaign?->start_date).'-'.  \App\CentralLogics\Helpers::date_format($campaign?->end_date): 'N/A'}}</span>
+                                    <span class="bg-light text-dark">{{$campaign->start_date? \App\CentralLogics\Helpers::date_format($campaign?->start_date).'-'.  \App\CentralLogics\Helpers::date_format($campaign?->end_date): 'N/A'}}</span>
                                 </td>
                                 <td>
-                                    <span class="bg-gradient-light text-dark">{{$campaign->start_time? \App\CentralLogics\Helpers::time_format($campaign?->start_time).'-'.  \App\CentralLogics\Helpers::time_format($campaign?->end_time): 'N/A'}}</span>
+                                    <span class="bg-light text-dark">{{$campaign->start_time? \App\CentralLogics\Helpers::time_format($campaign?->start_time).'-'.  \App\CentralLogics\Helpers::time_format($campaign?->end_time): 'N/A'}}</span>
                                 </td>
                                 <td>{{\App\CentralLogics\Helpers::format_currency($campaign->price)}}</td>
                                 <td>
@@ -190,37 +179,43 @@
 
 @push('script_2')
     <script>
-           $(document).on('ready', function() {
-            $('.js-data-example-ajax').select2({
-                ajax: {
-                    url: '{{ route('admin.store.get-stores') }}',
-                    data: function(params) {
-                        return {
-                            q: params.term,
-                            all:true,
-                            @if (isset($zone))
-                                zone_ids: [{{ $zone->id }}],
-                            @endif
-                            @if (request('module_id') || Config::get('module.current_module_id'))
-                                module_id: {{ request('module_id') ?? Config::get('module.current_module_id') }},
-                            @endif
-                            page: params.page
-                        };
-                    },
-                    processResults: function(data) {
-                        return {
-                            results: data
-                        };
-                    },
-                    __port: function(params, success, failure) {
-                        let $request = $.ajax(params);
+        $(document).on('ready', function () {
+            // INITIALIZATION OF DATATABLES
+            // =======================================================
+            var datatable = $.HSCore.components.HSDatatables.init($('#columnSearchDatatable'));
 
-                        $request.then(success);
-                        $request.fail(failure);
+            $('#column1_search').on('keyup', function () {
+                datatable
+                    .search(this.value)
+                    .draw();
+            });
 
-                        return $request;
-                    }
-                }
+            $('#column2_search').on('keyup', function () {
+                datatable
+                    .columns(2)
+                    .search(this.value)
+                    .draw();
+            });
+
+            $('#column3_search').on('change', function () {
+                datatable
+                    .columns(3)
+                    .search(this.value)
+                    .draw();
+            });
+
+            $('#column4_search').on('keyup', function () {
+                datatable
+                    .columns(4)
+                    .search(this.value)
+                    .draw();
+            });
+
+
+            // INITIALIZATION OF SELECT2
+            // =======================================================
+            $('.js-select2-custom').each(function () {
+                var select2 = $.HSCore.components.HSSelect2.init($(this));
             });
         });
     </script>

@@ -16,13 +16,6 @@
             {{ $customer['phone'] }}
         </div>
     </td>
-    @if(($tab ?? 'main') === 'storefront')
-    <td>
-        <label class="badge badge-soft-info">
-            {{ ($publishedStoreLookup ?? [])[$customer->sub_tenant_id] ?? '—' }}
-        </label>
-    </td>
-    @endif
     <td>
         <label class="badge">
             {{ $customer->order_count }}

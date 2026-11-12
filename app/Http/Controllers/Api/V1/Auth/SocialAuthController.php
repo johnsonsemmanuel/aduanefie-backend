@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api\V1\Auth;
+namespace App\Http\Controllers\api\v1\auth;
 
 
 use App\CentralLogics\Helpers;
@@ -153,14 +153,14 @@ class SocialAuthController extends Controller
                         'errors' => $errors
                     ], 403);
                 }
-                if($customer_verification && !$firebase_otp_verification && !auth()->user()->is_phone_verified && getEnvMode() != 'demo')
+                if($customer_verification && !$firebase_otp_verification && !auth()->user()->is_phone_verified && env('APP_MODE') != 'demo')
                 {
                     // $interval_time = BusinessSetting::where('key', 'otp_interval_time')->first();
                     // $otp_interval_time= isset($interval_time) ? $interval_time->value : 20;
                     $otp_interval_time= 60; //seconds
                     $phone_verification_data= DB::table('phone_verifications')->where('phone', $request['phone'])->first();
                     if(isset($phone_verification_data) &&  Carbon::parse($phone_verification_data->updated_at)->DiffInSeconds() < $otp_interval_time){
-                        $time= round($otp_interval_time - Carbon::parse($phone_verification_data->updated_at)->DiffInSeconds());
+                        $time= $otp_interval_time - Carbon::parse($phone_verification_data->updated_at)->DiffInSeconds();
                         $errors = [];
                         array_push($errors, ['code' => 'otp', 'message' =>  translate('messages.please_try_again_after_').$time.' '.translate('messages.seconds')]);
                         return response()->json([
@@ -180,7 +180,7 @@ class SocialAuthController extends Controller
                     try {
                         $mailResponse = null;
                         if (config('mail.status') && Helpers::get_mail_status('registration_otp_mail_status_user') == '1' && Helpers::getNotificationStatusData('customer', 'customer_registration_otp', 'mail_status')) {
-                            Mail::to($user?->getRawOriginal('email'))->send(new EmailVerification($otp, $user->email));
+                            Mail::to($user->email)->send(new EmailVerification($otp, $user->email));
                             $mailResponse = 'success';
                         }
 
@@ -350,14 +350,14 @@ class SocialAuthController extends Controller
                         'errors' => $errors
                     ], 403);
                 }
-                if($customer_verification && !$firebase_otp_verification && !auth()->user()->is_phone_verified && getEnvMode() != 'demo')
+                if($customer_verification && !$firebase_otp_verification && !auth()->user()->is_phone_verified && env('APP_MODE') != 'demo')
                 {
                     // $interval_time = BusinessSetting::where('key', 'otp_interval_time')->first();
                     // $otp_interval_time= isset($interval_time) ? $interval_time->value : 20;
                     $otp_interval_time= 60; //seconds
                     $phone_verification_data= DB::table('phone_verifications')->where('phone', $request['phone'])->first();
                     if(isset($phone_verification_data) &&  Carbon::parse($phone_verification_data->updated_at)->DiffInSeconds() < $otp_interval_time){
-                        $time= round($otp_interval_time - Carbon::parse($phone_verification_data->updated_at)->DiffInSeconds());
+                        $time= $otp_interval_time - Carbon::parse($phone_verification_data->updated_at)->DiffInSeconds();
                         $errors = [];
                         array_push($errors, ['code' => 'otp', 'message' =>  translate('messages.please_try_again_after_').$time.' '.translate('messages.seconds')]);
                         return response()->json([
@@ -376,7 +376,7 @@ class SocialAuthController extends Controller
                     try {
                         $mailResponse = null;
                         if (config('mail.status') && Helpers::get_mail_status('registration_otp_mail_status_user') == '1' && Helpers::getNotificationStatusData('customer', 'customer_registration_otp', 'mail_status')) {
-                            Mail::to($user?->getRawOriginal('email'))->send(new EmailVerification($otp, $user->email));
+                            Mail::to($user->email)->send(new EmailVerification($otp, $user->email));
                             $mailResponse = 'success';
                         }
 
@@ -561,14 +561,14 @@ class SocialAuthController extends Controller
                     'errors' => $errors
                 ], 403);
             }
-            if($customer_verification && !$firebase_otp_verification && !auth()->user()->is_phone_verified && getEnvMode() != 'demo')
+            if($customer_verification && !$firebase_otp_verification && !auth()->user()->is_phone_verified && env('APP_MODE') != 'demo')
             {
                 // $interval_time = BusinessSetting::where('key', 'otp_interval_time')->first();
                 // $otp_interval_time= isset($interval_time) ? $interval_time->value : 20;
                 $otp_interval_time= 60; //seconds
                 $phone_verification_data= DB::table('phone_verifications')->where('phone', $request['phone'])->first();
                 if(isset($phone_verification_data) &&  Carbon::parse($phone_verification_data->updated_at)->DiffInSeconds() < $otp_interval_time){
-                    $time= round($otp_interval_time - Carbon::parse($phone_verification_data->updated_at)->DiffInSeconds());
+                    $time= $otp_interval_time - Carbon::parse($phone_verification_data->updated_at)->DiffInSeconds();
                     $errors = [];
                     array_push($errors, ['code' => 'otp', 'message' =>  translate('messages.please_try_again_after_').$time.' '.translate('messages.seconds')]);
                     return response()->json([
@@ -588,7 +588,7 @@ class SocialAuthController extends Controller
                 try {
                     $mailResponse = null;
                     if (config('mail.status') && Helpers::get_mail_status('login_otp_mail_status_user') == '1' && Helpers::getNotificationStatusData('customer', 'customer_registration_otp', 'mail_status')) {
-                        Mail::to($user?->getRawOriginal('email'))->send(new EmailVerification($otp, $user->email));
+                        Mail::to($user->email)->send(new EmailVerification($otp, $user->email));
                         $mailResponse = 'success';
                     }
 

@@ -64,16 +64,6 @@ enum DeliveryMan
         VIEW => ''
     ];
 
-    const LOYALTY_POINT_EXPORT = [
-        URI => 'loyalty-point-export',
-        VIEW => ''
-    ];
-
-    const REFERRAL_EXPORT = [
-        URI => 'referral-export',
-        VIEW => ''
-    ];
-
     const ACTIVE_SEARCH = [
         URI => 'active-search',
         VIEW => ''

@@ -37,10 +37,14 @@ class ModuleCheckMiddleware
                 'errors' => $errors
             ], 403);
         }
-        $value = $request->header('moduleId');
-        $module = is_numeric($value)
-            ? Module::where('id', $value)->first()
-            : Module::where('slug', $value)->first();
+        $activeModules = \Illuminate\Support\Facades\Cache::remember('active_modules_by_id_v1', now()->addMinutes(5), function () {
+            return Module::active()->orderBy('id')->get()->keyBy('id');
+        });
+        $requestedId = (int) $request->header('moduleId');
+        $module = $activeModules->get($requestedId);
+        if (!$module && $request->isMethod('GET') && $activeModules->isNotEmpty()) {
+            $module = $activeModules->first();
+        }
         if(!$module) {
             $errors = [];
             array_push($errors, ['code' => 'moduleId', 'message' => translate('messages.not_found')]);

@@ -163,13 +163,13 @@
                                         </div>
                                         <div class="filename">{{translate('Must_be_Excel_files_using_our_Excel_template_above')}}</div>
                                     </div>
-                                    <input type="file" name="products_file" class="form-control-file text--primary font-weight-bold action-upload-section-dot-area" accept=".xls,.xlsx" id="products_file">
+                                    <input type="file" name="products_file" class="form-control-file text--primary font-weight-bold action-upload-section-dot-area" id="products_file">
                                 </div>
                             </label>
 
                         </div>
                     </div>
-                    <div class="btn--container justify-content-end mt-20">
+                    <div class="btn--container justify-content-end mt-3">
                         <button id="reset_btn" type="reset" class="btn btn--reset">{{translate('messages.reset')}}</button>
                         <button type="button" class="btn btn--primary update_or_import">{{translate('messages.Upload')}}</button>
                     </div>

@@ -1,3 +1,6 @@
+<?php
+$company_name = App\Models\BusinessSetting::where('key', 'business_name')->first()->value;
+?>
 <table class="main-table">
     <tbody>
         <tr>
@@ -13,7 +16,7 @@
                             <td class="p-10">
                                 <span class="d-block text-center">
                                     @php($restaurant_logo = \App\Models\BusinessSetting::where(['key' => 'logo'])->first())
-                                    <img class="mb-2 mail-img-2 onerror-image" data-onerror-image="{{ asset('storage/business/' . $restaurant_logo) }}"
+                                    <img class="mb-2 mail-img-2 onerror-image" data-onerror-image="{{ asset('storage/app/public/business/' . $restaurant_logo) }}"
                                     src="{{ $data?->logo ? $data->logo_full_url : \App\CentralLogics\Helpers::get_full_url('business',$restaurant_logo?->value,$restaurant_logo?->storage[0]?->value ?? 'public', 'favicon') }}"
                                     id="logoViewer" alt="">
                                     <h3 class="mb-3 mt-0">{{ translate('Order_Info') }}</h3>
@@ -133,7 +136,7 @@
                     {{ translate('Thanks_&_Regards') }},
                 </div>
                 <div class="mb-4">
-                    {{ \App\CentralLogics\Helpers::get_business_settings('business_name', false) }}
+                    {{ $company_name }}
                 </div>
             </td>
         </tr>
@@ -163,9 +166,10 @@
                     </a>
                 </span>
                 <span class="copyright" id="mail-copyright">
-                    {{ $data['copyright_text']?? \App\CentralLogics\Helpers::copyright_text() }}
+                    {{ $data['copyright_text']?? translate('Copyright 2023 aduanefie. All right reserved') }}
                 </span>
             </td>
         </tr>
     </tbody>
 </table>
+<script src="{{asset('public/assets/admin')}}/js/view-pages/common.js"></script>

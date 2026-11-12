@@ -1,0 +1,13 @@
+{
+    "name": "Service",
+    "alias": "service",
+    "description": "Agro Services & Mechanization module - verified agro-service providers offer mechanization, spraying, harvesting, irrigation, and skilled farm labor as scheduled service bookings.",
+    "keywords": ["agro", "service", "mechanization", "farming"],
+    "priority": 0,
+    "providers": [
+        "Modules\\Service\\Providers\\ServiceServiceProvider"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": []
+}

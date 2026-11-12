@@ -3,28 +3,18 @@
 namespace App\Models;
 
 use App\Scopes\ZoneScope;
-use App\Traits\ReportFilter;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class OrderTransaction extends Model
 {
-    use HasFactory,ReportFilter;
-
-    protected $casts = [
-        'pro_discount' => 'float',
-        'pro_delivery_discount' => 'float',
-    ];
+    use HasFactory;
 
     protected $fillable = array('delivery_man_id');
 
     public function order()
     {
         return $this->belongsTo(Order::class);
-    }
-    public function store()
-    {
-        return $this->belongsTo(Store::class,'vendor_id','vendor_id');
     }
 
     public function delivery_man()
@@ -36,7 +26,7 @@ class OrderTransaction extends Model
     {
         return $query->where('module_id', $module_id);
     }
-
+    
     public function scopeNotRefunded($query)
     {
         return $query->where(function($query){

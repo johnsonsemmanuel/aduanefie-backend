@@ -5,16 +5,13 @@ namespace App\Models;
 use App\CentralLogics\Helpers;
 use Carbon\Carbon;
 use App\Scopes\ZoneScope;
-use App\Traits\DemoMaskable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Traits\ReportFilter;
-use Modules\TaxModule\Entities\OrderTax;
-
 
 class Order extends Model
 {
-    use HasFactory , ReportFilter, DemoMaskable;
+    use HasFactory , ReportFilter;
 
     protected $casts = [
         'order_amount' => 'float',
@@ -25,10 +22,7 @@ class Order extends Model
         'flash_store_discount_amount' => 'float',
         'delivery_address_id' => 'integer',
         'delivery_man_id' => 'integer',
-        'community_agent_id' => 'integer',
-        'is_community_delivery' => 'boolean',
         'delivery_charge' => 'float',
-        'delivery_type_charge' => 'float',
         'additional_charge' => 'float',
         'original_delivery_charge' => 'float',
         'user_id' => 'integer',
@@ -50,30 +44,22 @@ class Order extends Model
         'cutlery' => 'boolean',
         'is_guest' => 'boolean',
         'ref_bonus_amount' => 'float',
-        'bring_change_amount'=>'integer',
-        'edited' => 'boolean',
-        'adjusment' => 'float',
-        'is_hidden' => 'boolean',
+        'currency_code' => 'string',
     ];
 
     protected $appends = ['module_type','order_attachment_full_url','order_proof_full_url'];
 
     public function getOrderAttachmentFullUrlAttribute(){
         $images = [];
-        $attachment = $this->order_attachment;
-
-        $value = is_array($attachment)
-            ? $attachment
-            : ($attachment && is_string($attachment) && $this->isValidJson($attachment)
-                ? json_decode($attachment, true)
+        $value = is_array($this->order_attachment)
+            ? $this->order_attachment
+            : ($this->order_attachment && is_string($this->order_attachment) && $this->isValidJson($this->order_attachment)
+                ? json_decode($this->order_attachment, true)
                 : []);
-
-
-
-        if ($value) {
-            foreach ($value as $item) {
-                $item = is_array($item) ? $item : (is_object($item) && get_class($item) == 'stdClass' ? json_decode(json_encode($item), true) : ['img' => $item, 'storage' => 'public']);
-                $images[] = Helpers::get_full_url('order', $item['img'], $item['storage'] ?? 'public');
+        if ($value){
+            foreach ($value as $item){
+                $item = is_array($item)?$item:(is_object($item) && get_class($item) == 'stdClass' ? json_decode(json_encode($item), true):['img' => $item, 'storage' => 'public']);
+                $images[] = Helpers::get_full_url('order',$item['img'],$item['storage']);
             }
         }
 
@@ -90,56 +76,16 @@ class Order extends Model
         if ($value){
             foreach ($value as $item){
                 $item = is_array($item)?$item:(is_object($item) && get_class($item) == 'stdClass' ? json_decode(json_encode($item), true):['img' => $item, 'storage' => 'public']);
-                $images[] = Helpers::get_full_url('order',$item['img'],$item['storage'] ?? 'public');
+                $images[] = Helpers::get_full_url('order',$item['img'],$item['storage']);
             }
         }
 
         return $images;
     }
 
-    public function getDeliveryAddressAttribute($value)
+    private function isValidJson($string)
     {
-        if ($this->shouldMask()) {
-            if (is_array($value)) {
-                $address = $value;
-            } elseif ($value instanceof \stdClass) {
-                $address = (array) $value;
-            } elseif (is_string($value)) {
-                $address = json_decode($value, true);
-            } else {
-                $address = [];
-            }
-
-            if (!empty($address['contact_person_email'])) {
-                $address['contact_person_email'] = $this->maskEmail($address['contact_person_email']);
-            }
-
-            if (!empty($address['contact_person_number'])) {
-                $address['contact_person_number'] = $this->maskPhone($address['contact_person_number']);
-            }
-            return json_encode($address);
-        }
-        return $value;
-    }
-
-    public function getReceiverDetailsAttribute($value)
-    {
-        $address = is_array($value) ? $value : json_decode($value, true);
-        if ($this->shouldMask()) {
-            if (!empty($address['contact_person_email'])) {
-                $address['contact_person_email'] = $this->maskEmail($address['contact_person_email']);
-            }
-            if (!empty($address['contact_person_number'])) {
-                $address['contact_person_number'] = $this->maskPhone($address['contact_person_number']);
-            }
-        }
-
-        return $address;
-    }
-
-    private function isValidJson($value)
-    {
-        json_decode($value);
+        json_decode($string);
         return (json_last_error() === JSON_ERROR_NONE);
     }
 
@@ -152,14 +98,6 @@ class Order extends Model
     {
         return $this->hasOne(CashBackHistory::class, 'order_id');
     }
-    public function orderProDiscount()
-    {
-        return $this->hasOne(OrderProDiscount::class, 'order_id');
-    }
-    public function parcelCancellation()
-    {
-        return $this->hasOne(ParcelCancellation::class, 'order_id');
-    }
 
 
     public function offline_payments()
@@ -171,10 +109,6 @@ class Order extends Model
     {
         return $this->hasMany(OrderDetail::class);
     }
-    public function reviews()
-    {
-        return $this->hasMany(Review::class , 'order_id');
-    }
 
     public function payments()
     {
@@ -184,11 +118,6 @@ class Order extends Model
     public function delivery_man()
     {
         return $this->belongsTo(DeliveryMan::class, 'delivery_man_id');
-    }
-
-    public function communityAgent()
-    {
-        return $this->belongsTo(DeliveryMan::class, 'community_agent_id');
     }
 
     public function customer()
@@ -237,6 +166,15 @@ class Order extends Model
         return $this->hasOne(OrderTransaction::class);
     }
 
+    /**
+     * The marketer commission accrued for this order, if any. Unique per order,
+     * so accrual can be retried without double-crediting.
+     */
+    public function marketerCommission()
+    {
+        return $this->hasOne(MarketerCommission::class, 'order_id');
+    }
+
     public function parcel_category()
     {
         return $this->belongsTo(ParcelCategory::class);
@@ -254,32 +192,6 @@ class Order extends Model
     public function getModuleTypeAttribute()
     {
         return $this->module ? $this->module->module_type : null;
-    }
-
-    public function getIsEditableAttribute(): bool
-    {
-        $campaignOrder = !empty(optional($this->details->first())->item_campaign_id);
-
-        return in_array($this->order_status, ['pending'])
-            && $this->order_type != 'pos'
-            && isset($this->store)
-            && !$campaignOrder
-            && $this->prescription_order == 0
-            && $this->payments->count() == 0
-            && $this->ref_bonus_amount == 0
-            && $this->flash_admin_discount_amount == 0
-            && $this->payment_method == 'cash_on_delivery';
-    }
-
-    public function getCanReorderAttribute(): bool
-    {
-        $campaignOrder = collect($this->details)->contains(fn ($detail) => !empty($detail->item_campaign_id));
-
-        return $this->order_type != 'parcel'
-            && $this->prescription_order == 0
-            && $this->flash_admin_discount_amount == 0
-            && $this->flash_store_discount_amount == 0
-            && !$campaignOrder;
     }
 
     public function scopeAccepteByDeliveryman($query)
@@ -314,7 +226,7 @@ class Order extends Model
 
     public function scopeFailed($query)
     {
-        return $query->where('order_status', 'failed')->whereDoesntHave('offline_payments');
+        return $query->where('order_status', 'failed');
     }
 
     public function scopeCanceled($query)
@@ -402,11 +314,6 @@ class Order extends Model
         return $query->where('order_type', '<>', 'pos');
     }
 
-    public function scopeNotHiddenForCustomer($query)
-    {
-        return $query->where($this->getTable() . '.is_hidden', 0);
-    }
-
     public function scopeNotDigitalOrder($query)
     {
         return $query->where(function ($q){
@@ -425,6 +332,22 @@ class Order extends Model
         static::addGlobalScope('storage', function ($builder) {
             $builder->with('storage');
         });
+
+        // Stamp the delivery time whenever an order becomes delivered.
+        //
+        // This used to be set only by the POS controller, so orders delivered
+        // through the rider API, the vendor panel or the admin panel left
+        // `delivered` null. The dashboard "delivered today" figures and the
+        // marketer holding period both read this column, so it has to be set in
+        // one place that every status path goes through rather than in each of
+        // the five controllers that can mark an order delivered.
+        static::saving(function (Order $order) {
+            if ($order->order_status === 'delivered'
+                && empty($order->delivered)
+                && $order->isDirty('order_status')) {
+                $order->delivered = now();
+            }
+        });
     }
     public function storage()
     {
@@ -433,14 +356,5 @@ class Order extends Model
     protected static function boot()
     {
         parent::boot();
-    }
-    public function orderTaxes()
-    {
-        return $this->morphMany(OrderTax::class, 'order');
-    }
-
-    public function orderEditLogs()
-    {
-        return $this->hasMany(OrderEditLog::class, 'order_id')->latest();
     }
 }

@@ -10,7 +10,17 @@
     <div class="content container-fluid">
         <!-- Page Header -->
         <div class="page-header">
-            @include('admin-views.business-settings.email-format-setting.partials.email-template-header')
+            <div class="d-flex flex-wrap justify-content-between align-items-center __gap-15px">
+                <h1 class="page-header-title mr-3 mb-0">
+                    <span class="page-header-icon">
+                        <img src="{{ asset('public/assets/admin/img/email-setting.png') }}" class="w--26" alt="">
+                    </span>
+                    <span>
+                        {{ translate('messages.Email Templates') }}
+                    </span>
+                </h1>
+                @include('admin-views.business-settings.email-format-setting.partials.email-template-options')
+            </div>
             @include('admin-views.business-settings.email-format-setting.partials.dm-email-template-setting-links')
         </div>
 
@@ -22,8 +32,8 @@
                     <div class="card-body">
                         <div class="maintenance-mode-toggle-bar d-flex flex-wrap justify-content-between border rounded align-items-center p-2">
                             <h5 class="text-capitalize m-0 text--primary pl-2">
-                                {{ \App\CentralLogics\Helpers::formatDeliverymanText(translate('Send_Mail_On_Delivery_Man_approve?'), null, true) }}
-                        <span class="form-label-secondary text--primary" data-toggle="tooltip" data-placement="right" data-original-title="{{ \App\CentralLogics\Helpers::formatDeliverymanText(translate('If_Admin_accepts_a_Deliveryman’s_self-registration,_the_Deliveryman_will_get_an_automatic_approval_mail.'), null, true) }}">
+                                {{translate('Send_Mail_On_Delivery_Man_approve?')}}
+                        <span class="form-label-secondary text--primary" data-toggle="tooltip" data-placement="right" data-original-title="{{ translate('If_Admin_accepts_a_Deliveryman’s_self-registration,_the_Deliveryman_will_get_an_automatic_approval_mail.') }}">
                                     <img src="{{asset('public/assets/admin/img/info-circle.svg')}}" alt="">
                                 </span>
                             </h5>
@@ -33,10 +43,10 @@
                                        data-type="status"
                                        data-image-on='{{asset('/public/assets/admin/img/modal')}}/place-order-on.png'
                                        data-image-off="{{asset('/public/assets/admin/img/modal')}}/place-order-off.png"
-                                       data-title-on="{{ \App\CentralLogics\Helpers::formatDeliverymanText(translate('Want_to_enable_Delivery_Man_approve_mail?'), null, true) }}"
-                                       data-title-off="{{ \App\CentralLogics\Helpers::formatDeliverymanText(translate('Want_to_disable_Delivery_Man_approve_mail?'), null, true) }}"
-                                       data-text-on="<p>{{ \App\CentralLogics\Helpers::formatDeliverymanText(translate('If_enabled,_Deliverymen_will_get_a_confirmation_email_when_registration_is_approved_by_the_Admin.'), null, true) }}</p>"
-                                       data-text-off="<p>{{ \App\CentralLogics\Helpers::formatDeliverymanText(translate('If_disabled,_Deliverymen_will_not_get_a_registration_approval_email.'), null, true) }}</p>"
+                                       data-title-on="{{translate('Want_to_enable_Delivery_Man_approve_mail?')}}"
+                                       data-title-off="{{translate('Want_to_disable_Delivery_Man_approve_mail?')}}"
+                                       data-text-on="<p>{{translate('If_enabled,_Deliverymen_will_get_a_confirmation_email_when_registration_is_approved_by_the_Admin.')}}</p>"
+                                       data-text-off="<p>{{translate('If_disabled,_Deliverymen_will_not_get_a_registration_approval_email.')}}</p>"
                                         id="mail-status" {{$mail_status == '1'?'checked':''}}>
                                 <span class="toggle-switch-label text mb-0">
                                     <span class="toggle-switch-indicator"></span>
@@ -49,7 +59,7 @@
                 </div>
                 @php($data=\App\Models\EmailTemplate::where('type','dm')->where('email_type', 'approve')->first())
                 @php($template= $template ?? $data?->email_template ?? 5)
-                <form action="{{ route('admin.business-settings.email-setup-update', ['dm','approve']) }}" method="POST" enctype="multipart/form-data">
+                <form action="{{ route('admin.business-settings.email-setup', ['dm','approve']) }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <div class="card border-0">
                         <div class="card-body">
@@ -231,7 +241,7 @@
                                                             <label class="form-label">
                                                                 {{translate('Copyright Content')}}({{ translate('messages.default') }})
                                                             </label>
-                                                            <input type="text" data-id="mail-copyright" name="copyright_text[]"  placeholder="{{ \App\CentralLogics\Helpers::copyright_placeholder() }}" class="form-control" value="{{ $data?->getRawOriginal('copyright_text') }}">
+                                                            <input type="text" data-id="mail-copyright" name="copyright_text[]"  placeholder="{{ translate('Ex:_Copyright_2023_Aduanefie._All_right_reserved') }}" class="form-control" value="{{ $data?->getRawOriginal('copyright_text') }}">
                                                         </div>
                                                     @foreach(json_decode($language) as $lang)
                                                     <?php
@@ -249,7 +259,7 @@
                                                             <label class="form-label">
                                                                 {{translate('Copyright Content')}}({{strtoupper($lang)}})
                                                             </label>
-                                                            <input type="text" name="copyright_text[]"  placeholder="{{ \App\CentralLogics\Helpers::copyright_placeholder() }}" class="form-control" value="{{ $translate[$lang]['copyright_text']??'' }}">
+                                                            <input type="text" name="copyright_text[]"  placeholder="{{ translate('Ex:_Copyright_2023_Aduanefie._All_right_reserved') }}" class="form-control" value="{{ $translate[$lang]['copyright_text']??'' }}">
                                                         </div>
                                                     @endforeach
                                                 @else
@@ -258,13 +268,13 @@
                                                         {{translate('Copyright Content')}}
 
                                                     </label>
-                                                    <input type="text" placeholder="{{ \App\CentralLogics\Helpers::copyright_placeholder() }}" class="form-control" name="copyright_text[]" value="">
+                                                    <input type="text" placeholder="{{ translate('Ex:_Copyright_2023_Aduanefie._All_right_reserved') }}" class="form-control" name="copyright_text[]" value="">
                                                 </div>
                                                 @endif
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="btn--container justify-content-end mt-20">
+                                    <div class="btn--container justify-content-end mt-3">
                                         <button type="reset" id="reset_btn" class="btn btn--reset">{{translate('Reset')}}</button>
                                         <button type="submit" class="btn btn--primary">{{translate('Save')}}</button>
                                     </div>

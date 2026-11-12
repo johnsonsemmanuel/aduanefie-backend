@@ -32,7 +32,7 @@ class ZoneRepository implements ZoneRepositoryInterface
 
     public function getList(array $orderBy = [], array $relations = [], int|string $dataLimit = DEFAULT_DATA_LIMIT, int $offset = null): Collection|LengthAwarePaginator
     {
-        return $this->zone->with($relations)->get();
+        return $this->zone->get();
     }
 
     public function getListWhere(string $searchValue = null, array $filters = [], array $relations = [], int|string $dataLimit = DEFAULT_DATA_LIMIT, int $offset = null): Collection|LengthAwarePaginator
@@ -48,7 +48,6 @@ class ZoneRepository implements ZoneRepositoryInterface
                     }
                 });
             })
-            ->with($relations)
             ->latest()->paginate($dataLimit);
     }
 
@@ -83,7 +82,7 @@ class ZoneRepository implements ZoneRepositoryInterface
 
     public function getWithCoordinateWhere(array $params): ?Model
     {
-        return $this->zone->withoutGlobalScopes()->selectRaw("*,ST_AsText(ST_Centroid(`coordinates`)) as center")->where($params)->first();
+        return $this->zone->withoutGlobalScopes()->selectRaw("*, ST_AsText(ST_Centroid(coordinates)) as center")->where($params)->first();
     }
 
     public function getExportList(Request $request): Collection

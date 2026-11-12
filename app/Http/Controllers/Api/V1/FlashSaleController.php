@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\CentralLogics\Helpers;
-use App\CentralLogics\PersonalizationService;
 use App\Models\FlashSale;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -13,7 +12,13 @@ use Illuminate\Support\Facades\Validator;
 class FlashSaleController extends Controller
 {
     public function get_flash_sales(Request $request){
-       Helpers::setZoneIds($request);
+        if (!$request->hasHeader('zoneId')) {
+            $errors = [];
+            array_push($errors, ['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]);
+            return response()->json([
+                'errors' => $errors
+            ], 200);
+        }
         $zone_id= $request->header('zoneId');
         try {
             $flash_sales = FlashSale::with(['activeProducts','activeProducts.item'])
@@ -32,12 +37,6 @@ class FlashSaleController extends Controller
                 $flash_sales->activeProducts->each(function ($activeProduct) {
                     $activeProduct->item = Helpers::product_data_formatting($activeProduct->item, false, false, app()->getLocale());
                 });
-                // Personalize flash sale product order
-                if(auth('api')->check()){
-                    $flash_sales->activeProducts = PersonalizationService::reorderByPreference(
-                        $flash_sales->activeProducts, auth('api')->id(), 'item.category_id', 'category'
-                    );
-                }
             }
             return response()->json($flash_sales, 200);
         } catch (\Exception $e) {
@@ -52,7 +51,13 @@ class FlashSaleController extends Controller
         if ($validator->fails()) {
             return response()->json(['errors' => Helpers::error_processor($validator)], 403);
         }
-        Helpers::setZoneIds($request);
+        if (!$request->hasHeader('zoneId')) {
+            $errors = [];
+            array_push($errors, ['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]);
+            return response()->json([
+                'errors' => $errors
+            ], 200);
+        }
         $limit = isset($request['limit'])?$request['limit']:50;
         $offset = isset($request['offset'])?$request['offset']:1;
         $zone_id= $request->header('zoneId');
@@ -60,7 +65,7 @@ class FlashSaleController extends Controller
             $query->whereIn('zones.id', json_decode($zone_id, true));
         })->module(config('module.current_module_data')['id'])
         ->running()->active()->first();
-
+ 
         if(!$flash_sale){
             return response()->json([
                 'errors' => [
@@ -73,8 +78,6 @@ class FlashSaleController extends Controller
 
             ->wherehas('item.store', function($query)use($zone_id){
                 $query->whereIn('zone_id',json_decode($zone_id, true));
-            })->wherehas('item',function($query){
-                $query->active();
             })
 
             ->paginate($limit, ['*'], 'page', $offset);

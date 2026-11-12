@@ -1,9 +1,7 @@
 @extends('layouts.admin.app')
 
 @section('title', translate('Store Report'))
-@section('store_summary_report')
-    active
-@endsection
+
 @push('css_or_js')
     <meta name="csrf-token" content="{{ csrf_token() }}">
 @endpush
@@ -68,7 +66,7 @@
                                 data-placeholder="{{ translate('messages.select_store') }}"
                                 class="js-data-example-ajax form-control set-filter" data-url="{{ url()->full() }}" data-filter="store_id">
                                 @if (isset($store))
-                                    <option value="{{ $store->id }}" data-verified="{{ (int) $store->verified_seller }}" selected>{{ $store->name }}</option>
+                                    <option value="{{ $store->id }}" selected>{{ $store->name }}</option>
                                 @else
                                     <option value="all" selected>{{ translate('messages.all_stores') }}</option>
                                 @endif
@@ -325,7 +323,7 @@
                                 <img class="avatar avatar-xss avatar-4by3 mr-2"
                                     src="{{ asset('public/assets/admin') }}/svg/components/placeholder-csv-format.svg"
                                     alt="Image Description">
-                                {{ translate('messages.csv') }}
+                                .{{ translate('messages.csv') }}
                             </a>
                         </div>
                     </div>
@@ -406,7 +404,7 @@
                                         </div>
                                     </td>
                                     <td class="text-center mw--85px">
-                                        {{ \App\CentralLogics\Helpers::number_format_short($order['coupon_discount_amount'] + $order['store_discount_amount']  + $order['ref_bonus_amount'] + ($order->orderProDiscount?->amount_saved ?? 0)) }}
+                                        {{ \App\CentralLogics\Helpers::number_format_short($order['coupon_discount_amount'] + $order['store_discount_amount']  + $order['ref_bonus_amount']) }}
                                     </td>
                                     <td class="text-center mw--85px">
                                         {{ \App\CentralLogics\Helpers::number_format_short($order['total_tax_amount']) }}
@@ -530,7 +528,7 @@
 
         $('.js-data-example-ajax').select2({
             ajax: {
-                url: '{{ route('admin.store.get-stores') }}',
+                url: '{{ url('/') }}/admin/store/get-stores',
                 data: function(params) {
                     return {
                         q: params.term, // search term

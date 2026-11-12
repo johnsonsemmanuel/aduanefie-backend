@@ -76,7 +76,7 @@ class SubscriptionController extends Controller
                     ]);
                 }
                 if (config('mail.status') && Helpers::get_mail_status('rental_subscription_cancel_mail_status_provider') == '1' &&  Helpers::getRentalNotificationStatusData('provider','provider_subscription_cancel','mail_status' ,$store?->id)) {
-                    Mail::to($store?->getRawOriginal('email'))->send(new ProviderSubscriptionCancel($store->name));
+                    Mail::to($store->email)->send(new ProviderSubscriptionCancel($store->name));
                 }
             } else{
             if( Helpers::getNotificationStatusData('store','store_subscription_cancel','push_notification_status',$store->id)  &&  $store?->vendor?->firebase_token){
@@ -97,7 +97,7 @@ class SubscriptionController extends Controller
                 ]);
             }
             if (config('mail.status') && Helpers::get_mail_status('subscription_cancel_mail_status_store') == '1' &&  Helpers::getNotificationStatusData('store','store_subscription_cancel','mail_status' ,$store?->id)) {
-                Mail::to($store?->getRawOriginal('email'))->send(new SubscriptionCancel($store->name));
+                Mail::to($store->email)->send(new SubscriptionCancel($store->name));
             }
         }
         } catch (\Exception $ex) {
@@ -134,7 +134,7 @@ class SubscriptionController extends Controller
         'transaction_type'=>'pending_bill', 'is_success' =>0])?->sum('amount') ?? 0;
 
         $balance = BusinessSetting::where('key', 'wallet_status')->first()?->value == 1 ? StoreWallet::where('vendor_id',$store->vendor_id)->first()?->balance ?? 0 : 0;
-        $payment_methods = Helpers::getActivePaymentGateways();
+        $payment_methods = Helpers::getDefaultPaymentMethods();
         $disable_item_count=null;
         if(data_get(Helpers::subscriptionConditionsCheck(store_id:$store->id,package_id:$package->id) , 'disable_item_count') > 0 && ( !$store_subscription || $package->id != $store_subscription->package_id)){
             $disable_item_count=data_get(Helpers::subscriptionConditionsCheck(store_id:$store->id,package_id:$package->id) , 'disable_item_count');

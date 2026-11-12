@@ -1,3 +1,6 @@
+<?php
+$company_name = App\Models\BusinessSetting::where('key', 'business_name')->first()->value;
+?>
 <table class="main-table">
     <tbody>
         <tr>
@@ -40,7 +43,7 @@
                     {{ translate('Thanks_&_Regards') }},
                 </div>
                 <div class="mb-4">
-                    {{ \App\CentralLogics\Helpers::get_business_settings('business_name', false) }}
+                    {{ $company_name }}
                 </div>
             </td>
         </tr>
@@ -70,9 +73,10 @@
                     </a>
                 </span>
                 <span class="copyright" id="mail-copyright">
-                    {{ $data['copyright_text']?? \App\CentralLogics\Helpers::copyright_text() }}
+                    {{ $data['copyright_text']?? translate('Copyright 2023 aduanefie. All right reserved') }}
                 </span>
             </td>
         </tr>
     </tbody>
 </table>
+<script src="{{asset('public/assets/admin')}}/js/view-pages/common.js"></script>

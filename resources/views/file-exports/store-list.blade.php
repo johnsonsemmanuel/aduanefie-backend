@@ -69,7 +69,7 @@
             <td>&nbsp;</td>
             <td>{{  $store['name']  }}</td>
             <td>
-                @if($isRental == 'Provider')
+                @if($isRental)
                     {{ number_format($store->vehicle_reviews->avg('rating')) }}
                 @else
                     @php($store_reviews = \App\CentralLogics\StoreLogic::calculate_store_rating($store['rating']))
@@ -83,14 +83,14 @@
             </td>
             <td> {{ $store->address }} </td>
             <td>
-                @if($isRental == 'Provider')
+                @if($isRental)
                     {{ count($store->vehicles) }}
                 @else
                     {{ $store->items_count }}
                 @endif
             </td>
             <td>
-                @if($isRental == 'Provider')
+                @if($isRental)
                     {{ count($store->trips) }}
                 @else
                     {{ $store->orders()->StoreOrder()->count() }}

@@ -88,7 +88,7 @@
                     <form  class="search-form">
                         <!-- Search -->
                         <div class="input--group input-group input-group-merge input-group-flush">
-                            <input name="search" value="{{ request()->search ?? null }}"   type="search" class="form-control" placeholder="{{ translate('Search by order id ,Phone number ,Customer name') }}">
+                            <input name="search" value="{{ request()->search ?? null }}"   type="search" class="form-control" placeholder="{{ translate('Search by Order ID') }}">
                             <button type="submit" class="btn btn--secondary"><i class="tio-search"></i></button>
                         </div>
                         <!-- End Search -->
@@ -119,7 +119,7 @@
                                 <img class="avatar avatar-xss avatar-4by3 mr-2"
                                     src="{{ asset('public/assets/admin') }}/svg/components/placeholder-csv-format.svg"
                                     alt="Image Description">
-                                {{ translate('messages.csv') }}
+                                .{{ translate('messages.csv') }}
                             </a>
                         </div>
                     </div>
@@ -142,7 +142,7 @@
                                 @endif
                                 <th class="text-center" >{{translate('Date & Time')}}</th>
                                 <th class="text-center" >{{ translate('Expense Type') }}</th>
-                                <th class="text-center" >{{ translate('Customer Info') }}</th>
+                                <th class="text-center" >{{ translate('Customer Name') }}</th>
                                 <th class="border-0 text-right pr-xl-5">
                                     <div class="pr-xl-5">
                                         {{translate('expense amount')}}
@@ -181,41 +181,16 @@
 
 
                                     <td class="text-center">
-                                        @if ($exp->order)
+                                    @if (isset($exp?->order?->customer))
+                                    {{ $exp?->order?->fullName }}
+                                    @elseif($exp?->order?->is_guest)
+                                        @php($customer_details = json_decode($exp?->order['delivery_address'],true))
+                                        {{$customer_details['contact_person_name']}}
+                                    @else
+                                    <label class="badge badge-danger">{{translate('messages.invalid_customer_data')}}</label>
 
-                                        @if($exp->order?->is_guest)
-                                        @php($customer_details = json_decode($exp->order['delivery_address'],true))
-                                        <strong>{{$customer_details['contact_person_name']}}</strong>
-
-                                        @elseif($exp->order?->customer)
-
-                                        {{$exp->order?->customer['f_name'].' '.$exp->order?->customer['l_name']}}
-                                        @else
-                                            <label
-                                                class="badge badge-danger">{{translate('messages.invalid_customer_data')}}</label>
-                                        @endif
-
-                                        @elseif($exp->trip)
-                                        @if ($exp?->trip?->customer)
-
-                                            {{ $exp?->trip?->customer?->fullName }}
-
-                                            @elseif($exp?->trip?->user_info['contact_person_name'])
-                                                <div class="font-medium">
-                                                    {{$exp?->trip?->user_info['contact_person_name'] }}
-                                                </div>
-                                            @else
-                                                {{ translate('messages.Guest_user') }}
-                                            @endif
-
-
-                                        @elseif ($exp['type'] == 'add_fund_bonus')
-                                        {{ $exp->user->f_name.' '.$exp->user->l_name }}
-                                        @else
-                                        <label class="badge badge-danger">{{translate('messages.invalid_customer_data')}}</label>
-
-                                        @endif
-                                    </td>
+                                    @endif
+                                </td>
                                 <td class="text-right pr-xl-5">
                                     <div class="pr-xl-5">
                                         {{\App\CentralLogics\Helpers::format_currency($exp['amount'])}}

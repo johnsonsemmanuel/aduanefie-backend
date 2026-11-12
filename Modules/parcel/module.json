@@ -1,0 +1,13 @@
+{
+    "name": "Parcel",
+    "alias": "parcel",
+    "description": "Produce shipping and logistics module - farm-to-market transport, cold chain logistics, and produce delivery services.",
+    "keywords": ["parcel", "shipping", "logistics", "cold-chain"],
+    "priority": 40,
+    "providers": [
+        "Modules\\Parcel\\Providers\\ParcelServiceProvider"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": []
+}

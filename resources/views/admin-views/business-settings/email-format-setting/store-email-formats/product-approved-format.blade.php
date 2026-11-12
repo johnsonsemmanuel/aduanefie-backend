@@ -10,14 +10,24 @@
     <div class="content container-fluid">
         <!-- Page Header -->
         <div class="page-header">
-            @include('admin-views.business-settings.email-format-setting.partials.email-template-header')
+            <div class="d-flex flex-wrap justify-content-between align-items-center __gap-15px">
+                <h1 class="page-header-title mr-3 mb-0">
+                    <span class="page-header-icon">
+                        <img src="{{ asset('public/assets/admin/img/email-setting.png') }}" class="w--26" alt="">
+                    </span>
+                    <span>
+                        {{ translate('messages.Email Templates') }}
+                    </span>
+                </h1>
+                @include('admin-views.business-settings.email-format-setting.partials.email-template-options')
+            </div>
             @include('admin-views.business-settings.email-format-setting.partials.store-email-template-setting-links')
         </div>
 
         <div class="tab-content">
             <div class="tab-pane fade show active">
                 <div class="card mb-3">
-                    @php($mail_status=\App\Models\BusinessSetting::where('key','product_approved_mail_status_store')->first()?->value ?? '0')
+                    @php($mail_status=\App\Models\BusinessSetting::where('key','product_approve_mail_status_store')->first()?->value ?? '0')
                     <div class="card-body">
                         <div class="maintenance-mode-toggle-bar d-flex flex-wrap justify-content-between border rounded align-items-center p-2">
                             <h5 class="text-capitalize m-0 text--primary pl-2">
@@ -36,7 +46,7 @@
                                        data-title-off="{{translate('Want_to_disable_product_approval_mai?')}}"
                                        data-text-on="<p>{{translate('If_enabled,_Stores_will_receive_a_confirmation_email_when_the_Admin_approves_their_product.')}}</p>"
                                        data-text-off="<p>{{translate('If_disabled,_Stores_will_not_get_a_product_approval_mail.')}}</p>"
-                                       id="mail-status" name="product_approve_mail_status_store" {{$mail_status == '1'?'checked':''}}>
+                                       id="mail-status" {{$mail_status == '1'?'checked':''}}>
                                 <span class="toggle-switch-label text mb-0">
                                     <span class="toggle-switch-indicator"></span>
                                 </span>
@@ -48,7 +58,7 @@
                 </div>
                 @php($data=\App\Models\EmailTemplate::where('type','store')->where('email_type', 'product_approved')->first())
                 @php($template= $template ?? $data?->email_template ?? 5)
-                <form action="{{ route('admin.business-settings.email-setup-update', ['store','product-approved']) }}" method="POST" enctype="multipart/form-data">
+                <form action="{{ route('admin.business-settings.email-setup', ['store','product-approved']) }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <div class="card border-0">
                         <div class="card-body">
@@ -228,7 +238,7 @@
                                                             <label class="form-label">
                                                                 {{translate('Copyright Content')}}({{ translate('messages.default') }})
                                                             </label>
-                                                            <input type="text" data-id="mail-copyright" name="copyright_text[]"  placeholder="{{ \App\CentralLogics\Helpers::copyright_placeholder() }}" class="form-control" value="{{ $data?->getRawOriginal('copyright_text') }}">
+                                                            <input type="text" data-id="mail-copyright" name="copyright_text[]"  placeholder="{{ translate('Ex:_Copyright_2023_Aduanefie._All_right_reserved') }}" class="form-control" value="{{ $data?->getRawOriginal('copyright_text') }}">
                                                         </div>
                                                     @foreach(json_decode($language) as $lang)
                                                     <?php
@@ -246,7 +256,7 @@
                                                             <label class="form-label">
                                                                 {{translate('Copyright Content')}}({{strtoupper($lang)}})
                                                             </label>
-                                                            <input type="text" name="copyright_text[]"  placeholder="{{ \App\CentralLogics\Helpers::copyright_placeholder() }}" class="form-control" value="{{ $translate[$lang]['copyright_text']??'' }}">
+                                                            <input type="text" name="copyright_text[]"  placeholder="{{ translate('Ex:_Copyright_2023_Aduanefie._All_right_reserved') }}" class="form-control" value="{{ $translate[$lang]['copyright_text']??'' }}">
                                                         </div>
                                                     @endforeach
                                                 @else
@@ -255,13 +265,13 @@
                                                         {{translate('Copyright Content')}}
 
                                                     </label>
-                                                    <input type="text" placeholder="{{ \App\CentralLogics\Helpers::copyright_placeholder() }}" class="form-control" name="copyright_text[]" value="">
+                                                    <input type="text" placeholder="{{ translate('Ex:_Copyright_2023_Aduanefie._All_right_reserved') }}" class="form-control" name="copyright_text[]" value="">
                                                 </div>
                                                 @endif
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="btn--container justify-content-end mt-20">
+                                    <div class="btn--container justify-content-end mt-3">
                                         <button type="reset" id="reset_btn" class="btn btn--reset">{{translate('Reset')}}</button>
                                         <button type="submit" class="btn btn--primary">{{translate('Save')}}</button>
                                     </div>

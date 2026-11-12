@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -48,9 +49,6 @@ class Banner extends Model
         'featured',
         'default_link',
         'created_by',
-        'time_period',
-        'start_date',
-        'end_date',
     ];
 
     /**
@@ -62,9 +60,6 @@ class Banner extends Model
         'zone_id' => 'integer',
         'module_id' => 'integer',
         'featured' => 'boolean',
-        'time_period' => 'string',
-        'start_date' => 'date',
-        'end_date' => 'date',
     ];
 
     protected $appends = ['image_full_url'];
@@ -181,8 +176,6 @@ class Banner extends Model
     {
         parent::boot();
         static::saved(function ($model) {
-            Helpers::deleteCacheData('banners_');
-
             if($model->isDirty('image')){
                 $value = Helpers::getDisk();
 
@@ -197,16 +190,5 @@ class Banner extends Model
                 ]);
             }
         });
-        static::created(function () {
-            Helpers::deleteCacheData('banners_');
-        });
-        static::deleted(function(){
-            Helpers::deleteCacheData('banners_');
-        });
-
-        static::updated(function(){
-            Helpers::deleteCacheData('banners_');
-        });
-
     }
 }

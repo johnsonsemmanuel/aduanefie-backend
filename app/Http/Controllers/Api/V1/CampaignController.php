@@ -7,13 +7,18 @@ use App\Models\Campaign;
 use App\Models\ItemCampaign;
 use Illuminate\Http\Request;
 use App\CentralLogics\Helpers;
-use App\CentralLogics\PersonalizationService;
 use Illuminate\Support\Facades\Validator;
 
 class CampaignController extends Controller
 {
     public function get_basic_campaigns(Request $request){
-        Helpers::setZoneIds($request);
+        if (!$request->hasHeader('zoneId')) {
+            $errors = [];
+            array_push($errors, ['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]);
+            return response()->json([
+                'errors' => $errors
+            ], 200);
+        }
         $zone_id= $request->header('zoneId');
         try {
             $campaigns = Campaign::
@@ -36,7 +41,13 @@ class CampaignController extends Controller
         }
     }
     public function basic_campaign_details(Request $request){
-        Helpers::setZoneIds($request);
+        if (!$request->hasHeader('zoneId')) {
+            $errors = [];
+            array_push($errors, ['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]);
+            return response()->json([
+                'errors' => $errors
+            ], 200);
+        }
         $zone_id= $request->header('zoneId');
         $longitude= $request->header('longitude');
         $latitude= $request->header('latitude');
@@ -61,10 +72,7 @@ class CampaignController extends Controller
             ->whereHas('module.zones', function($query)use($zone_id){
                 $query->whereIn('zones.id', json_decode($zone_id, true));
             })
-            ->running()
-            ->active()
-            ->where(fn($q) => $q->where('id', $request->basic_campaign_id)->orWhere('slug', $request->basic_campaign_id))
-            ->first();
+            ->running()->active()->whereId($request->basic_campaign_id)->first();
 
             $campaign=Helpers::basic_campaign_data_formatting($campaign, false);
 
@@ -76,10 +84,16 @@ class CampaignController extends Controller
         }
     }
     public function get_item_campaigns(Request $request){
-        Helpers::setZoneIds($request);
+        if (!$request->hasHeader('zoneId')) {
+            $errors = [];
+            array_push($errors, ['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]);
+            return response()->json([
+                'errors' => $errors
+            ], 200);
+        }
         $zone_id= $request->header('zoneId');
-        $item_campaign_default_status = Helpers::get_business_settings('item_campaign_default_status') ??  1;
-        $item_campaign_sort_by_general = Helpers::getPriorityList(name: 'item_campaign_sort_by_general', type: 'general');
+        $item_campaign_default_status = \App\Models\BusinessSetting::where('key', 'item_campaign_default_status')->first()?->value ??  1;
+        $item_campaign_sort_by_general = \App\Models\PriorityList::where('name', 'item_campaign_sort_by_general')->where('type','general')->first()?->value ?? '';
         try {
             $query = ItemCampaign::active()
             ->whereHas('module.zones', function($query)use($zone_id){
@@ -95,8 +109,8 @@ class CampaignController extends Controller
             ->running();
 
             if($item_campaign_default_status == 1){
-                $query = PersonalizationService::applyCampaignPersonalization($query, auth('api')->id());
                 $query = $query->latest();
+
             } else{
                 if ($item_campaign_sort_by_general == 'order_count') {
                     $query = $query->withCount([

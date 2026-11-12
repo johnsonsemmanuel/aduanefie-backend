@@ -36,8 +36,8 @@ class PlaceOrder extends Mailable
         $company_name = BusinessSetting::where('key', 'business_name')->first()->value;
         $data=EmailTemplate::where('type','user')->where('email_type', 'new_order')->first();
         $template=$data?$data->email_template:3;
-        $user_name = $order?->customer?->f_name.' '.$order?->customer?->l_name;
-        $store_name = $order?->store?->name;
+        $user_name = $order->customer->f_name.' '.$order->customer->l_name;
+        $store_name = $order->store->name;
         $delivery_man_name = $order->delivery_man?->f_name.''.$order->delivery_man?->l_name;
         $title = Helpers::text_variable_data_format( value:$data['title']??'',user_name:$user_name??'',store_name:$store_name??'',delivery_man_name:$delivery_man_name??'',order_id:$order_id??'');
         $body = Helpers::text_variable_data_format( value:$data['body']??'',user_name:$user_name??'',store_name:$store_name??'',delivery_man_name:$delivery_man_name??'',order_id:$order_id??'');

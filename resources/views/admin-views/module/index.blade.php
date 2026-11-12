@@ -35,7 +35,7 @@
                         <div class="input-group input--group">
                             <input id="datatableSearch" name="search" type="search" class="form-control" placeholder="{{translate('ex_:_Search_Module_by_Name')}}" aria-label="{{translate('messages.search_here')}}" value="{{request()->query('search')}}">
                             <button type="submit" class="btn btn--secondary"><i class="tio-search"></i></button>
-                            @if(request()->input('search'))
+                            @if(request()->get('search'))
                             <button type="reset" class="btn btn--primary ml-2 location-reload-to-base" data-url="{{url()->full()}}">{{translate('messages.reset')}}</button>
                             @endif
                         </div>
@@ -49,9 +49,6 @@
                         <select id="module_type" name="module_type" class="form-control h--45px set-filter" data-url="{{ url()->full() }}" data-filter="module_type">
                             <option value="all" {{ request('module_type') == 'all' ? 'selected' : '' }}>{{ translate('messages.all_module_type') }}</option>
                             @foreach (config('module.module_type') as $key)
-                                {{-- Hide addon-based module types whose addon isn't published --}}
-                                @continue($key === 'rental' && !addon_published_status('Rental'))
-                                @continue($key === 'ride-share' && !addon_published_status('RideShare'))
                                 <option class="" value="{{$key}}" {{ request('module_type') == $key ? 'selected' : '' }}>{{translate($key)}}</option>
                             @endforeach
                         </select>
@@ -78,7 +75,7 @@
                                 <img class="avatar avatar-xss avatar-4by3 mr-2"
                                     src="{{ asset('public/assets/admin') }}/svg/components/placeholder-csv-format.svg"
                                     alt="Image Description">
-                                {{ translate('messages.csv') }}
+                                .{{ translate('messages.csv') }}
                             </a>
                         </div>
                     </div>
@@ -101,7 +98,7 @@
                             <tr>
                                 <th class="border-0 pl-4 w--05">{{translate('messages.sl')}}</th>
                                 <th class="border-0 w--1">{{translate('messages.module_id')}}</th>
-                                <th class="border-0 w--2">{{translate('Module Name')}}</th>
+                                <th class="border-0 w--2">{{translate('messages.name')}}</th>
                                 <th class="border-0 w--2">{{translate('messages.business_Module_type')}}</th>
                                 <th class="border-0 text-center w--2">{{translate('messages.total_vendors')}}</th>
                                 <th class="border-0 w--1">{{translate('messages.status')}}</th>
@@ -126,14 +123,9 @@
                                     </span>
                                 </td>
                                 <td class="text-center">
-                                    @if ( in_array($module['module_type'], ['parcel' , 'ride-share']))
-                                        {{ translate('N/A') }}
-                                    @else
                                     {{$module->stores->filter(function($store) {
                                         return $store->vendor && $store->vendor->status == 1;
                                     })->count()}}
-
-                                    @endif
                                 </td>
                                 <td>
                                     <label class="toggle-switch toggle-switch-sm" for="status-{{$module->id}}">
@@ -239,7 +231,7 @@
                                     {{translate("Otherwise this zone won't function properly & will work show anything against this zone")}}
                                 </p>
                             </div>
-                            <img src="{{asset('/public/assets/admin/img/zone-settings-popup-arro.gif')}}" alt="admin/img" class="w-100 h-unset">
+                            <img src="{{asset('/public/assets/admin/img/zone-settings-popup-arrow.gif')}}" alt="admin/img" class="w-100 h-unset">
                         </div>
                     </div>
                     <div class="item px-xl-4">

@@ -1,5 +1,4 @@
 <div class="modal fade" id="instructions">
-    @php($deliverymanNameInstruction = \App\CentralLogics\Helpers::formatDeliverymanText(translate('the_name_of_the_delivery_person.'), null, true))
     <div class="modal-dialog status-warning-modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -56,7 +55,7 @@
                                     {userName}: {{ translate('the_name_of_the_user.') }}
                                 </li>
                                 <li>
-                                    {deliveryManName}: {{ $deliverymanNameInstruction }}
+                                    {deliveryManName}: {{ translate('the_name_of_the_delivery_person.') }}
                                 </li>
                                 <li>
                                     {storeName}: {{ translate('the_name_of_the_store.') }}

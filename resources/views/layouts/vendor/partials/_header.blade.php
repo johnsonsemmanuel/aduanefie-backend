@@ -13,34 +13,12 @@
                 </button>
                 <!-- End Navbar Vertical Toggle -->
             </div>
-            @if(\App\CentralLogics\Helpers::check_website_builder_status())
-            <div class="" id="vendor-dashboard-builder-button">
-                <a href="{{ route('vendor.builder.index', ['page' => 'global-settings']) }}"
-                   class="website-builder-btn">
-                    <span class="website-builder-icon">
-                        <img src="{{ asset('public/assets/admin/img/builder.svg') }}" alt="" >
-                    </span>
-                    <span>{{ translate('Build Your Custom Website') }}</span>
-                </a>
-            </div>
-            @endif
+
             <!-- Secondary Content -->
             <div class="navbar-nav-wrap-content-right">
                 <!-- Navbar -->
                 <ul class="navbar-nav align-items-center flex-row">
-                    <li class="nav-item max-sm-m-0 w-xxl-200px ml-auto mr-2 flex-grow-0">
-                        <button type="button" id="modalOpener" class="title-color bg--secondary border-0 rounded justify-content-between w-100 align-items-center py-2 px-2 px-md-3 d-flex gap-1" data-toggle="modal" data-target="#staticBackdrop">
-                            <div class="align-items-center d-flex flex-grow-1 gap-1 justify-content-between">
-                                <span class="align-items-center d-none d-xxl-flex gap-2 text-muted">{{translate('Search_or')}}
-
-                                    <span class="bg-E7E6E8 border ctrlplusk d-md-block d-none font-bold fs-12 fw-bold lh-1 ms-1 px-1 rounded text-muted">Ctrl+K</span>
-
-                                </span>
-                                <img width="14" src="{{asset('/public/assets/admin/img/new-img/search.svg')}}" class="svg" alt="">
-                            </div>
-                        </button>
-                    </li>
-                    <li class="nav-item ml-3 max-sm-m-0">
+                    <li class="nav-item max-sm-m-0">
                         <div class="hs-unfold">
                             <div>
                                 @php($local = session()->has('vendor_local')?session('vendor_local'):null)
@@ -76,7 +54,6 @@
                             </div>
                         </div>
                     </li>
-                    @if (\App\CentralLogics\Helpers::employee_module_permission_check('chat'))
                     <li class="nav-item d-none d-sm-inline-block mr-4">
                         <!-- Notification -->
                         <div class="hs-unfold">
@@ -91,7 +68,6 @@
                         </div>
                         <!-- End Notification -->
                     </li>
-                    @endif
 
 
 
@@ -130,7 +106,7 @@
                                                  alt="Owner image">
                                         </div>
                                         <div class="media-body">
-                                            <span class="card-title h5">{{\App\CentralLogics\Helpers::get_loggedin_user()->f_name}} {{\App\CentralLogics\Helpers::get_loggedin_user()->l_name}}</span>
+                                            <span class="card-title h5">{{\App\CentralLogics\Helpers::get_loggedin_user()->f_name}}</span>
                                             <span class="card-text">{{\App\CentralLogics\Helpers::get_loggedin_user()->email}}</span>
                                         </div>
                                     </div>
@@ -157,31 +133,6 @@
             <!-- End Secondary Content -->
         </div>
     </header>
-</div>
-<div class="modal fade removeSlideDown" id="staticBackdrop" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered max-w-520">
-        <div class="modal-content modal-content__search border-0">
-            <div class="d-flex flex-column gap-3 rounded-20 bg-card py-2 px-3">
-                <div class="d-flex gap-2 align-items-center position-relative">
-                    <form class="flex-grow-1" id="searchForm" action="{{ route('vendor.search.routing') }}">
-                        @csrf
-                        <div class="d-flex align-items-center global-search-container">
-                            <input autocomplete="off" class="form-control flex-grow-1 rounded-10 search-input" id="searchInput" maxlength="255" name="search" type="search" placeholder="{{ translate('Search_by_keyword') }}" aria-label="Search" autofocus>
-                        </div>
-                    </form>
-                    <div class="position-absolute right-0 pr-2">
-                        <button class="border-0 rounded px-2 py-1" type="button" data-dismiss="modal">{{ translate('Esc') }}</button>
-                    </div>
-                </div>
-
-                <div class="min-h-350">
-                    <div class="search-result" id="searchResults">
-                        <div class="text-center text-muted py-5">{{translate('It appears that you have not yet searched.')}}.</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 <div id="headerFluid" class="d-none"></div>
 <div id="headerDouble" class="d-none"></div>
@@ -271,7 +222,7 @@ $val= (string) ($cash_in_hand_overflow_store_amount - (($cash_in_hand_overflow_s
                     $pers=  439.6 * $pers / 100;
             }
         ?>
-        @if ($store_data?->store_sub?->is_trial == 0 && $store_data?->store_sub?->expiry_date_parsed && $store_data?->store_sub->expiry_date_parsed->subDays((int) $subscription_deadline_warning_days)->isBefore(now()) && Request::is('vendor-panel'))
+        @if ($store_data?->store_sub?->is_trial == 0 && $store_data?->store_sub?->expiry_date_parsed && $store_data?->store_sub->expiry_date_parsed->subDays($subscription_deadline_warning_days)->isBefore(now()) && Request::is('vendor-panel'))
 
                 <!--Always in header Renew -->
                 <div class="renew-badge mb-20" id="renew-badge">
@@ -289,7 +240,7 @@ $val= (string) ($cash_in_hand_overflow_store_amount - (($cash_in_hand_overflow_s
 
 
 
-        @elseif ( Session::get('subscription_renew_close_btn') !== true && $store_data?->store_sub?->is_trial == 0  && $store_data?->store_sub?->expiry_date_parsed && $store_data?->store_sub->expiry_date_parsed->subDays( (int) $subscription_deadline_warning_days)->isBefore(now()) && !Request::is('vendor-panel'))
+        @elseif ( Session::get('subscription_renew_close_btn') !== true && $store_data?->store_sub?->is_trial == 0  && $store_data?->store_sub?->expiry_date_parsed && $store_data?->store_sub->expiry_date_parsed->subDays($subscription_deadline_warning_days)->isBefore(now()) && !Request::is('vendor-panel'))
 
 
                 <div class="renew-badge mb-20 hide-warning" id="renew-badge">
@@ -407,7 +358,7 @@ $val= (string) ($cash_in_hand_overflow_store_amount - (($cash_in_hand_overflow_s
                                 <circle r="70" cx="80" cy="80" fill="transparent" stroke="#ffffff20" stroke-width="12px"></circle>
                                 <circle r="70" cx="80" cy="80" fill="transparent" stroke="#ffffff" stroke-width="12px" stroke-dasharray="439.6px" stroke-dashoffset="{{ $pers }}px"></circle>
                             </svg>
-                            {{ (int)Carbon\Carbon::now()->diffInDays($store_data?->store_sub?->expiry_date_parsed->format('Y-m-d'), false) }}
+                            {{ Carbon\Carbon::now()->diffInDays($store_data?->store_sub?->expiry_date_parsed->format('Y-m-d'), false) }}
                         </span>
                         {{translate('Days_left_in_this_subscription')}}
                     </a>
@@ -436,7 +387,7 @@ $val= (string) ($cash_in_hand_overflow_store_amount - (($cash_in_hand_overflow_s
                                 <circle r="70" cx="80" cy="80" fill="transparent" stroke="#ffffff20" stroke-width="12px"></circle>
                                 <circle r="70" cx="80" cy="80" fill="transparent" stroke="#ffffff" stroke-width="12px" stroke-dasharray="439.6px" stroke-dashoffset="{{ $pers }}px"></circle>
                             </svg>
-                            {{ (int)Carbon\Carbon::now()->diffInDays($store_data?->store_sub?->expiry_date_parsed->format('Y-m-d'), false) }}
+                            {{ Carbon\Carbon::now()->diffInDays($store_data?->store_sub?->expiry_date_parsed->format('Y-m-d'), false) }}
                         </span>
                         {{translate('Days_left_in_this_subscription')}}
                     </a>
@@ -470,22 +421,22 @@ $val= (string) ($cash_in_hand_overflow_store_amount - (($cash_in_hand_overflow_s
 
 @endif
 
-
-
 <script>
     document.addEventListener('DOMContentLoaded', function () {
                 $(document).on('click', '.log-out', function () {
                 Swal.fire({
-                title: '{{ translate('Do you want to sign out?') }}',
+                title: '{{ translate('Do you want to logout?') }}',
                 showDenyButton: true,
                 showCancelButton: true,
                 confirmButtonColor: '#FC6A57',
                 cancelButtonColor: '#363636',
                 confirmButtonText: `{{ translate('yes')}}`,
-                cancelButtonText: `{{ translate('Cancel')}}`,
+                cancelButtonText: `{{ translate('Do_not_Logout')}}`,
                 }).then((result) => {
                 if (result.value) {
                 location.href='{{route('logout')}}';
+                } else{
+                Swal.fire('{{ translate('messages.canceled') }}', '', 'info')
                 }
             })
         });

@@ -7,19 +7,16 @@
             onclick="viewAdminConvs('{{route('admin.message.view',['conversation_id'=>$conv->id,'user_id'=>$user->id])}}','customer-{{$user->id}}','{{ $conv->id }}','{{ $user->id }}')"
                 id="customer-{{$user->id}}">
             <div class="chat-user-info-img d-none d-md-block">
-                @include('partials._user-avatar', [
-                    'imageUrl'  => $user['image_full_url'],
-                    'proStatus' => $user['pro_status'] ?? false,
-                    'size'      => 55,
-                ])
+                <img class="avatar-img onerror-image"
+                src="{{ $user['image_full_url'] }}"
+                        data-onerror-image="{{asset('public/assets/admin')}}/img/160x160/img1.jpg"
+                        alt="Image Description">
             </div>
             <div class="chat-user-info-content">
                 <h5 class="mb-0 d-flex justify-content-between">
-                    <span>
-                        <span class=" mr-2">{{$user['f_name'].' '.$user['l_name']}}</span> <span
-                            class="{{$unchecked ? 'badge badge-info' : ''}}">{{$unchecked ? $unchecked : ''}}</span>
-                    </span>
-                    <small>{{date(config('timeformat'),strtotime($conv->last_message?->created_at))}}</small>
+                    <span class=" mr-3">{{$user['f_name'].' '.$user['l_name']}}</span> <span
+                        class="{{$unchecked ? 'badge badge-info' : ''}}">{{$unchecked ? $unchecked : ''}}</span>
+                        <small>{{date(config('timeformat'),strtotime($conv->last_message?->created_at))}}</small>
                 </h5>
                 <small>{{ $user['phone'] }}</small>
                 <div class="text-title">{{ Str::limit($conv->last_message?->message ??'', 35, '...') }}</div>
@@ -41,3 +38,5 @@
         </div>
     @endif
 @endforeach
+
+<script src="{{asset('public/assets/admin')}}/js/view-pages/common.js"></script>

@@ -12,37 +12,10 @@ use App\Models\AccountTransaction;
 use Illuminate\Support\Facades\DB;
 use App\Mail\OrderVerificationMail;
 use App\CentralLogics\CustomerLogic;
-use App\Models\Module;
 use Illuminate\Support\Facades\Mail;
 use App\Models\SubscriptionBillingAndRefundHistory;
 use Brian2694\Toastr\Facades\Toastr;
 use Modules\Rental\Entities\Trips;
-
-/*
- * True when the given user belongs to a storefront (tenant or sub-tenant
- * set) AND the Builder wallet-features master switch is off. Lets the
- * shared host pipeline (wallet/loyalty/referral/cashback credits, refund
- * flow, related notifications) skip side effects for storefront customers
- * without affecting host customers (who carry tenant_id = sub_tenant_id = 0).
- */
-if (! function_exists('storefront_wallet_disabled_for_user')) {
-    function storefront_wallet_disabled_for_user($userId): bool
-    {
-        if (\config('builder.wallet_features_enabled', true)) {
-            return false;
-        }
-        if (! $userId) {
-            return false;
-        }
-        $user = \App\Models\User::withoutGlobalScope(\App\Scopes\HostScope::class)
-            ->select(['id', 'tenant_id', 'sub_tenant_id'])
-            ->find($userId);
-        if (! $user) {
-            return false;
-        }
-        return ((int) $user->tenant_id) > 0 || ((int) $user->sub_tenant_id) > 0;
-    }
-}
 
 if (! function_exists('translate')) {
     function translate($key, $replace = [])
@@ -95,22 +68,13 @@ if (! function_exists('collect_cash_success')) {
                 $account_transaction->created_by = 'store';
             }
             elseif($data->attribute === 'deliveryman_collect_cash_payments'){
-                $user_data = DeliveryMan::withoutGlobalScope('delivery_only')->findOrFail($data->attribute_id);
+                $user_data = DeliveryMan::findOrFail($data->attribute_id);
                 $user_data->status = 1;
                 $user_data->save();
                 $current_balance = $user_data?->wallet?->collected_cash ?? 0;
                 $account_transaction->from_type = 'deliveryman';
                 $account_transaction->from_id = $user_data->id;
                 $account_transaction->created_by = 'deliveryman';
-            }
-            elseif($data->attribute === 'rider_collect_cash_payments'){
-                $user_data = DeliveryMan::withoutGlobalScope('delivery_only')->findOrFail($data->attribute_id);
-                $user_data->status = 1;
-                $user_data->save();
-                $current_balance = $user_data?->wallet?->collected_cash ?? 0;
-                $account_transaction->from_type = 'rider';
-                $account_transaction->from_id = $user_data->id;
-                $account_transaction->created_by = 'rider';
             }
             else{
                 return 0;
@@ -137,7 +101,7 @@ if (! function_exists('collect_cash_success')) {
 
         try {
             if($data->attribute == 'deliveryman_collect_cash_payments' && config('mail.status') &&  Helpers::getNotificationStatusData('deliveryman','deliveryman_collect_cash','mail_status') && Helpers::get_mail_status('cash_collect_mail_status_dm') == 1 ){
-                Mail::to($user_data?->getRawOriginal('email'))->send(new \App\Mail\CollectCashMail($account_transaction, $user_data));
+                Mail::to($user_data['email'])->send(new \App\Mail\CollectCashMail($account_transaction,$user_data['f_name']));
             }
         } catch (\Exception $exception) {
             info($exception->getMessage());
@@ -176,7 +140,7 @@ if (! function_exists('order_place')) {
             if(Helpers::getNotificationStatusData('customer','customer_delivery_verification','mail_status')  && Helpers::get_mail_status('order_verification_mail_status_user') == 1 && config('mail.status')){
 
                 if ( config('order_delivery_verification') == 1  && $order->is_guest == 0) {
-                    Mail::to($order->customer?->getRawOriginal('email'))->send(new OrderVerificationMail($order->otp,$order->customer->f_name));
+                    Mail::to($order->customer->email)->send(new OrderVerificationMail($order->otp,$order->customer->f_name));
                 }
 
                 if ($order->is_guest == 1   && isset($address['contact_person_email'])) {
@@ -196,12 +160,9 @@ if (! function_exists('trip_payment_success')) {
         $trip = Trips::find($data->attribute_id);
         if($trip->payment_method != 'partial_payment'){
             $trip->payment_method=$data->payment_method;
-        }elseif($trip->payment_method == 'partial_payment'){
-            CustomerLogic::create_wallet_transaction($trip->user_id, $trip->partially_paid_amount, 'partial_payment', $trip->id);
         }
         $trip->transaction_reference=$data->transaction_ref;
         $trip->payment_status='paid';
-        $trip->trip_status = $trip->trip_status == 'payment_failed' ? 'completed' : $trip->trip_status;
         $trip->save();
 
         if( $trip?->provider?->is_valid_subscription == 1 && $trip?->provider?->store_sub?->max_order != "unlimited" && $trip?->provider?->store_sub?->max_order > 0){
@@ -259,7 +220,7 @@ if (! function_exists('wallet_success')) {
             try{
                 Helpers::add_fund_push_notification($data->payer_id);
                 if(config('mail.status') && Helpers::get_mail_status('add_fund_mail_status_user') == '1' &&  Helpers::getNotificationStatusData('customer','customer_add_fund_to_wallet','mail_status')) {
-                    Mail::to($wallet_transaction->user?->getRawOriginal('email'))->send(new \App\Mail\AddFundToWallet($wallet_transaction));
+                    Mail::to($wallet_transaction->user->email)->send(new \App\Mail\AddFundToWallet($wallet_transaction));
                 }
             }catch(\Exception $ex)
             {
@@ -279,21 +240,14 @@ if (! function_exists('wallet_success')) {
 }
 
 if (!function_exists('addon_published_status')) {
-    function addon_published_status($module_name): int
+    function addon_published_status($module_name)
     {
+        $is_published = 0;
         try {
-            $path = base_path("Modules/{$module_name}/Addon/info.php");
-
-            if (!file_exists($path)) {
-                return 0;
-            }
-
-            $full_data = include $path;
-
-            return (isset($full_data['is_published']) && $full_data['is_published'] == 1) ? 1 : 0;
-
-        } catch (\Throwable $exception) {
-            info($exception->getMessage());
+            $full_data = include("Modules/{$module_name}/Addon/info.php");
+            $is_published = $full_data['is_published'] == 1 ? 1 : 0;
+            return $is_published;
+        } catch (\Exception $exception) {
             return 0;
         }
     }
@@ -340,66 +294,13 @@ if (!function_exists('config_settings')) {
             return true;
         }
     }
-    if (! function_exists('getEnvMode')) {
-         function getEnvMode()
-            {
-                $configKey='envAppMode_conf';
-                if (Config::has($configKey)) {
-                    $data = Config::get($configKey);
-                } else {
-                    $data = env('APP_MODE')??config('app.app_mode');
-                    Config::set($configKey, $data);
-                }
-                return $data;
-            }
-    }
 
-
-    if (! function_exists('getModuleId')) {
-         function getModuleId($value)
-            {
-                $module = is_numeric($value)
-                ? Module::where('id', $value)->first()
-                : Module::where('slug', $value)->first();
-                return $module?->id;
-            }
-    }
-}
-
-if (! function_exists('pro_customer_subscription_success')) {
-    function pro_customer_subscription_success($data)
-    {
-        // Idempotency: avoid double-applying if the gateway retries the callback.
-        $reference = 'pr_' . $data->id;
-        if (\App\Models\ProCustomerTransaction::where('transaction_reference', $reference)->exists()) {
-            return true;
+    if (! function_exists('getPaginationConfig')) {
+        function getPaginationConfig()
+        {
+            return config('default_pagination');
         }
-
-        $additional = is_array($data->additional_data) ? $data->additional_data : json_decode($data->additional_data ?? '[]', true);
-        $planId = $additional['plan_id'] ?? null;
-        $mode = $additional['mode'] ?? 'start';
-
-        $user = \App\Models\User::find($data->payer_id);
-        $plan = \App\Models\ProCustomerSubscriptionPlan::find($planId);
-        if (!$user || !$plan) {
-            return false;
-        }
-
-        $applier = new class { use \App\Traits\ManagesProCustomerSubscription; };
-        $applier->applyProCustomerPlan($user, $plan, [
-            'payment_method' => $data->payment_method,
-            'payment_status' => 'success',
-            'transaction_reference' => $reference,
-            'paid_at' => now(),
-        ], $mode);
-
-        return true;
     }
-}
 
-if (! function_exists('pro_customer_subscription_failed')) {
-    function pro_customer_subscription_failed($data)
-    {
-        return true;
-    }
+
 }

@@ -112,7 +112,7 @@
                                 <!-- End Search -->
                             </form>
 
-                            @if(request()->input('search'))
+                            @if(request()->get('search'))
                             <button type="reset" class="btn btn--primary ml-2 location-reload-to-base" data-url="{{url()->full()}}">{{translate('messages.reset')}}</button>
                             @endif
 
@@ -129,17 +129,17 @@
                                 <div id="usersExportDropdown"
                                     class="hs-unfold-content dropdown-unfold dropdown-menu dropdown-menu-sm-right">
                                     <span class="dropdown-header">{{ translate('messages.download_options') }}</span>
-                                    <a id="export-excel" class="dropdown-item" href="{{route('admin.unit.export', ['type'=>'excel',request()->getQueryString()]) }}">
+                                    <a id="export-excel" class="dropdown-item" href="{{route('admin.unit.export', ['type'=>'excel'])}}">
                                         <img class="avatar avatar-xss avatar-4by3 mr-2"
                                             src="{{ asset('public/assets/admin') }}/svg/components/excel.svg"
                                             alt="Image Description">
                                         {{ translate('messages.excel') }}
                                     </a>
-                                    <a id="export-csv" class="dropdown-item" href="{{route('admin.unit.export', ['type'=>'csv',request()->getQueryString()]) }}">
+                                    <a id="export-csv" class="dropdown-item" href="{{route('admin.unit.export', ['type'=>'csv'])}}">
                                         <img class="avatar avatar-xss avatar-4by3 mr-2"
                                             src="{{ asset('public/assets/admin') }}/svg/components/placeholder-csv-format.svg"
                                             alt="Image Description">
-                                        {{ translate('messages.csv') }}
+                                        .{{ translate('messages.csv') }}
                                     </a>
                                 </div>
                             </div>

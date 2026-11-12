@@ -36,10 +36,6 @@ class ReactTestimonial extends Model
 
         return Helpers::get_full_url('reviewer_company_image',$value,'public');
     }
-    public function translations()
-    {
-        return $this->morphMany(Translation::class, 'translationable');
-    }
     public function storage()
     {
         return $this->morphMany(Storage::class, 'data');

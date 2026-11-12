@@ -21,8 +21,4 @@ class WithdrawalMethod extends Model
     {
         $query->where('is_active', $status);
     }
-
-    public function disbursementMethod(){
-        return $this->hasMany(DisbursementWithdrawalMethod::class,'withdrawal_method_id');
-    }
 }

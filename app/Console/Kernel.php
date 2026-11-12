@@ -24,13 +24,10 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        // $schedule->command('inspire')->hourly();
-        // Personalization schedule moved to Modules/AI/app/Providers/AIServiceProvider.php
-
-        $schedule->command('community-agent:release-stuck')
-            ->everyFifteenMinutes()
-            ->withoutOverlapping()
-            ->appendOutputTo(storage_path('logs/community-agent-release.log'));
+        // Marketer commissions accrue on delivered orders and mature after the
+        // holding period. Hourly is enough for a 14-day hold, and the command
+        // is idempotent so a missed run simply catches up.
+        $schedule->command('marketer:accrue')->hourly()->withoutOverlapping();
     }
 
     /**

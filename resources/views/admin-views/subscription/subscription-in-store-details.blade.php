@@ -177,7 +177,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="btn--container justify-content-end mt-20">
+                <div class="btn--container justify-content-end mt-3">
                     <button type="button" class="btn btn--danger text-white">Cancel Subscription</button>
                     <button type="button" data-toggle="modal" data-target="#plan-modal" class="btn btn--primary">Change/Renew Subscription Plan</button>
                 </div>
@@ -424,7 +424,7 @@
                                     </label>
                                 </div>
                             </div>
-                            <div class="btn--container justify-content-end mt-20">
+                            <div class="btn--container justify-content-end mt-3">
                                 <button type="reset" data-dismiss="modal" class="btn btn--reset">Cancel</button>
                                 <button type="submit" class="btn btn--primary">Renew Subscription Plan</button>
                             </div>
@@ -541,7 +541,7 @@
                                     </label>
                                 </div>
                             </div>
-                            <div class="btn--container justify-content-end mt-20">
+                            <div class="btn--container justify-content-end mt-3">
                                 <button type="reset" data-dismiss="modal" class="btn btn--reset">Cancel</button>
                                 <button type="submit" class="btn btn--primary">Renew Subscription Plan</button>
                             </div>

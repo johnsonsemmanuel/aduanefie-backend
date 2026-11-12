@@ -315,7 +315,7 @@
                                     <span class="text-truncate sidebar--badge-container">
                                         {{ translate('messages.Offline_Payments') }}
                                         <span class="badge badge-soft-danger bg-light badge-pill ml-1">
-                                            {{ \App\Models\Order::where('payment_method', 'offline_payments')->whereHas('offline_payment')->StoreOrder()->module(Config::get('module.current_module_id'))->count() }}
+                                            {{ \App\Models\Order::has('offline_payments')->StoreOrder()->module(Config::get('module.current_module_id'))->count() }}
                                         </span>
                                     </span>
                                 </a>
@@ -349,6 +349,17 @@
                                 </span>
                             </a>
                         </li>
+
+                         {{-- <li class="nav-item {{ Request::is('admin/refund/settings') ? 'active' : '' }}">
+                            <a class="nav-link " href="{{ route('admin.refund.refund_settings') }}"
+                                title="{{ translate('refund_settings') }}">
+                                <span class="tio-circle nav-indicator-icon"></span>
+                                <span class="text-truncate sidebar--badge-container">
+                                    {{ translate('refund_settings') }}
+
+                                </span>
+                            </a>
+                        </li> --}}
                     </ul>
                     </li>
                     <!-- Order refund End-->
@@ -449,16 +460,16 @@
                         </a>
                         <ul class="js-navbar-vertical-aside-submenu nav nav-sub"  style="display:{{ Request::is('admin/category*') ? 'block' : 'none' }}">
                             <li class="nav-item @yield('main_category') {{ Request::is('admin/category/add') ? 'active' : '' }}">
-                                <a class="nav-link " href="{{ route('admin.category.add') }}" title="{{ translate('messages.Main_Category') }}">
+                                <a class="nav-link " href="{{ route('admin.category.add') }}" title="{{ translate('messages.category') }}">
                                     <span class="tio-circle nav-indicator-icon"></span>
-                                    <span class="text-truncate">{{ translate('messages.Main_Category') }}</span>
+                                    <span class="text-truncate">{{ translate('messages.category') }}</span>
                                 </a>
                             </li>
 
                             <li class="nav-item @yield('sub_category') {{ Request::is('admin/category/add-sub-category') ? 'active' : '' }}">
-                                <a class="nav-link " href="{{ route('admin.category.add-sub-category') }}" title="{{ translate('messages.Main_Sub_Category') }}">
+                                <a class="nav-link " href="{{ route('admin.category.add-sub-category') }}" title="{{ translate('messages.sub_category') }}">
                                     <span class="tio-circle nav-indicator-icon"></span>
-                                    <span class="text-truncate">{{ translate('messages.Main_Sub_Category') }}</span>
+                                    <span class="text-truncate">{{ translate('messages.sub_category') }}</span>
                                 </a>
                             </li>
 
@@ -484,19 +495,6 @@
                 </li>
                 @endif
                 <!-- End Category -->
-
-                <!-- Store Category -->
-                @if (\App\CentralLogics\Helpers::storeCategoryStatus() && \App\CentralLogics\Helpers::module_permission_check('category'))
-                <li class="navbar-vertical-aside-has-menu {{ Request::is('admin/store-category*') ? 'active' : '' }}">
-                    <a class="js-navbar-vertical-aside-menu-link nav-link" href="{{ route('admin.store-category.list') }}" title="{{ translate('messages.Store_Categories') }}">
-                        <i class="tio-folder-bookmarked nav-icon"></i>
-                        <span class="navbar-vertical-aside-mini-mode-hidden-elements text-truncate">
-                            {{ translate('messages.Store_Categories') }}
-                        </span>
-                    </a>
-                </li>
-                @endif
-                <!-- End Store Category -->
 
                 <!-- Attributes -->
                 @if (\App\CentralLogics\Helpers::module_permission_check('attribute'))
@@ -1074,7 +1072,7 @@
                     <small class="tio-more-horizontal nav-subtitle-replacer"></small>
                 </li>
 
-                @if (\App\CentralLogics\Helpers::module_permission_check('employee_role'))
+                @if (\App\CentralLogics\Helpers::module_permission_check('custom_role'))
                 <li class="navbar-vertical-aside-has-menu {{ Request::is('admin/custom-role*') ? 'active' : '' }}">
                     <a class="js-navbar-vertical-aside-menu-link nav-link" href="{{ route('admin.custom-role.create') }}" title="{{ translate('messages.employee_Role') }}">
                         <i class="tio-incognito nav-icon"></i>
@@ -1108,13 +1106,74 @@
                 @endif
                 <!-- End Employee -->
 
+                @include('layouts.admin.partials._sidebar_marketers')
+
+
 
                 <li class="nav-item py-5">
 
                 </li>
 
 
-                    @includeIf('layouts.admin.partials._logout_modal')
+                <li class="__sidebar-hs-unfold px-2" id="tourb-9">
+                    <div class="hs-unfold w-100">
+                        <a class="js-hs-unfold-invoker navbar-dropdown-account-wrapper" href="javascript:;"
+                            data-hs-unfold-options='{
+                                    "target": "#accountNavbarDropdown",
+                                    "type": "css-animation"
+                                }'>
+                            <div class="cmn--media right-dropdown-icon d-flex align-items-center">
+                                <div class="avatar avatar-sm avatar-circle">
+                                    <img class="avatar-img onerror-image"
+                                        data-onerror-image="{{asset('public/assets/admin/img/160x160/img1.jpg')}}"
+
+                                        src="{{auth('admin')->user()?->toArray()['image_full_url']}}"
+
+                                        alt="Image Description">
+                                    <span class="avatar-status avatar-sm-status avatar-status-success"></span>
+                                </div>
+                                <div class="media-body pl-3">
+                                    <span class="card-title h5">
+                                        {{auth('admin')->user()->f_name}}
+                                        {{auth('admin')->user()->l_name}}
+                                    </span>
+                                    <span class="card-text">{{auth('admin')->user()->email}}</span>
+                                </div>
+                            </div>
+                        </a>
+
+                        <div id="accountNavbarDropdown"
+                                class="hs-unfold-content dropdown-unfold dropdown-menu dropdown-menu-right navbar-dropdown-menu navbar-dropdown-account min--240">
+                            <div class="dropdown-item-text">
+                                <div class="media align-items-center">
+                                    <div class="avatar avatar-sm avatar-circle mr-2">
+                                        <img class="avatar-img onerror-image"
+                                                data-onerror-image="{{asset('public/assets/admin/img/160x160/img1.jpg')}}"
+                                                src="{{auth('admin')->user()?->toArray()['image_full_url']}}"
+
+                                                alt="Image Description">
+                                    </div>
+                                    <div class="media-body">
+                                        <span class="card-title h5">{{auth('admin')->user()->f_name}}</span>
+                                        <span class="card-text">{{auth('admin')->user()->email}}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="dropdown-divider"></div>
+
+                            <a class="dropdown-item" href="{{route('admin.settings')}}">
+                                <span class="text-truncate pr-2" title="Settings">{{translate('messages.settings')}}</span>
+                            </a>
+
+                            <div class="dropdown-divider"></div>
+
+                            <a class="dropdown-item log-out" href="javascript:">
+                                <span class="text-truncate pr-2" title="Sign out">{{translate('messages.sign_out')}}</span>
+                            </a>
+                        </div>
+                    </div>
+                </li>
                 </ul>
             </div>
             <!-- End Content -->

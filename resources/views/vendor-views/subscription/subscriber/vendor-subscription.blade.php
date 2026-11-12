@@ -77,7 +77,7 @@ active
 
             </div>
             @if (\App\CentralLogics\Helpers::subscription_check() )
-                <div class="btn--container justify-content-end mt-20">
+                <div class="btn--container justify-content-end mt-3">
                     <button type="button" data-toggle="modal" data-target="#plan-modal" class="btn btn--primary">{{ translate('Change Business Plan') }}</button>
                 </div>
             @endif
@@ -269,7 +269,7 @@ active
                     </div>
                 </div>
                 {{-- {{ dd($store?->store_sub_update_application) }} --}}
-                <div class="btn--container justify-content-end mt-20">
+                <div class="btn--container justify-content-end mt-3">
                     @if ( $store?->store_sub_update_application?->is_canceled == 0 && $store?->store_sub_update_application?->status == 1  )
                         <button type="button"  data-url="{{route('vendor.subscriptionackage.cancelSubscription',$store?->id)}}" data-message="{{translate('If_you_cancel_the_subscription,_after_')}} {{  Carbon\Carbon::now()->diffInDays($store?->store_sub_update_application?->expiry_date_parsed->format('Y-m-d'), false); }} {{ translate('days_the_you_will_no_longer_be_able_to_run_the_business_before_subscribe_a_new_plan.') }} "
                         class="btn btn--danger text-white status_change_alert">{{ translate('Cancel Subscription') }}</button>
@@ -297,7 +297,6 @@ active
 
         @endif
     </div>
-
     <div class="modal fade show" id="plan-modal">
         <div class="modal-dialog modal-xl modal-dialog-centered">
             <div class="modal-content">
@@ -320,11 +319,11 @@ active
                                 <div class="inner-div">
                                     <div class="text-center">
                                         <h3 class="title">{{ translate('Commission Base') }}</h3>
-                                        <h2 class="price">{{  $store->comission > 0 ?  $store->comission :  $admin_commission }}%</h2>
+                                        <h2 class="price">{{ $admin_commission }}%</h2>
                                     </div>
                                     <div class="py-5 mt-4">
                                         <div class="info-text text-center">
-                                            {{ translate($title.' will pay') }} {{  $store->comission > 0 ?  $store->comission :  $admin_commission }}% {{ translate('commission to') }} {{ $business_name }} {{ translate('from each '.$orderOrTrip.'. You will get access of all the features and options  in '.$title.' panel , app and interaction with user.') }}
+                                            {{ translate($title.' will pay') }} {{ $admin_commission }}% {{ translate('commission to') }} {{ $business_name }} {{ translate('from each '.$orderOrTrip.'. You will get access of all the features and options  in '.$title.' panel , app and interaction with user.') }}
                                         </div>
                                     </div>
                                     <div class="text-center">

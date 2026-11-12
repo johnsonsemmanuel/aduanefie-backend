@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Admin\Item;
 
-use App\CentralLogics\Helpers;
 use App\Contracts\Repositories\AddonRepositoryInterface;
 use App\Contracts\Repositories\StoreRepositoryInterface;
 use App\Contracts\Repositories\TranslationRepositoryInterface;
@@ -14,8 +13,6 @@ use App\Http\Requests\Admin\AddonAddRequest;
 use App\Http\Requests\Admin\AddonBulkExportRequest;
 use App\Http\Requests\Admin\AddonBulkImportRequest;
 use App\Http\Requests\Admin\AddonUpdateRequest;
-use App\Models\AddOn as ModelsAddOn;
-use App\Models\AddonCategory;
 use App\Services\AddonService;
 use App\Traits\ImportExportTrait;
 use Exception;
@@ -35,7 +32,6 @@ use OpenSpout\Writer\Exception\WriterNotOpenedException;
 use Rap2hpoutre\FastExcel\FastExcel;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
-use Illuminate\Http\JsonResponse;
 
 class AddonController extends BaseController
 {
@@ -46,7 +42,9 @@ class AddonController extends BaseController
         protected AddonService $addonService,
         protected TranslationRepositoryInterface $translationRepo,
         protected StoreRepositoryInterface $storeRepo
-    ) {}
+    )
+    {
+    }
 
     public function index(?Request $request): View|Collection|LengthAwarePaginator|null
     {
@@ -63,91 +61,32 @@ class AddonController extends BaseController
             storeId: $storeId,
             dataLimit: config('default_pagination')
         );
-        $store = $storeId != 'all' ? $this->storeRepo->getFirstWhere(params: ['id' => $storeId]) : null;
+        $store =$storeId !='all'? $this->storeRepo->getFirstWhere(params: ['id' => $storeId]):null;
         $language = getWebConfig('language');
+        $defaultLang = str_replace('_', '-', app()->getLocale());
 
-        $addonCategories = AddonCategory::where(function ($query) {
-            $query->where('module_id', Config::get('module.current_module_id'))->orWhereNull('module_id');
-        })->where('status', 1)->select('id', 'name')->get();
-
-        $taxData = Helpers::getTaxSystemType();
-        $productWiseTax = $taxData['productWiseTax'];
-        $taxVats = $taxData['taxVats'];
-
-        return view(AddonViewPath::INDEX[VIEW], compact('addons', 'store', 'language', 'addonCategories', 'productWiseTax', 'taxVats'));
+        return view(AddonViewPath::INDEX[VIEW], compact('addons','store','language','defaultLang'));
     }
 
     public function add(AddonAddRequest $request): RedirectResponse
     {
-        if($this->addonService->checkAddonExistsForThisStore(storeId: $request->store_id, addonName: $request->name[0])) {
-            Toastr::error(translate('messages.addon_already_exists_for_this_store'));
-            return back();
-        }
         $addon = $this->addonRepo->add(data: $this->addonService->getAddData(request: $request));
-
-        if (addon_published_status('TaxModule')) {
-            $SystemTaxVat = \Modules\TaxModule\Entities\SystemTaxSetup::where('is_active', 1)->where('is_default', 1)->first();
-            if ($SystemTaxVat?->tax_type == 'product_wise') {
-                foreach ($request['tax_ids'] ?? [] as $tax_id) {
-                    \Modules\TaxModule\Entities\Taxable::create(
-                        [
-                            'taxable_type' => ModelsAddOn::class,
-                            'taxable_id' => $addon->id,
-                            'system_tax_setup_id' => $SystemTaxVat->id,
-                            'tax_id' => $tax_id
-                        ],
-                    );
-                }
-            }
-        }
-
         $this->translationRepo->addByModel(request: $request, model: $addon, modelPath: 'App\Models\AddOn', attribute: 'name');
         Toastr::success(translate('messages.addon_added_successfully'));
         return back();
     }
 
-    public function getUpdateView(string|int $id): JsonResponse
+    public function getUpdateView(string|int $id): View
     {
         $addon = $this->addonRepo->getFirstWithoutGlobalScopeWhere(params: ['id' => $id]);
         $language = getWebConfig('language');
-
-        $taxData = Helpers::getTaxSystemType();
-        $productWiseTax = $taxData['productWiseTax'];
-        $taxVats = $taxData['taxVats'];
-        $taxVatIds =  $productWiseTax ? $addon->taxVats()->pluck('tax_id')->toArray(): [];
-
-
-        $addonCategories = AddonCategory::where(function ($query) {
-            $query->where('module_id', Config::get('module.current_module_id'))->orWhereNull('module_id');
-        })->where('status', 1)->select('id', 'name')->get();
-        return response()->json([
-            'view' => view(AddonViewPath::UPDATE[VIEW], compact('addon','addonCategories', 'taxVats', 'productWiseTax', 'language', 'taxVatIds'))->render(),
-        ]);
+        $defaultLang = str_replace('_', '-', app()->getLocale());
+        return view(AddonViewPath::UPDATE[VIEW], compact('addon','language','defaultLang'));
     }
 
     public function update(AddonUpdateRequest $request, $id): RedirectResponse
     {
-        $addon = $this->addonRepo->update(id: $id, data: $this->addonService->getAddData(request: $request));
-
-
-            if (addon_published_status('TaxModule')) {
-            $SystemTaxVat = \Modules\TaxModule\Entities\SystemTaxSetup::where('is_active', 1)->where('is_default', 1)->first();
-            if ($SystemTaxVat?->tax_type == 'product_wise') {
-                $addon->taxVats()->delete();
-                foreach ($request['tax_ids'] ?? [] as $tax_id) {
-                    \Modules\TaxModule\Entities\Taxable::create(
-                        [
-                            'taxable_type' => ModelsAddOn::class,
-                            'taxable_id' => $addon->id,
-                            'system_tax_setup_id' => $SystemTaxVat->id,
-                            'tax_id' => $tax_id
-                        ],
-                    );
-                }
-            }
-        }
-
-
+        $addon = $this->addonRepo->update(id: $id ,data: $this->addonService->getAddData(request: $request));
         $this->translationRepo->updateByModel(request: $request, model: $addon, modelPath: 'App\Models\AddOn', attribute: 'name');
         Toastr::success(translate('messages.addon_updated_successfully'));
         return back();
@@ -163,7 +102,7 @@ class AddonController extends BaseController
     public function updateStatus(Request $request): RedirectResponse
     {
         $this->addonRepo->update(id: $request['id'], data: ['status' => $request['status']]);
-        Toastr::success(translate('messages.addon_status_updated'));
+        Toastr::success(translate('messages.category_status_updated'));
         return back();
     }
 
@@ -175,19 +114,14 @@ class AddonController extends BaseController
             searchValue: $request['search'],
             storeId: $storeId
         );
-        $store = $storeId != 'all' ? $this->storeRepo->getFirstWhere(params: ['id' => $storeId]) : null;
-
-        $taxData = Helpers::getTaxSystemType();
-        $productWiseTax = $taxData['productWiseTax'];
-
-        $data = [
-            'data' => $addons,
-            'search' => $request['search'] ?? null,
+        $store =$storeId !='all'? $this->storeRepo->getFirstWhere(params: ['id' => $storeId]):null;
+        $data=[
+            'data' =>$addons,
+            'search' =>$request['search'] ?? null,
             'store' => $store,
-            'productWiseTax' => $productWiseTax
         ];
 
-        if ($request['type'] == 'csv') {
+        if($request['type'] == 'csv'){
             return Excel::download(new AddonExport($data), Addon::EXPORT_CSV);
         }
         return Excel::download(new AddonExport($data), Addon::EXPORT_XLSX);

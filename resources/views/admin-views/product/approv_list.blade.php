@@ -43,7 +43,7 @@
                     <div class="select-item">
                         <select name="store_id" id="store" data-url="{{url()->full()}}" data-placeholder="{{translate('messages.select_store')}}" class="js-data-example-ajax form-control store-filter" required title="Select Store" oninvalid="this.setCustomValidity('{{translate('messages.please_select_store')}}')">
                             @if($store)
-                            <option value="{{$store->id}}" data-verified="{{ (int) $store->verified_seller }}" selected>{{$store->name}}</option>
+                            <option value="{{$store->id}}" selected>{{$store->name}}</option>
                             @else
                             <option value="all" selected>{{translate('messages.all_stores')}}</option>
                             @endif
@@ -52,7 +52,7 @@
                 </div>
 
                 <div class="col-sm-6 col-md-3">
-                    @if(!auth('admin')?->user()?->zone_id)
+                    @if(!isset(auth('admin')->user()->zone_id))
                         <div class="select-item">
                             <select name="zone_id" class="form-control js-select2-custom set-filter"
                                     data-url="{{url()->full()}}" data-filter="zone_id">
@@ -147,11 +147,11 @@
                         <!-- Search -->
                         <div class="input-group input--group">
                             <input id="datatableSearch" name="search" value="{{ request()?->search ?? null }}" type="search" class="form-control h--40px" placeholder="{{translate('ex_:_search_item_name')}}" aria-label="{{translate('messages.search_here')}}">
-                            <button type="submit" class="btn btn--primary h--40px"><i class="tio-search"></i></button>
+                            <button type="submit" class="btn btn--secondary h--40px"><i class="tio-search"></i></button>
                         </div>
                         <!-- End Search -->
                     </form>
-                    @if(request()->input('search'))
+                    @if(request()->get('search'))
                     <button type="reset" class="btn btn--primary ml-2 location-reload-to-base" data-url="{{url()->full()}}">{{translate('messages.reset')}}</button>
                     @endif
                     <!-- Unfold -->
@@ -178,7 +178,7 @@
                                 <img class="avatar avatar-xss avatar-4by3 mr-2"
                                     src="{{ asset('public/assets/admin') }}/svg/components/placeholder-csv-format.svg"
                                     alt="Image Description">
-                                {{ translate('messages.csv') }}
+                                .{{ translate('messages.csv') }}
                             </a>
 
                         </div>
@@ -196,7 +196,7 @@
                 <table id="datatable" class="table table-borderless table-thead-bordered table-nowrap table-align-middle card-table"
                     data-hs-datatables-options='{
                         "columnDefs": [{
-                            "targets": [7,8],
+                            "targets": [],
                             "width": "5%",
                             "orderable": false
                         }],
@@ -211,16 +211,15 @@
                         "isShowPaging": false,
                         "paging":false
                     }'>
-                    <thead class="bg-table-head">
+                    <thead class="thead-light">
                     <tr>
-                        <th class="text-title border-0">{{translate('sl')}}</th>
-                        <th class="text-title border-0">{{translate('messages.name')}}</th>
-                        <th class="text-title border-0">{{translate('messages.category')}}</th>
-                        <th class="text-title border-0">{{translate('messages.store')}}</th>
-                        <th class="text-title border-0">{{translate('messages.price')}}</th>
-                        <!-- <th class="text-title border-0">{{translate('messages.Vat/Tax')}}</th> -->
-                        <th class="text-title border-0">{{translate('messages.status')}}</th>
-                        <th class="text-title border-0 text-center">{{translate('messages.action')}}</th>
+                        <th class="border-0">{{translate('sl')}}</th>
+                        <th class="border-0">{{translate('messages.name')}}</th>
+                        <th class="border-0">{{translate('messages.category')}}</th>
+                        <th class="border-0">{{translate('messages.store')}}</th>
+                        <th class="border-0">{{translate('messages.price')}}</th>
+                        <th class="border-0">{{translate('messages.status')}}</th>
+                        <th class="border-0 text-center">{{translate('messages.action')}}</th>
                     </tr>
                     </thead>
 
@@ -257,12 +256,6 @@
                                     {{\App\CentralLogics\Helpers::format_currency($item['price'])}}
                                 </div>
                             </td>
-                            <!-- <td>
-                                <div class="color-677788 fs-12">
-                                    <span>VAT: <strong>(5%)</strong></span> <br>
-                                    <span>GST: <strong>(7%)</strong></span>
-                                </div>
-                            </td> -->
                             <td>
                                 @if ($item->is_rejected == 1)
                                 <span class="badge badge-soft-danger text-capitalize">
@@ -402,7 +395,7 @@
 
         $('#store').select2({
             ajax: {
-                url: '{{ route('admin.store.get-stores') }}',
+                url: '{{url('/')}}/admin/store/get-stores',
                 data: function (params) {
                     return {
                         q: params.term, // search term

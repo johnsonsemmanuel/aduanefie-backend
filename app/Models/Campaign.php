@@ -8,11 +8,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Support\Facades\DB;
-use App\Traits\GeneratesSlug;
 
 class Campaign extends Model
 {
-    use HasFactory, GeneratesSlug;
+    use HasFactory;
 
     protected $casts = [
         'status' => 'integer',
@@ -70,7 +69,7 @@ class Campaign extends Model
     }
     public function stores()
     {
-        return $this->belongsToMany(Store::class)->withPivot('campaign_status','updated_at','created_at');
+        return $this->belongsToMany(Store::class)->withPivot('campaign_status');
     }
 
     public function getImageFullUrlAttribute(){
@@ -129,10 +128,6 @@ class Campaign extends Model
     protected static function boot()
     {
         parent::boot();
-        static::created(function ($campaign) {
-            $campaign->slug = $campaign->generateSlug($campaign->title);
-            $campaign->save();
-        });
         static::saved(function ($model) {
             if($model->isDirty('image')){
                 $value = Helpers::getDisk();

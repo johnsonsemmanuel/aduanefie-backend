@@ -72,7 +72,7 @@
 
 
         @if (Config::get('module.current_module_type') != 'food')
-            <td>{{ max((int) $campaign->stock, 0) }}</td>
+            <td>{{ $campaign->stock }}</td>
         @endif
 
         <td>{{ $campaign->start_date->format('d M Y') }}</td>
