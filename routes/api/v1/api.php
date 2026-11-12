@@ -192,6 +192,15 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
         Route::get('get-disbursement-report', 'ReportController@disbursement_report');
         Route::get('subscription-transaction', 'SubscriptionController@transaction');
 
+        // Farmer Management - Agro Services & Live Farming
+        Route::group(['prefix' => 'farmer'], function () {
+            Route::get('dashboard', 'FarmerController@dashboard');
+            Route::get('products', 'FarmerController@products');
+            Route::patch('products/{id}/farming-status', 'FarmerController@update_farming_status');
+            Route::patch('products/{id}/dates', 'FarmerController@update_dates');
+        });
+
+
 
 
         //remove account
@@ -488,6 +497,7 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
         Route::get('bundle/home', 'PromotionController@bundle_home');
         Route::get('bogo/home', 'PromotionController@bogo_home');
         Route::get('happy-hour/running', 'PromotionController@happy_hour_running');
+        Route::get('item/farming-list', 'ItemController@farming_list');
 
         Route::group(['prefix' => 'common-condition'], function () {
             Route::get('/', 'CommonConditionController@get_conditions');
