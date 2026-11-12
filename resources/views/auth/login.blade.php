@@ -375,27 +375,35 @@
     @php(session()->forget('log_email_succ'))
     <script>
         "use strict";
-        $('#successMailModal').modal('show');
+        if (window.jQuery && typeof $('#successMailModal').modal === 'function') {
+            $('#successMailModal').modal('show');
+        }
     </script>
     @endif
 
     <script>
         "use strict";
 
-        // Initialize show/hide password
-        $(document).on('ready', function () {
-            $('.js-toggle-password').each(function () {
-                new HSTogglePassword(this).init()
-            });
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof HSTogglePassword !== 'undefined') {
+                document.querySelectorAll('.js-toggle-password').forEach(function (el) {
+                    new HSTogglePassword(el).init();
+                });
+            }
 
             // Auto-focus the code input when MFA panel is active
-            {{ $mfaRequired ? '$("#mfaForm input[name=code]").trigger("focus");' : '' }}
-        });
+            @if ($mfaRequired)
+            var mfaInput = document.querySelector('#mfaForm input[name=code]');
+            if (mfaInput) { mfaInput.focus(); }
+            @endif
 
-        $(document).ready(function() {
-            $('.onerror-image').on('error', function() {
-                let img = $(this).data('onerror-image')
-                $(this).attr('src', img);
+            document.querySelectorAll('.onerror-image').forEach(function (imgEl) {
+                imgEl.addEventListener('error', function () {
+                    var fallback = imgEl.getAttribute('data-onerror-image');
+                    if (fallback && imgEl.getAttribute('src') !== fallback) {
+                        imgEl.setAttribute('src', fallback);
+                    }
+                });
             });
         });
     </script>
@@ -403,19 +411,25 @@
     @if(env('APP_MODE')=='demo')
     <script>
         "use strict";
-        $('.copy_cred').on('click', function () {
-            @if($isAdmin)
-            $('#loginForm input[name=email]').val('admin@admin.com');
-            $('#loginForm input[name=password]').val('12345678');
-            @else
-            $('#loginForm input[name=email]').val('test.restaurant@gmail.com');
-            $('#loginForm input[name=password]').val('12345678');
-            @endif
-            toastr.success('Copied successfully!', 'Success!', {
-                CloseButton: true,
-                ProgressBar: true
+        document.querySelectorAll('.copy_cred').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var emailInput = document.querySelector('#loginForm input[name=email]');
+                var passInput = document.querySelector('#loginForm input[name=password]');
+                @if($isAdmin)
+                if (emailInput) emailInput.value = 'admin@admin.com';
+                if (passInput) passInput.value = '12345678';
+                @else
+                if (emailInput) emailInput.value = 'test.restaurant@gmail.com';
+                if (passInput) passInput.value = '12345678';
+                @endif
+                if (typeof toastr !== 'undefined') {
+                    toastr.success('Copied successfully!', 'Success!', {
+                        CloseButton: true,
+                        ProgressBar: true
+                    });
+                }
             });
-        })
+        });
     </script>
     @endif
 
