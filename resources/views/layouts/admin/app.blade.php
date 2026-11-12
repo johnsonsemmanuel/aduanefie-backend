@@ -257,7 +257,6 @@ $countryCode= strtolower($country?$country->value:'auto');
 <script src="{{asset('public/assets/admin')}}/js/sweet_alert.js"></script>
 <script src="{{asset('public/assets/admin')}}/js/bootstrap-tour-standalone.min.js"></script>
 <script src="{{asset('public/assets/admin/js/owl.min.js')}}"></script>
-<script src="{{asset('public/assets/admin')}}/js/font-awesome.min.js"></script>
 <script src="{{asset('public/assets/admin')}}/js/emogi-area.js"></script>
 <script src="{{asset('public/assets/admin')}}/js/toastr.js"></script>
 <script src="{{asset('public/assets/admin/js/app-blade/admin.js')}}"></script>
