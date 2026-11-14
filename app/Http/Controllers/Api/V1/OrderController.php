@@ -2480,4 +2480,36 @@ class OrderController extends Controller
             'delivery_options' => [],
         ], 200);
     }
+
+    public function get_surge_price(Request $request)
+    {
+        return response()->json([
+            'surge_price' => 0,
+            'price' => 0,
+            'price_type' => 'fixed',
+            'customer_note' => null,
+            'customer_note_status' => 0,
+        ], 200);
+    }
+
+    public function reorder(Request $request)
+    {
+        $order_id = $request->input('order_id');
+        if (!$order_id) {
+            return response()->json([], 200);
+        }
+
+        $details = OrderDetail::with('item')
+            ->where('order_id', $order_id)
+            ->get()
+            ->filter(fn ($d) => $d->item !== null)
+            ->map(fn ($d) => [
+                'item_id' => $d->item_id,
+                'quantity' => $d->quantity,
+                'item' => Helpers::product_data_formatting($d->item, false, false, app()->getLocale()),
+            ])
+            ->values();
+
+        return response()->json($details, 200);
+    }
 }

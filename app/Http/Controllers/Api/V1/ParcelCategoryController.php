@@ -23,4 +23,14 @@ class ParcelCategoryController extends Controller
             return response()->json([], 200);
         }
     }
+
+    public function parcel_weight(Request $request)
+    {
+        return response()->json([], 200);
+    }
+
+    public function parcel_dimension(Request $request)
+    {
+        return response()->json([], 200);
+    }
 }

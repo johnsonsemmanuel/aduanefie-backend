@@ -87,4 +87,25 @@ class PromotionController extends Controller
             'coverage' => [],
         ], 200);
     }
+
+    public function trending_searches(Request $request)
+    {
+        $module_id = $request->header('moduleId');
+        $items = \App\Models\Item::active()
+            ->when($module_id, fn ($q) => $q->where('module_id', $module_id))
+            ->orderByDesc('order_count')
+            ->limit(8)
+            ->pluck('name')
+            ->values();
+
+        return response()->json($items, 200);
+    }
+
+    public function exclusive_deals_stores(Request $request)
+    {
+        return response()->json([
+            'stores' => [],
+            'total_size' => 0,
+        ], 200);
+    }
 }

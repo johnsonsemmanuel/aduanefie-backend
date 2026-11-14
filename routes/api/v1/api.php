@@ -450,8 +450,10 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
                 Route::get('payment-failed', 'CustomerController@orderPaymentFailed');
                 Route::post('get-Tax', 'OrderController@get_tax');
                 Route::post('checkout-summary', 'OrderController@checkout_summary');
+                Route::post('get-surge-price', 'OrderController@get_surge_price');
 
             });
+            Route::post('order-again/reorder', 'OrderController@reorder');
             Route::get('pro-customer/active-offer', 'PromotionController@pro_customer_active_offer');
             Route::get('reels/list', 'CustomerController@reels_list');
 
@@ -549,6 +551,18 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
         Route::get('happy-hour/stores', 'PromotionController@happy_hour_stores');
         Route::get('item/farming-list', 'ItemController@farming_list');
         Route::get('delivery-charge/coverage-list', 'PromotionController@delivery_charge_coverage_list');
+        Route::get('parcel-weight', 'ParcelCategoryController@parcel_weight');
+        Route::get('parcel-dimension', 'ParcelCategoryController@parcel_dimension');
+        Route::get('trending-searches', 'PromotionController@trending_searches');
+        Route::get('stores/exclusive-deals', 'PromotionController@exclusive_deals_stores');
+
+        Route::group(['prefix' => 'trade'], function () {
+            Route::get('blocs', 'TradeController@blocs');
+            Route::get('corridors', 'TradeController@corridors');
+            Route::post('customs-duties/calculate', 'TradeController@customs_duties_calculate');
+            Route::get('sourcing', 'TradeController@sourcing');
+            Route::get('requests', 'TradeController@requests');
+        });
 
         Route::group(['prefix' => 'common-condition'], function () {
             Route::get('/', 'CommonConditionController@get_conditions');
