@@ -563,6 +563,7 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             Route::post('customs-duties/calculate', 'TradeController@customs_duties_calculate');
             Route::get('sourcing', 'TradeController@sourcing');
             Route::get('requests', 'TradeController@requests');
+            Route::get('agro-prices', 'TradeController@agro_prices');
         });
 
         Route::group(['prefix' => 'common-condition'], function () {
