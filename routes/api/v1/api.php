@@ -449,6 +449,7 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
                 Route::put('offline-payment-update', 'OrderController@update_offline_payment_info');
                 Route::get('payment-failed', 'CustomerController@orderPaymentFailed');
                 Route::post('get-Tax', 'OrderController@get_tax');
+                Route::post('checkout-summary', 'OrderController@checkout_summary');
 
             });
             Route::get('pro-customer/active-offer', 'PromotionController@pro_customer_active_offer');

@@ -2394,4 +2394,90 @@ class OrderController extends Controller
             'tax_status' => $tax_status,
         ], 200);
     }
+
+    public function checkout_summary(Request $request)
+    {
+        $settings = BusinessSetting::whereIn('key', [
+            'tax_included',
+            'per_km_shipping_charge',
+            'minimum_shipping_charge',
+            'free_delivery_over',
+            'parcel_per_km_shipping_charge',
+            'parcel_minimum_shipping_charge',
+        ])->pluck('value', 'key');
+
+        $tax_included = (int) ($settings['tax_included'] ?? 0);
+        $tax_status = $tax_included === 1 ? 'included' : 'excluded';
+
+        $order_type = $request->input('order_type', 'delivery');
+        $order_amount = (float) ($request->input('order_amount') ?? 0);
+        $distance = max(0, (float) ($request->input('distance') ?? 0));
+        $store_id = $request->input('store_id');
+        $store = $store_id ? Store::find($store_id) : null;
+
+        $tax_rate = ($store && $store->tax > 0) ? (float) $store->tax : 0;
+        $tax_amount = ($tax_rate > 0 && $order_amount > 0)
+            ? round(Helpers::product_tax($order_amount, $tax_rate, $tax_status === 'included'), config('round_up_to_digit', 2))
+            : 0;
+
+        $delivery_charge = 0;
+        $free_delivery_by = null;
+
+        if ($order_type === 'parcel') {
+            $per_km = (float) ($settings['parcel_per_km_shipping_charge'] ?? 1);
+            $min_charge = (float) ($settings['parcel_minimum_shipping_charge'] ?? 10);
+            $delivery_charge = max($min_charge, round($distance * $per_km, config('round_up_to_digit', 2)));
+        } elseif ($order_type !== 'take_away') {
+            $per_km = ($store && $store->per_km_shipping_charge > 0)
+                ? (float) $store->per_km_shipping_charge
+                : (float) ($settings['per_km_shipping_charge'] ?? 0.8);
+            $min_charge = ($store && $store->minimum_shipping_charge > 0)
+                ? (float) $store->minimum_shipping_charge
+                : (float) ($settings['minimum_shipping_charge'] ?? 7);
+            $delivery_charge = max($min_charge, round($distance * $per_km, config('round_up_to_digit', 2)));
+
+            $free_over = isset($settings['free_delivery_over']) ? (float) $settings['free_delivery_over'] : null;
+            if ($free_over !== null && $free_over > 0 && $order_amount >= $free_over) {
+                $delivery_charge = 0;
+                $free_delivery_by = 'admin';
+            } elseif ($store && !empty($store->free_delivery)) {
+                $delivery_charge = 0;
+                $free_delivery_by = 'vendor';
+            }
+        }
+
+        return response()->json([
+            'tax' => [
+                'tax_amount' => $tax_amount,
+                'tax_status' => $tax_status,
+                'tax_included' => $tax_included,
+                'total_price' => $order_amount,
+                'pro_discount' => 0,
+                'store_discount_amount' => 0,
+                'discount_source' => null,
+                'ref_bonus_amount' => 0,
+            ],
+            'delivery' => [
+                'delivery_charge' => $delivery_charge,
+                'delivery_charge_before_pro_discount' => $delivery_charge,
+                'original_delivery_charge' => $delivery_charge,
+                'base_delivery_charge' => $delivery_charge,
+                'min_delivery_charge' => $order_type === 'take_away' ? 0 : (float) ($settings['minimum_shipping_charge'] ?? 7),
+                'surge_amount' => 0,
+                'free_delivery_by' => $free_delivery_by,
+                'pro_customer_savings' => 0,
+                'vehicle_id' => null,
+            ],
+            'surge' => null,
+            'pro' => [
+                'status' => false,
+                'type' => '',
+                'discount' => 0,
+                'delivery_savings' => 0,
+                'total_savings' => 0,
+            ],
+            'cashback' => null,
+            'delivery_options' => [],
+        ], 200);
+    }
 }
