@@ -109,6 +109,13 @@
                                 <span class="text-truncate">{{ translate('messages.business_settings') }}</span>
                             </a>
                         </li>
+                        <li class="navbar-vertical-aside-has-menu {{ Request::is('admin/agro-prices*') ? 'active' : '' }}">
+                            <a class="nav-link " href="{{ route('admin.agro-prices.index') }}"
+                               title="Agro Market Prices">
+                                <span class="tio-chart-bar-4 nav-icon"></span>
+                                <span class="text-truncate">Agro Market Prices</span>
+                            </a>
+                        </li>
                     @endif
 {{--                    @if (\App\CentralLogics\Helpers::module_permission_check('settings') && (auth('admin')->user()->role_id == 1))--}}
 {{--                        <li class="navbar-vertical-aside-has-menu {{ Request::is('admin/business-settings/external-system*') ? 'active' : '' }}">--}}

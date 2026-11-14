@@ -52,10 +52,18 @@
                 Next commission becomes available on {{ $summary['next_eligible_at'] }}.
             </p>
         @endif
-        <p class="small muted" style="margin-bottom:0;">
+        <p class="small muted" style="margin-bottom:8px;">
             Your farmer referral code: <strong>{{ $marketer->marketer_code ?? ('MKT-' . $marketer->id) }}</strong>
             — share this when onboarding commercial farms or backyard growers.
         </p>
+        @php
+            $refCode = $marketer->marketer_code ?? ('MKT-' . $marketer->id);
+            $refUrl = 'https://aduanefie.com/store-registration?ref=' . urlencode($refCode);
+        @endphp
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input type="text" id="marketer-ref-url" value="{{ $refUrl }}" readonly style="flex:1;min-width:240px;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;background:#f9fafb;">
+            <button type="button" onclick="var i=document.getElementById('marketer-ref-url');i.select();navigator.clipboard.writeText(i.value);this.innerText='Copied!';setTimeout(()=>this.innerText='Copy Onboarding Link',2000);" style="padding:7px 14px;background:#166534;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;">Copy Onboarding Link</button>
+        </div>
     </div>
 
     <div class="card">

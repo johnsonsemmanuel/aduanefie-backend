@@ -309,6 +309,14 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
 
 
 
+        Route::group(['prefix' => 'agro-prices', 'as' => 'agro-prices.', 'middleware' => ['module:settings']], function () {
+            Route::get('/', 'AgroPriceController@index')->name('index');
+            Route::post('store', 'AgroPriceController@store')->name('store');
+            Route::post('update/{id}', 'AgroPriceController@update')->name('update');
+            Route::delete('destroy/{id}', 'AgroPriceController@destroy')->name('destroy');
+            Route::post('send-sms', 'AgroPriceController@sendSmsAlerts')->name('send-sms');
+        });
+
         Route::group(['prefix' => 'business-settings', 'as' => 'business-settings.', 'middleware' => ['module:settings', 'actch']], function () {
             Route::get('business-setup/{tab?}', 'BusinessSettingsController@business_index')->name('business-setup');
             Route::get('react-setup', 'BusinessSettingsController@react_setup')->name('react-setup');
