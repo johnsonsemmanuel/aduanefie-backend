@@ -335,6 +335,12 @@ class ItemController extends Controller
         $item->stock = $request->current_stock ?? 0;
         $item->images = $images;
         $item->is_halal =  $request->is_halal ?? 0;
+        $item->is_insured = $request->boolean('is_insured');
+        $item->insurance_type = $request->input('insurance_type', 'crop_and_transit');
+        $item->farming_status = in_array($request->input('farming_status'), ['in_stock', 'farming', 'harvest_ready'], true) ? $request->input('farming_status') : 'in_stock';
+        $item->pre_order_enabled = $request->boolean('pre_order_enabled');
+        $item->planting_date = $request->filled('planting_date') ? $request->input('planting_date') : null;
+        $item->expected_harvest_date = $request->filled('expected_harvest_date') ? $request->input('expected_harvest_date') : null;
         $item->save();
         $item->tags()->sync($tag_ids);
         $item->nutritions()->sync($nutrition_ids);
@@ -639,6 +645,12 @@ class ItemController extends Controller
         $item->organic = $request->organic ?? 0;
         $item->veg = $request->veg;
         $item->images = $images;
+        $item->is_insured = $request->boolean('is_insured');
+        $item->insurance_type = $request->input('insurance_type', 'crop_and_transit');
+        $item->farming_status = in_array($request->input('farming_status'), ['in_stock', 'farming', 'harvest_ready'], true) ? $request->input('farming_status') : 'in_stock';
+        $item->pre_order_enabled = $request->boolean('pre_order_enabled');
+        $item->planting_date = $request->filled('planting_date') ? $request->input('planting_date') : null;
+        $item->expected_harvest_date = $request->filled('expected_harvest_date') ? $request->input('expected_harvest_date') : null;
         if (Helpers::get_mail_status('product_approval') && $request?->temp_product) {
 
 

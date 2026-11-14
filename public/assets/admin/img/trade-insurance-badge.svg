@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
+  <defs>
+    <linearGradient id="shieldGrad" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="55%" stop-color="#D97706"/>
+      <stop offset="100%" stop-color="#B45309"/>
+    </linearGradient>
+    <linearGradient id="innerGrad" x1="16" y1="12" x2="48" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFBEB"/>
+      <stop offset="100%" stop-color="#FEF3C7"/>
+    </linearGradient>
+  </defs>
+  <path d="M32 4L10 13.5V30.5C10 45.2 19.4 56.8 32 60C44.6 56.8 54 45.2 54 30.5V13.5L32 4Z" fill="url(#shieldGrad)" stroke="#92400E" stroke-width="2"/>
+  <path d="M32 9.5L15 16.8V30.2C15 41.8 22.1 51.1 32 54C41.9 51.1 49 41.8 49 30.2V16.8L32 9.5Z" fill="url(#innerGrad)"/>
+  <circle cx="32" cy="31" r="12.5" fill="#15803D"/>
+  <path d="M26.2 31.2L30.1 35.1L38.3 26.8" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -446,6 +446,56 @@
                                         </div>
                                     </div>
                                 @endif
+                                <div class="col-12 mt-2">
+                                    <div class="border rounded p-3 bg-light">
+                                        <h6 class="mb-3 d-flex align-items-center gap-2">
+                                            <img src="{{ asset('public/assets/admin/img/trade-insurance-badge.svg') }}" width="20" height="20" alt="">
+                                            <span>{{ translate('Crop Insurance & Live Farming') }}</span>
+                                        </h6>
+                                        <div class="row g-3">
+                                            <div class="col-sm-6 col-lg-3">
+                                                <div class="form-check mt-2">
+                                                    <input class="form-check-input" name="is_insured" type="checkbox" value="1" id="is_insured_check" {{ $product->is_insured ? 'checked' : '' }}>
+                                                    <label class="form-check-label font-weight-bold" for="is_insured_check">
+                                                        {{ translate('Trade & Crop Insured') }}
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-sm-6 col-lg-3">
+                                                <label class="input-label mb-1">{{ translate('Insurance Coverage') }}</label>
+                                                <select name="insurance_type" class="form-control">
+                                                    <option value="crop_and_transit" {{ ($product->insurance_type ?? 'crop_and_transit') === 'crop_and_transit' ? 'selected' : '' }}>{{ translate('Crop & Cross-Border Transit') }}</option>
+                                                    <option value="cross_border" {{ $product->insurance_type === 'cross_border' ? 'selected' : '' }}>{{ translate('Cross-Border Transit Only') }}</option>
+                                                    <option value="crop_only" {{ $product->insurance_type === 'crop_only' ? 'selected' : '' }}>{{ translate('Crop Harvest & Spoilage') }}</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-sm-6 col-lg-3">
+                                                <label class="input-label mb-1">{{ translate('Live Farming Status') }}</label>
+                                                <select name="farming_status" class="form-control">
+                                                    <option value="in_stock" {{ ($product->farming_status ?? 'in_stock') === 'in_stock' ? 'selected' : '' }}>{{ translate('In Stock (Ready)') }}</option>
+                                                    <option value="farming" {{ $product->farming_status === 'farming' ? 'selected' : '' }}>{{ translate('Live Farming (Growing)') }}</option>
+                                                    <option value="harvest_ready" {{ $product->farming_status === 'harvest_ready' ? 'selected' : '' }}>{{ translate('Harvest Ready') }}</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-sm-6 col-lg-3">
+                                                <div class="form-check mt-4">
+                                                    <input class="form-check-input" name="pre_order_enabled" type="checkbox" value="1" id="pre_order_enabled_check" {{ $product->pre_order_enabled ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="pre_order_enabled_check">
+                                                        {{ translate('Allow Pre-Order') }}
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-sm-6 col-lg-3">
+                                                <label class="input-label mb-1">{{ translate('Planting Date') }}</label>
+                                                <input type="date" name="planting_date" class="form-control" value="{{ $product->planting_date ? \Carbon\Carbon::parse($product->planting_date)->format('Y-m-d') : '' }}">
+                                            </div>
+                                            <div class="col-sm-6 col-lg-3">
+                                                <label class="input-label mb-1">{{ translate('Expected Harvest Date') }}</label>
+                                                <input type="date" name="expected_harvest_date" class="form-control" value="{{ $product->expected_harvest_date ? \Carbon\Carbon::parse($product->expected_harvest_date)->format('Y-m-d') : '' }}">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

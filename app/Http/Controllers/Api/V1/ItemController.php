@@ -558,6 +558,45 @@ class ItemController extends Controller
         return response()->json($items, 200);
     }
 
+        public function get_live_farming_items(Request $request)
+    {
+        $limit = max(1, min(50, (int) $request->query('limit', 20)));
+        $offset = max(1, (int) $request->query('offset', 1));
+        $status = $request->query('status', 'all');
+        $backyard = $request->query('backyard');
+        $zoneId = $request->header('zoneId') ? json_decode($request->header('zoneId'), true) : null;
+        $moduleId = config('module.current_module_data')['id'] ?? $request->header('moduleId');
+
+        $query = Item::active()
+            ->where('is_approved', 1)
+            ->whereHas('store', function ($q) use ($zoneId) {
+                $q->where('status', 1);
+                if (is_array($zoneId) && ! empty($zoneId)) {
+                    $q->whereIn('zone_id', $zoneId);
+                }
+            })
+            ->when($moduleId, fn ($q) => $q->where('module_id', $moduleId))
+            ->when(
+                in_array($status, ['farming', 'harvest_ready'], true),
+                fn ($q) => $q->where('farming_status', $status),
+                fn ($q) => $q->whereIn('farming_status', ['farming', 'harvest_ready'])
+            )
+            ->when($backyard === '1' || $backyard === 'true', fn ($q) => $q->where('is_backyard', true))
+            ->orderByRaw("CASE WHEN farming_status = 'harvest_ready' THEN 0 ELSE 1 END")
+            ->orderBy('expected_harvest_date', 'asc')
+            ->latest('id');
+
+        $paginator = $query->paginate($limit, ['*'], 'page', $offset);
+        $products = Helpers::product_data_formatting($paginator->items(), true, false, app()->getLocale());
+
+        return response()->json([
+            'total_size' => $paginator->total(),
+            'limit' => $limit,
+            'offset' => $offset,
+            'products' => $products,
+        ], 200);
+    }
+
     public function get_most_reviewed_products(Request $request)
     {
         if (!$request->hasHeader('zoneId')) {

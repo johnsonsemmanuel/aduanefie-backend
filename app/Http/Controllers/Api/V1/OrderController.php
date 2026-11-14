@@ -1102,6 +1102,35 @@ class OrderController extends Controller
 
         //DM TIPS
         $order->order_amount = $order->order_amount + $order->dm_tips + $order->additional_charge + $order->extra_packaging_amount;
+
+        // Crop & Cross-Border Trade Insurance
+        $insuranceEnabled = (bool) (Helpers::get_business_settings('insurance_status') ?? 0);
+        $insuranceAutoCrossBorder = (bool) (Helpers::get_business_settings('insurance_cross_border_auto') ?? 1);
+        $insuranceAllowOptIn = (bool) (Helpers::get_business_settings('insurance_allow_opt_in') ?? 1);
+        $applyInsurance = $insuranceEnabled && (
+            ($isCrossBorder && $insuranceAutoCrossBorder) ||
+            ($request->boolean('is_insured') && $insuranceAllowOptIn)
+        );
+        $insuranceFee = 0.0;
+        if ($applyInsurance && $request->order_type !== 'parcel') {
+            $ratePct = (float) (Helpers::get_business_settings('insurance_rate_percent') ?? 2.5);
+            $minFee = (float) (Helpers::get_business_settings('insurance_min_fee') ?? 0);
+            $maxFee = (float) (Helpers::get_business_settings('insurance_max_fee') ?? 0);
+            $baseSubtotal = max(0, (float) ($total_price ?? $order->order_amount));
+            $insuranceFee = round($baseSubtotal * ($ratePct / 100), config('round_up_to_digit'));
+            if ($minFee > 0 && $insuranceFee < $minFee) {
+                $insuranceFee = round($minFee, config('round_up_to_digit'));
+            }
+            if ($maxFee > 0 && $insuranceFee > $maxFee) {
+                $insuranceFee = round($maxFee, config('round_up_to_digit'));
+            }
+            $order->order_amount = round($order->order_amount + $insuranceFee, config('round_up_to_digit'));
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('orders', 'is_insured')) {
+            $order->is_insured = $applyInsurance;
+            $order->insurance_fee = $insuranceFee;
+            $order->insurance_coverage_type = $applyInsurance ? ($isCrossBorder ? 'cross_border_and_crop' : 'crop_and_transit') : null;
+        }
         if ($request->payment_method == 'wallet' && $request->user->wallet_balance < $order->order_amount) {
             return response()->json([
                 'errors' => [

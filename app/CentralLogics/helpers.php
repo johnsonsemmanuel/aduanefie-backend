@@ -966,6 +966,8 @@ class Helpers
         $item['farm_type'] = $store?->farm_type ?? ($item['is_backyard'] ? 'backyard' : 'commercial');
         $item['cold_chain_required'] = (bool) ($item->cold_chain_required ?? false);
         $item['minimum_order_qty'] = (int) ($item->minimum_order_qty ?? 1);
+        $item['is_insured'] = (bool) ($item->is_insured ?? false);
+        $item['insurance_type'] = $item->insurance_type ?? 'crop_and_transit';
     }
 
     private static function attachStoreAgroFields($store): void

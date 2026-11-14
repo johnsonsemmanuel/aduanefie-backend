@@ -477,6 +477,7 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
 
         Route::group(['prefix' => 'items'], function () {
             Route::get('latest', 'ItemController@get_simple_items');
+            Route::get('live-farming', 'ItemController@get_live_farming_items');
             Route::get('new-arrival', 'ItemController@get_new_products');
             Route::get('popular', 'ItemController@get_popular_products');
             Route::get('most-reviewed', 'ItemController@get_most_reviewed_products');

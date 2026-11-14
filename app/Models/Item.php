@@ -55,6 +55,16 @@ class Item extends Model
         'hs_description'=>'string',
         'weight_kg'=>'float',
         'origin_country'=>'string',
+        'farming_status'=>'string',
+        'is_backyard'=>'boolean',
+        'planting_date'=>'date',
+        'expected_harvest_date'=>'date',
+        'crop_cycle_days'=>'integer',
+        'pre_order_enabled'=>'boolean',
+        'pre_order_limit'=>'integer',
+        'plot_id'=>'integer',
+        'is_insured'=>'boolean',
+        'insurance_type'=>'string',
     ];
 
     protected $appends = ['unit_type','image_full_url','images_full_url'];
@@ -72,6 +82,11 @@ class Item extends Model
     public function temp_product()
     {
         return $this->hasOne(TempProduct::class,'item_id')->with('translations');
+    }
+
+    public function plot()
+    {
+        return $this->belongsTo(FarmPlot::class, 'plot_id');
     }
 
     public function scopeDiscounted($query)

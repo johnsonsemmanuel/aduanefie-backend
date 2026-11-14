@@ -54,6 +54,9 @@ class Order extends Model
         'currency_code' => 'string',
         'is_pre_order' => 'boolean',
         'expected_harvest_date' => 'date',
+        'is_insured' => 'boolean',
+        'insurance_fee' => 'float',
+        'insurance_coverage_type' => 'string',
     ];
 
     protected $appends = ['module_type','order_attachment_full_url','order_proof_full_url'];

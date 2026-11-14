@@ -395,6 +395,14 @@
                                                                         </tr>
                                                                         @endif
 
+                                                                        @if (!empty($order?->is_insured) || ($order?->insurance_fee ?? 0) > 0)
+                                                                        <tr>
+                                                                            <td style="width: 40%"></td>
+                                                                            <td class="p-1 px-3">{{ translate('Trade & Crop Insurance') }}</td>
+                                                                            <td class="text-right p-1 px-3">{{ \App\CentralLogics\Helpers::format_currency($order->insurance_fee ?? 0) }}</td>
+                                                                        </tr>
+                                                                        @endif
+
                                                                         @if ($order->tax_status == 'excluded' || $order->tax_status == null  )
                                                                         <tr>
                                                                             <td style="width: 40%"></td>

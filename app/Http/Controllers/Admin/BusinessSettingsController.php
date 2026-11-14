@@ -103,7 +103,56 @@ class BusinessSettingsController extends Controller
                 $language = getWebConfig('language');
 
             return view('admin-views.business-settings.automated_message', compact( 'messages','language'));
+        } else if ($tab == 'insurance') {
+            return view('admin-views.business-settings.insurance-index');
         }
+    }
+
+    public function update_insurance(Request $request)
+    {
+        if (env('APP_MODE') == 'demo') {
+            Toastr::info(translate('messages.update_option_is_disable_for_demo'));
+            return back();
+        }
+
+        $request->validate([
+            'insurance_rate_percent' => 'nullable|numeric|min:0|max:100',
+            'insurance_min_fee' => 'nullable|numeric|min:0',
+            'insurance_max_fee' => 'nullable|numeric|min:0',
+            'insurance_provider_name' => 'nullable|string|max:120',
+            'insurance_policy_summary' => 'nullable|string|max:500',
+        ]);
+
+        $toggles = [
+            'insurance_status',
+            'insurance_cross_border_auto',
+            'insurance_allow_opt_in',
+            'insurance_show_badge',
+            'insurance_crop_spoilage',
+            'insurance_cross_border_transit',
+            'insurance_quality_escrow',
+        ];
+        foreach ($toggles as $key) {
+            Helpers::businessUpdateOrInsert(['key' => $key], [
+                'value' => $request->has($key) ? 1 : 0,
+            ]);
+        }
+
+        $fields = [
+            'insurance_rate_percent' => $request->input('insurance_rate_percent', 2.5),
+            'insurance_min_fee' => $request->input('insurance_min_fee', 0),
+            'insurance_max_fee' => $request->input('insurance_max_fee', 0),
+            'insurance_provider_name' => $request->input('insurance_provider_name', 'Aduanefie Trade & Crop Assurance'),
+            'insurance_policy_summary' => $request->input('insurance_policy_summary', 'Protects crop harvests, cross-border transit, and order quality under Aduanefie Escrow.'),
+        ];
+        foreach ($fields as $key => $val) {
+            Helpers::businessUpdateOrInsert(['key' => $key], [
+                'value' => $val,
+            ]);
+        }
+
+        Toastr::success(translate('messages.successfully_updated'));
+        return back();
     }
 
     public function update_priority(Request $request)

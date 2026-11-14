@@ -377,6 +377,56 @@
 
 
                                 @endif
+                                <div class="col-12 mt-2">
+                                    <div class="border rounded p-3 bg-light">
+                                        <h6 class="mb-3 d-flex align-items-center gap-2">
+                                            <img src="{{ asset('public/assets/admin/img/trade-insurance-badge.svg') }}" width="20" height="20" alt="">
+                                            <span>{{ translate('Crop Insurance & Live Farming') }}</span>
+                                        </h6>
+                                        <div class="row g-3">
+                                            <div class="col-sm-6 col-lg-3">
+                                                <div class="form-check mt-2">
+                                                    <input class="form-check-input" name="is_insured" type="checkbox" value="1" id="is_insured_check">
+                                                    <label class="form-check-label font-weight-bold" for="is_insured_check">
+                                                        {{ translate('Trade & Crop Insured') }}
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-sm-6 col-lg-3">
+                                                <label class="input-label mb-1">{{ translate('Insurance Coverage') }}</label>
+                                                <select name="insurance_type" class="form-control">
+                                                    <option value="crop_and_transit">{{ translate('Crop & Cross-Border Transit') }}</option>
+                                                    <option value="cross_border">{{ translate('Cross-Border Transit Only') }}</option>
+                                                    <option value="crop_only">{{ translate('Crop Harvest & Spoilage') }}</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-sm-6 col-lg-3">
+                                                <label class="input-label mb-1">{{ translate('Live Farming Status') }}</label>
+                                                <select name="farming_status" class="form-control">
+                                                    <option value="in_stock">{{ translate('In Stock (Ready)') }}</option>
+                                                    <option value="farming">{{ translate('Live Farming (Growing)') }}</option>
+                                                    <option value="harvest_ready">{{ translate('Harvest Ready') }}</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-sm-6 col-lg-3">
+                                                <div class="form-check mt-4">
+                                                    <input class="form-check-input" name="pre_order_enabled" type="checkbox" value="1" id="pre_order_enabled_check">
+                                                    <label class="form-check-label" for="pre_order_enabled_check">
+                                                        {{ translate('Allow Pre-Order') }}
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-sm-6 col-lg-3">
+                                                <label class="input-label mb-1">{{ translate('Planting Date') }}</label>
+                                                <input type="date" name="planting_date" class="form-control">
+                                            </div>
+                                            <div class="col-sm-6 col-lg-3">
+                                                <label class="input-label mb-1">{{ translate('Expected Harvest Date') }}</label>
+                                                <input type="date" name="expected_harvest_date" class="form-control">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

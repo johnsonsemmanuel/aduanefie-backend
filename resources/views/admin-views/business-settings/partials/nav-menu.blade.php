@@ -9,6 +9,9 @@
                 <a class="nav-link {{ Request::is('admin/business-settings/business-setup/order') ?'active':'' }}" href="{{ route('admin.business-settings.business-setup',  ['tab' => 'order']) }}"  aria-disabled="true">{{translate('messages.order_settings')}}</a>
             </li>
             <li class="nav-item">
+                <a class="nav-link {{ Request::is('admin/business-settings/business-setup/insurance') ?'active':'' }}" href="{{ route('admin.business-settings.business-setup',  ['tab' => 'insurance']) }}"  aria-disabled="true">{{translate('Insurance & Protection')}}</a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link {{ Request::is('admin/business-settings/business-setup/refund-settings') ?'active':'' }}" href="{{ route('admin.business-settings.business-setup',  ['tab' => 'refund-settings']) }}"  aria-disabled="true">{{translate('messages.refund_settings')}}</a>
             </li>
             <li class="nav-item">
