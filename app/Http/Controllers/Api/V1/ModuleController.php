@@ -24,7 +24,7 @@ class ModuleController extends Controller
 
                 $zone_id = is_array($zone_id) ? $zone_id : [$zone_id];
 
-                $modules = Module::with('zones')
+                $modules = Module::with('zones:zones.id,zones.name,zones.status')
                     ->withCount([
                         'items',
                         'stores' => function ($query) use ($zone_id) {
