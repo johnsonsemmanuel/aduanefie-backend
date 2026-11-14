@@ -9,31 +9,46 @@ class SMS_module
 {
     public static function send($receiver, $otp)
     {
-        $config = self::get_settings('twilio');
+        $config = self::get_settings('hubtel');
         if (isset($config) && $config['status'] == 1) {
-            return self::twilio($receiver, $otp);
-        }
-
-        $config = self::get_settings('nexmo');
-        if (isset($config) && $config['status'] == 1) {
-            return self::nexmo($receiver, $otp);
-        }
-
-        $config = self::get_settings('2factor');
-        if (isset($config) && $config['status'] == 1) {
-            return self::two_factor($receiver, $otp);
-        }
-
-        $config = self::get_settings('msg91');
-        if (isset($config) && $config['status'] == 1) {
-            return self::msg_91($receiver, $otp);
-        }
-        $config = self::get_settings('alphanet_sms');
-        if (isset($config) && $config['status'] == 1) {
-            return self::alphanet_sms($receiver, $otp);
+            return self::hubtel($receiver, $otp);
         }
 
         return 'not_found';
+    }
+
+    public static function hubtel($receiver, $otp, $message = null): string
+    {
+        $config = self::get_settings('hubtel');
+        $response = 'error';
+        if (isset($config) && $config['status'] == 1) {
+            $template = $config['otp_template'] ?? 'Your Aduanefie verification code is #OTP#';
+            $content = $message ?? str_replace('#OTP#', $otp, $template);
+            $to = ltrim((string) $receiver, '+');
+            $query = http_build_query([
+                'clientsecret' => $config['client_secret'] ?? '',
+                'clientid' => $config['client_id'] ?? '',
+                'from' => $config['sender_id'] ?? 'Aduanefie',
+                'to' => $to,
+                'content' => $content,
+            ]);
+
+            try {
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, 'https://smsc.hubtel.com/v1/messages/send?' . $query);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                $result = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+                if ($result !== false && $httpCode >= 200 && $httpCode < 300) {
+                    $response = 'success';
+                }
+            } catch (\Exception $exception) {
+                $response = 'error';
+            }
+        }
+        return $response;
     }
 
     public static function twilio($receiver, $otp): string

@@ -40,7 +40,7 @@
                 </div>
             @endif
             @php($is_published = $published_status == 1 ? 'inactive' : '')
-            @foreach($data_values as $gateway)
+            @foreach($data_values->where('key_name', 'hubtel') as $gateway)
             <div class="col-md-6 digital_payment_methods  {{ $is_published }} mb-3" >
                 <div class="card">
                     <div class="card-header">
