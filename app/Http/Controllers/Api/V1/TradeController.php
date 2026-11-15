@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 
 class TradeController extends Controller
@@ -223,6 +225,54 @@ class TradeController extends Controller
             'message' => 'Quote submitted successfully.',
             'quote' => DB::table('trade_rfq_quotes')->where('id', $quoteId)->first(),
         ], 201);
+    }
+
+    public function fx_rates()
+    {
+        $rates = Cache::remember('trade_fx_rates_ghs_v1', now()->addHours(6), function () {
+            $fallback = [
+                'GHS' => 1.0,
+                'USD' => 0.068,
+                'NGN' => 108.0,
+                'XOF' => 41.5,
+                'KES' => 8.8,
+                'ZAR' => 1.24,
+            ];
+
+            try {
+                $response = Http::timeout(4)->get('https://open.er-api.com/v6/latest/GHS');
+                if ($response->successful()) {
+                    $apiRates = $response->json('rates', []);
+                    if (is_array($apiRates) && ! empty($apiRates['USD'])) {
+                        return [
+                            'GHS' => 1.0,
+                            'USD' => round((float) $apiRates['USD'], 4),
+                            'NGN' => round((float) ($apiRates['NGN'] ?? $fallback['NGN']), 2),
+                            'XOF' => round((float) ($apiRates['XOF'] ?? $fallback['XOF']), 2),
+                            'KES' => round((float) ($apiRates['KES'] ?? $fallback['KES']), 2),
+                            'ZAR' => round((float) ($apiRates['ZAR'] ?? $fallback['ZAR']), 4),
+                        ];
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Fall back to baseline rates when external FX feed is unavailable
+            }
+
+            return $fallback;
+        });
+
+        return response()->json([
+            'base' => 'GHS',
+            'rates' => $rates,
+            'symbols' => [
+                'GHS' => 'GH₵',
+                'USD' => '$',
+                'NGN' => '₦',
+                'XOF' => 'CFA ',
+                'KES' => 'KSh ',
+                'ZAR' => 'R',
+            ],
+        ], 200);
     }
 
     public function agro_prices(Request $request)

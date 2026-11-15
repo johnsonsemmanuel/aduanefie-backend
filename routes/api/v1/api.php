@@ -566,6 +566,7 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             Route::post('rfqs', 'TradeController@store_rfq');
             Route::post('rfqs/{id}/quotes', 'TradeController@store_quote');
             Route::get('agro-prices', 'TradeController@agro_prices');
+            Route::get('fx-rates', 'TradeController@fx_rates');
         });
 
         Route::group(['prefix' => 'common-condition'], function () {
