@@ -78,12 +78,151 @@ class TradeController extends Controller
 
     public function sourcing(Request $request)
     {
-        return response()->json(['requests' => [], 'total' => 0], 200);
+        return $this->requests($request);
     }
 
     public function requests(Request $request)
     {
-        return response()->json(['requests' => [], 'total' => 0], 200);
+        if (! Schema::hasTable('trade_rfqs')) {
+            return response()->json(['requests' => [], 'total' => 0], 200);
+        }
+
+        $query = DB::table('trade_rfqs')->orderByDesc('id');
+        if ($request->filled('status') && $request->query('status') !== 'all') {
+            $query->where('status', $request->query('status'));
+        }
+        if ($request->filled('trade_bloc') && $request->query('trade_bloc') !== 'all') {
+            $query->where('trade_bloc', $request->query('trade_bloc'));
+        }
+
+        $rfqs = $query->limit(50)->get();
+        $quotesByRfq = Schema::hasTable('trade_rfq_quotes')
+            ? DB::table('trade_rfq_quotes')
+                ->whereIn('trade_rfq_id', $rfqs->pluck('id'))
+                ->orderBy('quoted_unit_price_ghs')
+                ->get()
+                ->groupBy('trade_rfq_id')
+            : collect();
+
+        $enriched = $rfqs->map(function ($rfq) use ($quotesByRfq) {
+            $quotes = $quotesByRfq->get($rfq->id, collect());
+            $rfq->quotes_count = $quotes->count();
+            $rfq->quotes = $quotes->values();
+            return $rfq;
+        });
+
+        return response()->json([
+            'requests' => $enriched->values(),
+            'total' => $enriched->count(),
+        ], 200);
+    }
+
+    public function store_rfq(Request $request)
+    {
+        if (! Schema::hasTable('trade_rfqs')) {
+            return response()->json(['message' => 'RFQ table not initialized yet.'], 503);
+        }
+
+        $data = $request->validate([
+            'buyer_name' => 'required|string|max:120',
+            'buyer_company' => 'nullable|string|max:150',
+            'buyer_phone' => 'required|string|max:40',
+            'buyer_email' => 'nullable|email|max:150',
+            'commodity' => 'required|string|max:150',
+            'category' => 'nullable|string|max:100',
+            'quantity' => 'required|numeric|min:1',
+            'unit' => 'required|string|max:60',
+            'target_price_ghs' => 'nullable|numeric|min:0',
+            'incoterm' => 'nullable|in:EXW,FOB,CIF,DDP',
+            'origin_country' => 'nullable|string|max:80',
+            'destination_country' => 'required|string|max:80',
+            'destination_city' => 'nullable|string|max:120',
+            'trade_bloc' => 'nullable|in:ECOWAS,AfCFTA,EAC,SADC',
+            'requires_insurance' => 'nullable|boolean',
+            'requires_phytosanitary' => 'nullable|boolean',
+            'deadline_date' => 'nullable|date',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        $id = DB::table('trade_rfqs')->insertGetId([
+            'user_id' => auth('api')->id(),
+            'buyer_name' => trim($data['buyer_name']),
+            'buyer_company' => isset($data['buyer_company']) ? trim($data['buyer_company']) : null,
+            'buyer_phone' => trim($data['buyer_phone']),
+            'buyer_email' => $data['buyer_email'] ?? null,
+            'commodity' => trim($data['commodity']),
+            'category' => trim($data['category'] ?? 'Grains & Cereals'),
+            'quantity' => round((float) $data['quantity'], 2),
+            'unit' => trim($data['unit']),
+            'target_price_ghs' => isset($data['target_price_ghs']) ? round((float) $data['target_price_ghs'], 2) : null,
+            'incoterm' => strtoupper($data['incoterm'] ?? 'DDP'),
+            'origin_country' => trim($data['origin_country'] ?? 'Ghana'),
+            'destination_country' => trim($data['destination_country']),
+            'destination_city' => isset($data['destination_city']) ? trim($data['destination_city']) : null,
+            'trade_bloc' => strtoupper($data['trade_bloc'] ?? 'ECOWAS'),
+            'requires_insurance' => (bool) ($data['requires_insurance'] ?? true),
+            'requires_phytosanitary' => (bool) ($data['requires_phytosanitary'] ?? true),
+            'deadline_date' => $data['deadline_date'] ?? null,
+            'notes' => $data['notes'] ?? null,
+            'status' => 'open',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'RFQ submitted successfully.',
+            'rfq' => DB::table('trade_rfqs')->where('id', $id)->first(),
+        ], 201);
+    }
+
+    public function store_quote(Request $request, $id)
+    {
+        if (! Schema::hasTable('trade_rfqs') || ! Schema::hasTable('trade_rfq_quotes')) {
+            return response()->json(['message' => 'RFQ tables not initialized yet.'], 503);
+        }
+
+        $rfq = DB::table('trade_rfqs')->where('id', $id)->first();
+        if (! $rfq) {
+            return response()->json(['message' => 'RFQ not found.'], 404);
+        }
+
+        $data = $request->validate([
+            'supplier_name' => 'required|string|max:150',
+            'supplier_phone' => 'required|string|max:40',
+            'store_id' => 'nullable|integer',
+            'quoted_unit_price_ghs' => 'required|numeric|min:0.01',
+            'incoterm' => 'nullable|in:EXW,FOB,CIF,DDP',
+            'lead_time_days' => 'nullable|integer|min:1|max:365',
+            'compliance_docs' => 'nullable|string|max:255',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        $quoteId = DB::table('trade_rfq_quotes')->insertGetId([
+            'trade_rfq_id' => $rfq->id,
+            'store_id' => $data['store_id'] ?? null,
+            'supplier_name' => trim($data['supplier_name']),
+            'supplier_phone' => trim($data['supplier_phone']),
+            'quoted_unit_price_ghs' => round((float) $data['quoted_unit_price_ghs'], 2),
+            'incoterm' => strtoupper($data['incoterm'] ?? $rfq->incoterm),
+            'lead_time_days' => (int) ($data['lead_time_days'] ?? 7),
+            'compliance_docs' => $data['compliance_docs'] ?? 'AfCFTA CoO, Phytosanitary',
+            'notes' => $data['notes'] ?? null,
+            'status' => 'submitted',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        if ($rfq->status === 'open') {
+            DB::table('trade_rfqs')->where('id', $rfq->id)->update([
+                'status' => 'quoted',
+                'updated_at' => now(),
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Quote submitted successfully.',
+            'quote' => DB::table('trade_rfq_quotes')->where('id', $quoteId)->first(),
+        ], 201);
     }
 
     public function agro_prices(Request $request)

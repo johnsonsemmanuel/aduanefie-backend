@@ -317,6 +317,18 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
             Route::post('send-sms', 'AgroPriceController@sendSmsAlerts')->name('send-sms');
         });
 
+        Route::group(['prefix' => 'trade-rfqs', 'as' => 'trade-rfqs.', 'middleware' => ['module:settings']], function () {
+            Route::get('/', 'TradeRfqController@index')->name('index');
+            Route::post('status/{id}', 'TradeRfqController@updateStatus')->name('update-status');
+            Route::post('quotes/{quoteId}/accept', 'TradeRfqController@acceptQuote')->name('accept-quote');
+            Route::delete('destroy/{id}', 'TradeRfqController@destroy')->name('destroy');
+        });
+
+        Route::group(['prefix' => 'footer-links', 'as' => 'footer-links.', 'middleware' => ['module:settings']], function () {
+            Route::get('/', 'FooterLinkController@index')->name('index');
+            Route::post('update', 'FooterLinkController@update')->name('update');
+        });
+
         Route::group(['prefix' => 'business-settings', 'as' => 'business-settings.', 'middleware' => ['module:settings', 'actch']], function () {
             Route::get('business-setup/{tab?}', 'BusinessSettingsController@business_index')->name('business-setup');
             Route::get('react-setup', 'BusinessSettingsController@react_setup')->name('react-setup');

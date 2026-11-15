@@ -116,6 +116,20 @@
                                 <span class="text-truncate">Agro Market Prices</span>
                             </a>
                         </li>
+                        <li class="navbar-vertical-aside-has-menu {{ Request::is('admin/trade-rfqs*') ? 'active' : '' }}">
+                            <a class="nav-link " href="{{ route('admin.trade-rfqs.index') }}"
+                               title="Cross-Border RFQs">
+                                <span class="tio-document-text-outlined nav-icon"></span>
+                                <span class="text-truncate">Cross-Border RFQs</span>
+                            </a>
+                        </li>
+                        <li class="navbar-vertical-aside-has-menu {{ Request::is('admin/footer-links*') ? 'active' : '' }}">
+                            <a class="nav-link " href="{{ route('admin.footer-links.index') }}"
+                               title="Footer Links">
+                                <span class="tio-link nav-icon"></span>
+                                <span class="text-truncate">Footer Links</span>
+                            </a>
+                        </li>
                     @endif
 {{--                    @if (\App\CentralLogics\Helpers::module_permission_check('settings') && (auth('admin')->user()->role_id == 1))--}}
 {{--                        <li class="navbar-vertical-aside-has-menu {{ Request::is('admin/business-settings/external-system*') ? 'active' : '' }}">--}}

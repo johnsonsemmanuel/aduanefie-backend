@@ -563,6 +563,8 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             Route::post('customs-duties/calculate', 'TradeController@customs_duties_calculate');
             Route::get('sourcing', 'TradeController@sourcing');
             Route::get('requests', 'TradeController@requests');
+            Route::post('rfqs', 'TradeController@store_rfq');
+            Route::post('rfqs/{id}/quotes', 'TradeController@store_quote');
             Route::get('agro-prices', 'TradeController@agro_prices');
         });
 
