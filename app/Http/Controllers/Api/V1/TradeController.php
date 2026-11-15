@@ -300,13 +300,9 @@ class TradeController extends Controller
             $prices = $query->orderBy('id')->get();
         }
 
-        if ($prices->isEmpty() && ! $category && ! $hub && $search === '') {
-            $prices = collect(self::defaultGhanaAgroPrices());
-        }
-
         $allForFilters = Schema::hasTable('agro_market_prices')
             ? DB::table('agro_market_prices')->where('is_active', true)->get()
-            : collect(self::defaultGhanaAgroPrices());
+            : collect();
 
         return response()->json([
             'prices' => $prices->values(),
