@@ -424,6 +424,21 @@
                                                 <label class="input-label mb-1">{{ translate('Expected Harvest Date') }}</label>
                                                 <input type="date" name="expected_harvest_date" class="form-control">
                                             </div>
+                                            <div class="col-sm-6 col-lg-3">
+                                                <label class="input-label mb-1">{{ translate('Minimum Order Qty (MOQ)') }}</label>
+                                                <input type="number" min="1" name="moq" class="form-control" value="1">
+                                            </div>
+                                            <div class="col-lg-9">
+                                                <label class="input-label mb-1">{{ translate('Bulk Volume Pricing Tiers (Min Qty & Unit Price)') }}</label>
+                                                <div class="row g-2">
+                                                    @for ($t = 0; $t < 3; $t++)
+                                                        <div class="col-md-4 d-flex gap-1">
+                                                            <input type="number" min="2" name="tier_min_qty[]" class="form-control form-control-sm" placeholder="{{ translate('Min Qty') }}">
+                                                            <input type="number" step="0.01" min="0" name="tier_price[]" class="form-control form-control-sm" placeholder="{{ translate('Price') }}">
+                                                        </div>
+                                                    @endfor
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

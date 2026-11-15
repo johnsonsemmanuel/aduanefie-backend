@@ -1807,4 +1807,24 @@ class OrderController extends Controller
 
         return view('admin-views.order.offline_verification_list', compact('orders', 'status'));
     }
+
+    public function update_trade_compliance(Request $request, $id)
+    {
+        $request->validate([
+            'escrow_status' => 'required|in:none,held,inspection_uploaded,border_cleared,buyer_confirmed,released,disputed',
+            'phytosanitary_cert_ref' => 'nullable|string|max:120',
+            'origin_cert_ref' => 'nullable|string|max:120',
+            'inspection_notes' => 'nullable|string|max:1000',
+        ]);
+
+        $order = Order::findOrFail($id);
+        $order->escrow_status = $request->input('escrow_status');
+        $order->phytosanitary_cert_ref = $request->input('phytosanitary_cert_ref');
+        $order->origin_cert_ref = $request->input('origin_cert_ref');
+        $order->inspection_notes = $request->input('inspection_notes');
+        $order->save();
+
+        Toastr::success('Trade escrow & compliance documents updated.');
+        return back();
+    }
 }

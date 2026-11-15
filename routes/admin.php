@@ -276,6 +276,7 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
 
             Route::post('add-payment-ref-code/{id}', 'OrderController@add_payment_ref_code')->name('add-payment-ref-code');
             Route::post('add-order-proof/{id}', 'OrderController@add_order_proof')->name('add-order-proof');
+            Route::post('trade-compliance/{id}', 'OrderController@update_trade_compliance')->name('trade-compliance');
             Route::get('remove-proof-image', 'OrderController@remove_proof_image')->name('remove-proof-image');
             Route::get('store-filter/{store_id}', 'OrderController@restaurnt_filter')->name('store-filter');
             Route::get('filter/reset', 'OrderController@filter_reset');

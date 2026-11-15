@@ -266,6 +266,33 @@
                                     @endif
 
                                 </h6>
+                                <div class="mt-3 p-2 border rounded bg-light text-left">
+                                    <div class="font-weight-bold small mb-2">{{ translate('Trade Escrow & Export Compliance') }}</div>
+                                    <form action="{{ route('admin.order.trade-compliance', $order->id) }}" method="POST">
+                                        @csrf
+                                        <div class="row g-2">
+                                            <div class="col-12">
+                                                <select name="escrow_status" class="form-control form-control-sm">
+                                                    @foreach (['none' => 'No Escrow', 'held' => 'Escrow Held', 'inspection_uploaded' => 'Inspection Uploaded', 'border_cleared' => 'Border Cleared', 'buyer_confirmed' => 'Buyer Confirmed', 'released' => 'Escrow Released', 'disputed' => 'Disputed'] as $val => $lbl)
+                                                        <option value="{{ $val }}" {{ ($order->escrow_status ?? 'none') === $val ? 'selected' : '' }}>{{ $lbl }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="col-6">
+                                                <input type="text" name="phytosanitary_cert_ref" value="{{ $order->phytosanitary_cert_ref }}" class="form-control form-control-sm" placeholder="Phytosanitary Ref">
+                                            </div>
+                                            <div class="col-6">
+                                                <input type="text" name="origin_cert_ref" value="{{ $order->origin_cert_ref }}" class="form-control form-control-sm" placeholder="AfCFTA / ETLS CoO Ref">
+                                            </div>
+                                            <div class="col-12">
+                                                <input type="text" name="inspection_notes" value="{{ $order->inspection_notes }}" class="form-control form-control-sm" placeholder="Inspection / Border Notes">
+                                            </div>
+                                            <div class="col-12 text-right">
+                                                <button type="submit" class="btn btn-xs btn-primary">{{ translate('Save Compliance') }}</button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
                                 @if ($order->store && $order->store->module->module_type == 'food')
                                     <h6>
                                         <span>{{ translate('cutlery') }}</span> <span>:</span>

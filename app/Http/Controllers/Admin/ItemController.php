@@ -341,6 +341,17 @@ class ItemController extends Controller
         $item->pre_order_enabled = $request->boolean('pre_order_enabled');
         $item->planting_date = $request->filled('planting_date') ? $request->input('planting_date') : null;
         $item->expected_harvest_date = $request->filled('expected_harvest_date') ? $request->input('expected_harvest_date') : null;
+        $item->moq = max(1, (int) $request->input('moq', 1));
+        $tiers = [];
+        foreach ((array) $request->input('tier_min_qty', []) as $idx => $minQty) {
+            $qty = (int) $minQty;
+            $tierPrice = (float) ($request->input('tier_price', [])[$idx] ?? 0);
+            if ($qty > 0 && $tierPrice > 0) {
+                $tiers[] = ['min_qty' => $qty, 'unit_price' => round($tierPrice, 2)];
+            }
+        }
+        usort($tiers, fn($a, $b) => $a['min_qty'] <=> $b['min_qty']);
+        $item->bulk_pricing_tiers = !empty($tiers) ? $tiers : null;
         $item->save();
         $item->tags()->sync($tag_ids);
         $item->nutritions()->sync($nutrition_ids);
@@ -651,6 +662,17 @@ class ItemController extends Controller
         $item->pre_order_enabled = $request->boolean('pre_order_enabled');
         $item->planting_date = $request->filled('planting_date') ? $request->input('planting_date') : null;
         $item->expected_harvest_date = $request->filled('expected_harvest_date') ? $request->input('expected_harvest_date') : null;
+        $item->moq = max(1, (int) $request->input('moq', 1));
+        $tiers = [];
+        foreach ((array) $request->input('tier_min_qty', []) as $idx => $minQty) {
+            $qty = (int) $minQty;
+            $tierPrice = (float) ($request->input('tier_price', [])[$idx] ?? 0);
+            if ($qty > 0 && $tierPrice > 0) {
+                $tiers[] = ['min_qty' => $qty, 'unit_price' => round($tierPrice, 2)];
+            }
+        }
+        usort($tiers, fn($a, $b) => $a['min_qty'] <=> $b['min_qty']);
+        $item->bulk_pricing_tiers = !empty($tiers) ? $tiers : null;
         if (Helpers::get_mail_status('product_approval') && $request?->temp_product) {
 
 

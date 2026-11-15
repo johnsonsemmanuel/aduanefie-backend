@@ -29,6 +29,8 @@ class Item extends Model
         'reviews_count' => 'integer',
         'recommended' => 'integer',
         'maximum_cart_quantity' => 'integer',
+        'moq' => 'integer',
+        'bulk_pricing_tiers' => 'array',
         'organic' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
