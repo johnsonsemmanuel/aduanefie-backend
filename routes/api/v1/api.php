@@ -22,6 +22,7 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
         Route::post('/store', 'ExternalConfigurationController@updateConfiguration');
     });
 
+    Route::get('get-page-meta-data', 'ConfigController@getPageMetaData');
     Route::get('/terms-and-conditions', 'HomeController@terms_and_conditions');
     Route::get('/about-us', 'HomeController@about_us');
     Route::get('/privacy-policy', 'HomeController@privacy_policy');
@@ -335,6 +336,7 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
 
     Route::group(['prefix' => 'config'], function () {
         Route::get('/', 'ConfigController@configuration');
+        Route::get('get-analytic-scripts', 'ConfigController@getAnalyticScripts');
         Route::get('/get-zone-id', 'ConfigController@get_zone');
         Route::get('place-api-autocomplete', 'ConfigController@place_api_autocomplete');
         Route::get('distance-api', 'ConfigController@distance_api');

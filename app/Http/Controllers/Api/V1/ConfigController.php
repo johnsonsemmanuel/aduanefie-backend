@@ -869,4 +869,105 @@ class ConfigController extends Controller
 
         return response()->json($payload, 200);
     }
+
+    /**
+     * Analytics script ids consumed by the React `_document.js` server render.
+     * Values live in business_settings so they can be changed without a deploy.
+     * These ids are public by design — they are injected into page HTML.
+     */
+    public function getAnalyticScripts()
+    {
+        $keys = [
+            'google_tag_manager',
+            'google_analytics',
+            'facebook_pixel',
+            'linkedin_insight_tag',
+            'tiktok_pixel',
+            'snapchat_pixel',
+            'x_pixel',
+            'twitter_pixel',
+            'pinterest_pixel',
+        ];
+        $aliases = ['twitter_pixel' => 'x_pixel'];
+
+        $settings = BusinessSetting::whereIn('key', $keys)->pluck('value', 'key');
+        $scripts = [];
+        $seen = [];
+
+        foreach ($keys as $key) {
+            $scriptId = trim((string) ($settings[$key] ?? ''));
+            if ($scriptId === '') {
+                continue;
+            }
+            $type = $aliases[$key] ?? $key;
+            if (isset($seen[$type])) {
+                continue;
+            }
+            $seen[$type] = true;
+            $scripts[] = ['type' => $type, 'script_id' => $scriptId];
+        }
+
+        return response()->json($scripts, 200);
+    }
+
+    /**
+     * Per-page SEO metadata requested by the React SSR helpers. Returns a
+     * 200 with empty fields when nothing is configured so pages fall back to
+     * their built-in titles instead of logging a 404 on every request.
+     */
+    public function getPageMetaData(Request $request)
+    {
+        $empty = [
+            'title' => null,
+            'description' => null,
+            'image_full_url' => null,
+            'meta_data' => null,
+        ];
+
+        $pageName = trim((string) $request->query('page_name', ''));
+        if ($pageName === '' || strlen($pageName) > 255) {
+            return response()->json($empty, 200);
+        }
+
+        $configured = json_decode(
+            (string) Helpers::cached_business_setting('page_meta_data', ''),
+            true
+        );
+
+        $candidates = [$pageName];
+        $pageId = $request->query('id');
+        if (is_scalar($pageId) && (string) $pageId !== '') {
+            $candidates[] = $pageName . '/' . (string) $pageId;
+        }
+
+        $entry = null;
+        if (is_array($configured)) {
+            foreach ($candidates as $candidate) {
+                if (isset($configured[$candidate]) && is_array($configured[$candidate])) {
+                    $entry = $configured[$candidate];
+                    break;
+                }
+            }
+        }
+
+        if ($entry === null) {
+            return response()->json($empty, 200);
+        }
+
+        $image = $entry['image_full_url'] ?? $entry['image'] ?? null;
+        if ($image && !preg_match('#^https?://#i', (string) $image)) {
+            $image = Helpers::get_full_url(
+                'page_meta',
+                $image,
+                $entry['storage'] ?? 'public'
+            );
+        }
+
+        return response()->json([
+            'title' => $entry['title'] ?? null,
+            'description' => $entry['description'] ?? null,
+            'image_full_url' => $image ?: null,
+            'meta_data' => $entry['meta_data'] ?? null,
+        ], 200);
+    }
 }
