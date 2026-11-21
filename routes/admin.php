@@ -343,13 +343,6 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
             Route::post('release-escrow/{id}', 'GroupBuyController@releaseEscrow')->name('release-escrow');
         });
 
-        // Organiser Ghana Card review. Masked last four + manual approval only.
-        Route::group(['prefix' => 'organizer-verifications', 'as' => 'organizer-verifications.', 'middleware' => ['module:settings']], function () {
-            Route::get('/', 'OrganizerVerificationController@index')->name('index');
-            Route::post('approve/{user}', 'OrganizerVerificationController@approve')->name('approve');
-            Route::post('reject/{user}', 'OrganizerVerificationController@reject')->name('reject');
-        });
-
         Route::group(['prefix' => 'backyard-farmers', 'as' => 'backyard-farmers.', 'middleware' => ['module:settings', 'actch']], function () {
             Route::get('/', [\App\Http\Controllers\BackyardFarmerController::class, 'adminIndex'])->name('index');
             Route::get('export', [\App\Http\Controllers\BackyardFarmerController::class, 'adminExport'])->name('export');
@@ -363,6 +356,12 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
             Route::post('{id}/status', 'RegionalTourController@updateStatus')->name('status');
             Route::post('{id}/broadcast', 'RegionalTourController@broadcastReminder')->name('broadcast');
             Route::get('export', 'RegionalTourController@exportCsv')->name('export');
+        });
+
+        Route::group(['prefix' => 'marketer-applications', 'as' => 'marketer-applications.'], function () {
+            Route::get('/', 'MarketerApplicationController@index')->name('index');
+            Route::post('{id}/approve', 'MarketerApplicationController@approve')->name('approve');
+            Route::post('{id}/reject', 'MarketerApplicationController@reject')->name('reject');
         });
 
         Route::group(['prefix' => 'footer-links', 'as' => 'footer-links.', 'middleware' => ['module:settings']], function () {

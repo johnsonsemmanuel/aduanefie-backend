@@ -370,8 +370,6 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
     Route::group(['prefix' => 'group-buys'], function () {
         Route::get('/', 'GroupBuyController@index');
         Route::get('my', 'GroupBuyController@my');
-        Route::get('organizer/verification', 'GroupBuyController@verification');
-        Route::post('organizer/verification', 'GroupBuyController@submitVerification');
         Route::post('/', 'GroupBuyController@store')->middleware('throttle:api-public-write');
         Route::get('{id}', 'GroupBuyController@show');
         // Organiser edit + member list + member-only chat. Membership and
@@ -384,7 +382,6 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
         Route::post('{id}/leave', 'GroupBuyController@leave')->middleware('throttle:api-public-write');
         Route::post('{id}/cancel', 'GroupBuyController@cancel')->middleware('throttle:api-public-write');
         Route::post('{id}/quote', 'GroupBuyController@quote');
-        Route::post('{id}/invite', 'GroupBuyController@invite')->middleware('throttle:api-public-write');
     });
 
     // Regional Tours: farmer/cooperative tour signups & regional visit requests
@@ -392,6 +389,10 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
         Route::get('/', 'RegionalTourController@index');
         Route::post('register', 'RegionalTourController@register')->middleware('throttle:api-public-write');
     });
+
+    // Public Remote Marketer self-application
+    Route::post('marketer-applications', 'MarketerApplicationController@store')
+        ->middleware('throttle:api-public-write');
 
     Route::group(['prefix' => 'testimonial'], function () {
         Route::get('/', 'TestimonialController@get_tetimonial_lists');

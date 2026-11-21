@@ -42,6 +42,13 @@
         </a>
     </li>
 
+    <li class="navbar-vertical-aside-has-menu {{ Request::is('admin/marketer-applications*') ? 'active' : '' }}">
+        <a class="nav-link" href="{{ route('admin.marketer-applications.index') }}" title="Marketer Applications">
+            <i class="tio-user-add nav-icon"></i>
+            <span class="navbar-vertical-aside-mini-mode-hidden-elements text-truncate">Marketer Applications</span>
+        </a>
+    </li>
+
     <li class="nav-item">
         <small class="nav-subtitle" title="Agro & Field Programs">Agro &amp; Field Programs</small>
         <small class="tio-more-horizontal nav-subtitle-replacer"></small>

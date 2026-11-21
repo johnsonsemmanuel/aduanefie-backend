@@ -34,11 +34,6 @@ class User extends Authenticatable
         'password',
         'remember_token',
         'interest',
-        // Ghana Card reference and review note are never serialized on the
-        // generic user model. Only the owner's verification endpoint returns
-        // the masked reference.
-        'ghana_card_last4',
-        'organizer_verification_note',
     ];
 
     /**

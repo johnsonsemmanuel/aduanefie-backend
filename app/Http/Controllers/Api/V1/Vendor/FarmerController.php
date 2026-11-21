@@ -683,12 +683,69 @@ class FarmerController extends Controller
             $request->severity ?? 'medium'
         );
 
+        $recommendedInputs = $this->getRecommendedFarmInputs($request->pest_type);
+
         return response()->json([
             'pest_type' => $request->pest_type,
             'crop_type' => $request->crop_type,
             'severity' => $request->severity,
             'recommendation' => $recommendation,
+            'recommended_inputs' => $recommendedInputs,
         ], 200);
+    }
+
+    /**
+     * Map a pest/disease type to matching approved Farm Inputs & Fertiliser
+     * products so farmers can purchase treatments in 1 tap.
+     */
+    private function getRecommendedFarmInputs(string $pestType): array
+    {
+        $keywordsByPest = [
+            'aphids' => ['neem', 'insecticid', 'aphid', 'soap'],
+            'armyworm' => ['spinosad', 'bt', 'bacillus', 'armyworm', 'insecticid'],
+            'whitefly' => ['neem', 'sticky', 'whitefly', 'insecticid'],
+            'mealybug' => ['neem', 'mealybug', 'insecticid'],
+            'spider mite' => ['miticid', 'neem', 'acaricid', 'mite'],
+            'fruit fly' => ['pheromone', 'bait', 'trap', 'insecticid'],
+            'blight' => ['copper', 'fungicid', 'mancozeb', 'blight'],
+            'powdery mildew' => ['sulfur', 'sulphur', 'fungicid', 'mildew'],
+            'root rot' => ['trichoderma', 'fungicid', 'bio'],
+            'bacterial wilt' => ['bactericid', 'copper', 'disinfect'],
+            'locust' => ['metarhizium', 'biopesticid', 'insecticid'],
+        ];
+
+        $pestLower = strtolower(trim($pestType));
+        $keywords = $keywordsByPest[$pestLower] ?? ['pesticid', 'fungicid', 'insecticid', 'neem'];
+
+        $inputModuleIds = \App\Models\Module::where('module_type', 'pharmacy')
+            ->orWhere('module_name', 'like', '%Input%')
+            ->orWhere('module_name', 'like', '%Fertilis%')
+            ->pluck('id')
+            ->all();
+
+        $query = Item::active()
+            ->when(! empty($inputModuleIds), fn ($q) => $q->whereIn('module_id', $inputModuleIds))
+            ->where(function ($q) use ($keywords) {
+                foreach ($keywords as $kw) {
+                    $q->orWhere('name', 'like', "%{$kw}%")
+                      ->orWhere('description', 'like', "%{$kw}%");
+                }
+            })
+            ->with('store:id,name')
+            ->limit(4)
+            ->get();
+
+        return $query->map(function (Item $item) {
+            return [
+                'id' => $item->id,
+                'slug' => $item->slug,
+                'name' => $item->name,
+                'price' => (float) $item->price,
+                'store_name' => $item->store?->name,
+                'image_full_url' => $item->image_full_url,
+                'product_url' => 'https://aduanefie.com/product/' . ($item->slug ?: $item->id),
+            ];
+        })->values()->all();
     }
 
     /**
@@ -697,7 +754,6 @@ class FarmerController extends Controller
     private function getAiPestRecommendation(string $pestType, string $cropType, string $severity): string
     {
         $pestLower = strtolower($pestType);
-        $cropLower = strtolower($cropType);
 
         // Common pest recommendations
         $recommendations = [
@@ -720,9 +776,6 @@ class FarmerController extends Controller
             'high' => "Treat urgently. Consider removing severely affected plants.",
             'critical' => "Emergency treatment required. Consider crop loss mitigation. Contact extension officer.",
         ];
-
-        $rec = $recommendations[$pestLower] ?? "Apply appropriate pesticide for $pestType. Follow label instructions carefully. Rotate active ingredients to prevent resistance.";
-        $sevAdvice = $severityAdvice[$severity] ?? $severityAdvice['medium'];
 
         $rec = $recommendations[$pestLower] ?? "Apply appropriate pesticide for $pestType. Follow label instructions carefully. Rotate active ingredients to prevent resistance.";
         $sevAdvice = $severityAdvice[$severity] ?? $severityAdvice['medium'];
