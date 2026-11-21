@@ -80,7 +80,7 @@
                     <input type="text" id="marketer-ref-url" value="{{ $refUrl }}" readonly style="flex:1;min-width:220px;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;background:#f9fafb;">
                     <button type="button" onclick="var i=document.getElementById('marketer-ref-url');i.select();navigator.clipboard.writeText(i.value);this.innerText='Copied!';setTimeout(()=>this.innerText='Copy Link',2000);" style="padding:7px 14px;background:#67513A;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;">Copy Link</button>
                     <a href="https://wa.me/?text={{ $waText }}" target="_blank" rel="noopener" style="padding:7px 14px;background:#25D366;color:#fff;border-radius:6px;font-size:13px;text-decoration:none;font-weight:600;">Share on WhatsApp</a>
-                    <a href="{{ $refUrl }}" target="_blank" class="btn" style="padding:7px 14px;font-size:13px;text-decoration:none;">Onboard Farmer ↗</a>
+                    <a href="{{ route('marketer.register-farmer') }}" class="btn" style="padding:7px 14px;font-size:13px;text-decoration:none;">+ Register Farmer</a>
                     <button type="button" onclick="window.print()" class="btn secondary" style="padding:7px 12px;font-size:13px;">Print QR Poster</button>
                 </div>
             </div>

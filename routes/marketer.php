@@ -39,6 +39,8 @@ Route::get('marketer-mfa/recovery-codes', [MarketerMfaController::class, 'recove
 
 Route::middleware(MarketerAuthenticated::class)->prefix('marketer')->group(function () {
     Route::get('/', [MarketerPortalController::class, 'dashboard'])->name('marketer.dashboard');
+    Route::get('register-farmer', [MarketerPortalController::class, 'showRegisterFarmer'])->name('marketer.register-farmer');
+    Route::post('register-farmer', [MarketerPortalController::class, 'storeRegisterFarmer'])->name('marketer.register-farmer.store');
     Route::post('stores/{storeId}/verify', [MarketerPortalController::class, 'verifyStore'])->name('marketer.stores.verify');
     Route::get('backyard-farms', [MarketerPortalController::class, 'backyardFarms'])->name('marketer.backyard-farms');
     Route::post('backyard-farms/{id}/verify', [MarketerPortalController::class, 'verifyBackyardFarm'])->name('marketer.backyard-farms.verify');
