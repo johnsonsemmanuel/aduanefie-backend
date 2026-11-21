@@ -211,18 +211,40 @@ class GroupBuyService
         });
     }
 
-    public function leave(GroupBuy $group, GroupBuyParticipant $participant): void
+    public function leave(GroupBuy $group, GroupBuyParticipant $participant, ?string $reason = null, ?string $note = null): void
     {
         if ($group->status !== GroupBuy::STATUS_OPEN) {
             throw new \InvalidArgumentException('You can only leave a group that is still open.');
         }
 
-        DB::transaction(function () use ($group, $participant) {
+        $cleanReason = $reason ? mb_substr(trim($reason), 0, 255) : null;
+        $cleanNote = $note ? mb_substr(trim($note), 0, 500) : null;
+
+        DB::transaction(function () use ($group, $participant, $cleanReason, $cleanNote) {
             $participant->delete();
-            $group->decrement('committed_count');
-            $this->log($group, 'left', $participant->id, 'customer', $participant->user_id, [
-                'message' => 'Member left before the group filled; no payment was taken.',
-            ]);
+            if ($group->committed_count > 0) {
+                $group->decrement('committed_count');
+            }
+            $this->log($group, 'left', $participant->id, 'customer', $participant->user_id, array_filter([
+                'reason' => $cleanReason,
+                'note' => $cleanNote,
+                'message' => 'Member left before the group filled; spot reopened for new buyers.',
+            ]));
+
+            // Let the group team see why a member left and that a spot reopened.
+            if ($cleanReason || $cleanNote) {
+                $summary = $cleanReason ?: 'Member left';
+                if ($cleanNote) {
+                    $summary .= " - {$cleanNote}";
+                }
+                GroupBuyMessage::create([
+                    'group_buy_id' => $group->id,
+                    'sender_user_id' => null,
+                    'sender_guest_id' => null,
+                    'sender_name' => 'Group Update',
+                    'body' => "A member left the group ({$summary}). A spot is now open for another buyer to join.",
+                ]);
+            }
         });
     }
 
@@ -262,9 +284,14 @@ class GroupBuyService
         });
     }
 
-    public function cancel(GroupBuy $group): void
+    public function cancel(GroupBuy $group, ?string $reason = null): void
     {
         $this->release($group, GroupBuy::STATUS_CANCELLED, 'cancelled');
+        if ($reason) {
+            $this->log($group, 'closed_reason', null, 'customer', $group->organizer_id, [
+                'reason' => mb_substr(trim($reason), 0, 255),
+            ]);
+        }
     }
 
     public function expire(GroupBuy $group): void

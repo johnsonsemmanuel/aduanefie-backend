@@ -168,13 +168,20 @@ class GroupBuyController extends Controller
             return response()->json(['errors' => [['code' => 'join', 'message' => 'You are not a member of this group.']]], 404);
         }
 
+        $reason = trim((string) $request->input('reason', ''));
+        $note = trim((string) $request->input('note', ''));
+
         try {
-            $this->groups->leave($group, $participant);
+            $this->groups->leave($group, $participant, $reason ?: null, $note ?: null);
         } catch (\InvalidArgumentException $e) {
             return response()->json(['errors' => [['code' => 'leave', 'message' => $e->getMessage()]]], 403);
         }
 
-        return response()->json(['data' => ['message' => 'You left the group. No payment was taken.']], 200);
+        return response()->json([
+            'data' => [
+                'message' => 'You left the group. Your spot is now open for another buyer, and no payment was taken.',
+            ],
+        ], 200);
     }
 
     public function cancel(Request $request, $id)
@@ -185,16 +192,18 @@ class GroupBuyController extends Controller
         }
 
         if (! $this->isOrganizer($request, $group)) {
-            return response()->json(['errors' => [['code' => 'permission', 'message' => 'Only the organiser can cancel this group.']]], 403);
+            return response()->json(['errors' => [['code' => 'permission', 'message' => 'Only the organiser can close this group.']]], 403);
         }
 
+        $reason = trim((string) $request->input('reason', ''));
+
         try {
-            $this->groups->cancel($group);
+            $this->groups->cancel($group, $reason ?: null);
         } catch (\InvalidArgumentException $e) {
             return response()->json(['errors' => [['code' => 'cancel', 'message' => $e->getMessage()]]], 403);
         }
 
-        return response()->json(['data' => ['message' => 'Group cancelled. All members were released.']], 200);
+        return response()->json(['data' => ['message' => 'Group closed. All members were released with no charge.']], 200);
     }
 
     public function quote(Request $request, $id)
