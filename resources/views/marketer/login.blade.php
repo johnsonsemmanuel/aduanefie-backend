@@ -7,17 +7,11 @@
     @php($recaptchaOn = isset($recaptcha) && $recaptcha['status'] == 1)
 
     <div class="card" style="max-width:460px;margin:32px auto 0;">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;">
-            <img src="https://aduanefie.com/static/aduanefie_logo.png" alt="Aduanefie" style="height:36px;width:auto;" onerror="this.style.display='none'">
-            <span class="badge" style="background:#EDF2E4;color:#5E7042;border-color:#C8D6AF;">Partners Portal</span>
-        </div>
-        <h1>Marketer sign in</h1>
-        <p class="muted small" style="margin-top:0;">
-            Remote marketers sign in with their registered email address.
-            @if(config('marketer.mfa_required', false))
-                Two-factor authentication is required.
-            @endif
-        </p>
+        @include('partials._portal-login-header', [
+            'badge' => 'Partners Portal',
+            'heading' => 'Marketer sign in',
+            'subtitle' => 'Remote marketers sign in with their registered email address.' . (config('marketer.mfa_required', false) ? ' Two-factor authentication is required.' : ''),
+        ])
 
         <form method="post" action="{{ route('marketer.login.submit') }}" id="marketer-login-form">
             @csrf
