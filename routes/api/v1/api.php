@@ -574,6 +574,8 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
 
         Route::group(['prefix' => 'trade'], function () {
             Route::get('blocs', 'TradeController@blocs');
+            Route::get('blocs/{slug}/corridors', 'TradeController@blocCorridors');
+            Route::get('blocs/{slug}', 'TradeController@bloc');
             Route::get('corridors', 'TradeController@corridors');
             Route::post('customs-duties/calculate', 'TradeController@customs_duties_calculate');
             Route::get('sourcing', 'TradeController@sourcing');

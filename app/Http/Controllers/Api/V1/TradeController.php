@@ -11,47 +11,91 @@ use Illuminate\Support\Facades\Schema;
 
 class TradeController extends Controller
 {
-    public function blocs()
+    /**
+     * Active blocs from the database. The small static list is the same
+     * reference data the blocs index has always used when the table is empty;
+     * it is not user-generated market data.
+     */
+    private function blocRows()
     {
         if (Schema::hasTable('trade_blocs')) {
             $rows = DB::table('trade_blocs')->where('status', 'active')->get();
             if ($rows->isNotEmpty()) {
-                return response()->json(['blocs' => $rows], 200);
+                return $rows;
             }
         }
 
-        return response()->json([
-            'blocs' => [
-                [
-                    'id' => 'ecowas',
-                    'slug' => 'ecowas',
-                    'name' => 'Economic Community of West African States (ECOWAS)',
-                    'shortName' => 'ECOWAS',
-                    'status' => 'active',
-                ],
-                [
-                    'id' => 'afcfta',
-                    'slug' => 'afcfta',
-                    'name' => 'African Continental Free Trade Area (AfCFTA)',
-                    'shortName' => 'AfCFTA',
-                    'status' => 'active',
-                ],
-                [
-                    'id' => 'eac',
-                    'slug' => 'eac',
-                    'name' => 'East African Community (EAC)',
-                    'shortName' => 'EAC',
-                    'status' => 'active',
-                ],
-                [
-                    'id' => 'sadc',
-                    'slug' => 'sadc',
-                    'name' => 'Southern African Development Community (SADC)',
-                    'shortName' => 'SADC',
-                    'status' => 'active',
-                ],
+        return collect([
+            [
+                'id' => 'ecowas',
+                'slug' => 'ecowas',
+                'name' => 'Economic Community of West African States (ECOWAS)',
+                'shortName' => 'ECOWAS',
+                'status' => 'active',
             ],
-        ], 200);
+            [
+                'id' => 'afcfta',
+                'slug' => 'afcfta',
+                'name' => 'African Continental Free Trade Area (AfCFTA)',
+                'shortName' => 'AfCFTA',
+                'status' => 'active',
+            ],
+            [
+                'id' => 'eac',
+                'slug' => 'eac',
+                'name' => 'East African Community (EAC)',
+                'shortName' => 'EAC',
+                'status' => 'active',
+            ],
+            [
+                'id' => 'sadc',
+                'slug' => 'sadc',
+                'name' => 'Southern African Development Community (SADC)',
+                'shortName' => 'SADC',
+                'status' => 'active',
+            ],
+        ]);
+    }
+
+    public function blocs()
+    {
+        return response()->json(['blocs' => $this->blocRows()->values()], 200);
+    }
+
+    public function bloc($slug)
+    {
+        $bloc = $this->blocRows()->first(
+            fn ($row) => data_get($row, 'slug') === $slug
+        );
+
+        if (! $bloc) {
+            return response()->json(['message' => 'Trade bloc not found'], 404);
+        }
+
+        return response()->json(['bloc' => $bloc], 200);
+    }
+
+    public function blocCorridors($slug)
+    {
+        $bloc = $this->blocRows()->first(
+            fn ($row) => data_get($row, 'slug') === $slug
+        );
+
+        if (! $bloc) {
+            return response()->json(['message' => 'Trade bloc not found'], 404);
+        }
+
+        $members = json_decode(data_get($bloc, 'member_countries') ?: '[]', true) ?: [];
+        $corridors = Schema::hasTable('trade_corridors')
+            ? DB::table('trade_corridors')
+                ->where('status', 'active')
+                ->get()
+                ->filter(fn ($corridor) => in_array($corridor->origin_country, $members, true)
+                    || in_array($corridor->destination_country, $members, true))
+                ->values()
+            : collect();
+
+        return response()->json(['corridors' => $corridors], 200);
     }
 
     public function corridors(Request $request)
