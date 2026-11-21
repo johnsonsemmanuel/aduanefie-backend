@@ -80,6 +80,21 @@ class PromotionController extends Controller
         ], 200);
     }
 
+    public function pro_customer_plans(Request $request)
+    {
+        return response()->json(['plans' => []], 200);
+    }
+
+    public function pro_customer_faqs(Request $request)
+    {
+        return response()->json(['faqs' => []], 200);
+    }
+
+    public function pro_customer_terms(Request $request)
+    {
+        return response()->json(['terms' => ''], 200);
+    }
+
     public function delivery_charge_coverage_list(Request $request)
     {
         return response()->json([

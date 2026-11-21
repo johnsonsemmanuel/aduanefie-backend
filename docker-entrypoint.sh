@@ -28,12 +28,17 @@ chmod 600 /app/storage/oauth-*.key 2>/dev/null || true
 echo "Running database migrations..."
 php artisan migrate --force --no-interaction
 
-# Cache static configuration/routes/views to avoid repeated bootstrap work.
-# These are best-effort (a broken route closure would make route:cache fail),
-# but never silently swallowed: the deploy log shows what was skipped.
+# Cache static configuration/views to avoid repeated bootstrap work.
+# Route caching is skipped because legacy admin routes reuse GET/POST route names.
 php artisan config:cache || echo "WARNING: config:cache failed"
-php artisan route:cache || echo "WARNING: route:cache failed"
+php artisan route:clear || true
 php artisan view:cache || echo "WARNING: view:cache failed"
+
+# Re-apply ownership AFTER root artisan commands so laravel.log and compiled
+# caches/views are always writable by php-fpm (www-data).
+chown -R www-data:www-data /app/storage /app/bootstrap/cache 2>/dev/null || true
+chmod -R 775 /app/storage /app/bootstrap/cache 2>/dev/null || true
+chmod 600 /app/storage/oauth-*.key 2>/dev/null || true
 
 # Start php-fpm in background
 php-fpm -D

@@ -579,6 +579,11 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
         Route::get('bogo/home', 'PromotionController@bogo_home');
         Route::get('bogo/offers', 'PromotionController@bogo_home');
         Route::get('bogo/store-offers', 'PromotionController@bogo_home');
+        Route::get('offers/items', 'ItemController@get_discounted_products');
+        Route::get('offers/stores', 'StoreController@get_discounted_stores');
+        Route::get('pro-customer/plans', 'PromotionController@pro_customer_plans');
+        Route::get('pro-customer/faqs', 'PromotionController@pro_customer_faqs');
+        Route::get('pro-customer/terms-and-conditions', 'PromotionController@pro_customer_terms');
         Route::get('happy-hour/running', 'PromotionController@happy_hour_running');
         Route::get('happy-hour/stores', 'PromotionController@happy_hour_stores');
         Route::get('item/farming-list', 'ItemController@farming_list');
