@@ -93,9 +93,14 @@
                     <a href="{{ route('vendor.item.stock-limit-list') }}" class="btn btn-sm btn-warning ml-3 text-nowrap">Restock Now</a>
                 </div>
             @endif
-            <button type="button" onclick="window.location.reload()" class="btn btn-outline-primary btn-sm text-nowrap ml-auto">
-                <i class="tio-refresh mr-1"></i> {{ translate('Refresh Orders') }}
-            </button>
+            <div class="d-flex align-items-center gap-2 ml-auto">
+                <a href="{{ route('vendor.sales-statement') }}" class="btn btn-outline-success btn-sm text-nowrap" title="Download bankable verified sales history">
+                    <i class="tio-download-to mr-1"></i> {{ translate('Sales Statement (CSV)') }}
+                </a>
+                <button type="button" onclick="window.location.reload()" class="btn btn-outline-primary btn-sm text-nowrap">
+                    <i class="tio-refresh mr-1"></i> {{ translate('Refresh Orders') }}
+                </button>
+            </div>
         </div>
 
         <div class="card mb-3">
@@ -277,9 +282,14 @@
                     <a href="{{ route('vendor.item.stock-limit-list') }}" class="btn btn-sm btn-warning ml-3 text-nowrap">Restock Now</a>
                 </div>
             @endif
-            <button type="button" onclick="window.location.reload()" class="btn btn-outline-primary btn-sm text-nowrap ml-auto">
-                <i class="tio-refresh mr-1"></i> {{ translate('Refresh Orders') }}
-            </button>
+            <div class="d-flex align-items-center gap-2 ml-auto">
+                <a href="{{ route('vendor.sales-statement') }}" class="btn btn-outline-success btn-sm text-nowrap" title="Download bankable verified sales history">
+                    <i class="tio-download-to mr-1"></i> {{ translate('Sales Statement (CSV)') }}
+                </a>
+                <button type="button" onclick="window.location.reload()" class="btn btn-outline-primary btn-sm text-nowrap">
+                    <i class="tio-refresh mr-1"></i> {{ translate('Refresh Orders') }}
+                </button>
+            </div>
         </div>
         @endif
     </div>

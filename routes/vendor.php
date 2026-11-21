@@ -9,6 +9,7 @@ Route::group(['namespace' => 'Vendor', 'as' => 'vendor.'], function () {
     Route::group(['middleware' => ['vendor']], function () {
         Route::get('lang/{locale}', 'LanguageController@lang')->name('lang');
         Route::get('/', 'DashboardController@dashboard')->name('dashboard');
+        Route::get('/sales-statement', 'DashboardController@salesStatementCsv')->name('sales-statement');
         Route::get('/get-store-data', 'DashboardController@store_data')->name('get-store-data');
         Route::post('/store-token', 'DashboardController@updateDeviceToken')->name('store.token');
         Route::get('/reviews', 'ReviewController@index')->name('reviews')->middleware(['module:reviews' ,'subscription:reviews']);

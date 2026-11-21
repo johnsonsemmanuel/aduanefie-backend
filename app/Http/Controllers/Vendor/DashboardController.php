@@ -207,4 +207,61 @@ class DashboardController extends Controller
 
         return response()->json(['Token successfully stored.']);
     }
+
+    /**
+     * Bankable Farmer / Vendor Verified Sales Statement (CSV)
+     * Summarizes delivered volume, gross revenue, and fulfillment rate for MFI/bank credit readiness.
+     */
+    public function salesStatementCsv()
+    {
+        $storeId = Helpers::get_store_id();
+        $store = Helpers::get_store_data();
+        $totalOrders = Order::where('store_id', $storeId)->StoreOrder()->count();
+        $deliveredOrders = Order::where('store_id', $storeId)
+            ->where('order_status', 'delivered')
+            ->StoreOrder()
+            ->latest('id')
+            ->limit(1000)
+            ->get(['id', 'order_amount', 'payment_method', 'order_status', 'created_at']);
+
+        $deliveredCount = $deliveredOrders->count();
+        $grossRevenue = (float) $deliveredOrders->sum('order_amount');
+        $fulfillmentRate = $totalOrders > 0 ? round(($deliveredCount / $totalOrders) * 100, 1) : 0.0;
+
+        $escape = static function ($v): string {
+            $s = (string) ($v ?? '');
+            if ($s !== '' && preg_match('/^[=+\-@]/', $s)) {
+                $s = "'" . $s;
+            }
+            return $s;
+        };
+
+        $filename = 'aduanefie-sales-statement-store-' . $storeId . '-' . now()->format('Ymd') . '.csv';
+
+        return response()->streamDownload(function () use ($store, $totalOrders, $deliveredCount, $grossRevenue, $fulfillmentRate, $deliveredOrders, $escape) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF");
+            fputcsv($out, ['Aduanefie Verified Farmer / Vendor Sales Statement']);
+            fputcsv($out, ['Farm / Store', $escape($store?->name ?? 'Store #' . Helpers::get_store_id())]);
+            fputcsv($out, ['Generated At', now()->toDateTimeString()]);
+            fputcsv($out, ['Total Orders', $totalOrders]);
+            fputcsv($out, ['Delivered Orders', $deliveredCount]);
+            fputcsv($out, ['Fulfillment Rate (%)', $fulfillmentRate . '%']);
+            fputcsv($out, ['Verified Gross Sales (GHS)', number_format($grossRevenue, 2, '.', '')]);
+            fputcsv($out, []);
+            fputcsv($out, ['Order ID', 'Date', 'Payment Method', 'Status', 'Order Amount (GHS)']);
+            foreach ($deliveredOrders as $o) {
+                fputcsv($out, [
+                    $o->id,
+                    optional($o->created_at)->toDateTimeString(),
+                    $escape($o->payment_method ?? ''),
+                    $escape($o->order_status ?? ''),
+                    number_format((float) $o->order_amount, 2, '.', ''),
+                ]);
+            }
+            fclose($out);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
 }
