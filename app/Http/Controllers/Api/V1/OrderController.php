@@ -2653,4 +2653,72 @@ class OrderController extends Controller
 
         return response()->json($details, 200);
     }
+
+    public function submitInsuranceClaim(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'order_id' => 'required|integer',
+            'reason' => 'required|string|max:80',
+            'description' => 'required|string|min:10|max:1500',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => Helpers::error_processor($validator)], 403);
+        }
+
+        $order = Order::where('id', $request->order_id)
+            ->where('user_id', $request->user()->id)
+            ->first();
+
+        if (! $order) {
+            return response()->json(['errors' => [['code' => 'order', 'message' => translate('messages.not_found')]]], 404);
+        }
+
+        if (empty($order->is_insured) && (float) ($order->insurance_fee ?? 0) <= 0) {
+            return response()->json(['errors' => [['code' => 'insurance', 'message' => 'This order is not covered by Trade & Crop Insurance.']]], 422);
+        }
+
+        if (! \Illuminate\Support\Facades\Schema::hasTable('insurance_claims')) {
+            return response()->json(['errors' => [['code' => 'unavailable', 'message' => 'Insurance claims table not migrated yet.']]], 503);
+        }
+
+        $existing = \App\Models\InsuranceClaim::where('order_id', $order->id)
+            ->where('user_id', $request->user()->id)
+            ->whereIn('status', ['pending', 'approved'])
+            ->first();
+
+        if ($existing) {
+            return response()->json([
+                'data' => $existing,
+                'message' => 'An insurance claim for this order is already under review.',
+            ], 200);
+        }
+
+        $claim = \App\Models\InsuranceClaim::create([
+            'order_id' => $order->id,
+            'user_id' => $request->user()->id,
+            'reason' => trim((string) $request->reason),
+            'description' => trim((string) $request->description),
+            'claim_amount' => (float) ($order->order_amount ?? 0),
+            'status' => 'pending',
+        ]);
+
+        return response()->json([
+            'data' => $claim,
+            'message' => 'Insurance claim submitted! Our team will review and respond shortly.',
+        ], 201);
+    }
+
+    public function listInsuranceClaims(Request $request)
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasTable('insurance_claims')) {
+            return response()->json(['claims' => []], 200);
+        }
+
+        $claims = \App\Models\InsuranceClaim::where('user_id', $request->user()->id)
+            ->orderByDesc('id')
+            ->get();
+
+        return response()->json(['claims' => $claims], 200);
+    }
 }

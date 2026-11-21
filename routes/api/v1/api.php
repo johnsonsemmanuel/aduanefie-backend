@@ -503,6 +503,8 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
                 Route::post('get-Tax', 'OrderController@get_tax');
                 Route::post('checkout-summary', 'OrderController@checkout_summary');
                 Route::post('get-surge-price', 'OrderController@get_surge_price');
+                Route::post('insurance-claim', 'OrderController@submitInsuranceClaim');
+                Route::get('insurance-claims', 'OrderController@listInsuranceClaims');
 
             });
             Route::post('order-again/reorder', 'OrderController@reorder');
