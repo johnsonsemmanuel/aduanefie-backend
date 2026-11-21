@@ -36,9 +36,9 @@ class ConfigController extends Controller
 
     function __construct()
     {
-        $map_api_key_server = BusinessSetting::where(['key' => 'map_api_key_server'])->first();
-        $map_api_key_server = $map_api_key_server ? $map_api_key_server->value : null;
-        $this->map_api_key = $map_api_key_server;
+        // Constructed for every config/meta/landing request: use the cached
+        // lookup so a single setting never costs a DB query per request.
+        $this->map_api_key = Helpers::cached_business_setting('map_api_key_server');
     }
 
     public function configuration()

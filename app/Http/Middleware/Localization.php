@@ -2,7 +2,7 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\BusinessSetting;
+use App\CentralLogics\Helpers;
 use Closure;
 use Illuminate\Support\Facades\App;
 
@@ -21,9 +21,11 @@ class Localization
         $lang ='en';
         $direction ='ltr';
         try {
-            $language = BusinessSetting::where('key', 'system_language')->first();
+            // This middleware runs on every API request. Use the shared cached
+            // setting instead of hitting the database on each request.
+            $language = Helpers::cached_business_setting('system_language');
             if($language){
-                foreach (json_decode($language->value, true) as $key => $data) {
+                foreach (json_decode($language, true) as $key => $data) {
                     if ($data['default']) {
                         $lang= $data['code'];
                         $direction= $data['direction'];

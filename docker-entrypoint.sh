@@ -22,8 +22,18 @@ fi
 chown www-data:www-data /app/storage/oauth-*.key 2>/dev/null || true
 chmod 600 /app/storage/oauth-*.key 2>/dev/null || true
 
-# Cache static configuration to avoid per-request config bootstrap overhead
-php artisan config:cache 2>/dev/null || true
+# Apply pending migrations before serving traffic. Group-buy routes and other
+# new features depend on tables that are created here; failing loudly is safer
+# than booting with missing tables and returning 500s to users.
+echo "Running database migrations..."
+php artisan migrate --force --no-interaction
+
+# Cache static configuration/routes/views to avoid repeated bootstrap work.
+# These are best-effort (a broken route closure would make route:cache fail),
+# but never silently swallowed: the deploy log shows what was skipped.
+php artisan config:cache || echo "WARNING: config:cache failed"
+php artisan route:cache || echo "WARNING: route:cache failed"
+php artisan view:cache || echo "WARNING: view:cache failed"
 
 # Start php-fpm in background
 php-fpm -D
