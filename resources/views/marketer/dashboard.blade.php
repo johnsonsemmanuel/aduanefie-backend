@@ -80,7 +80,7 @@
                     <input type="text" id="marketer-ref-url" value="{{ $refUrl }}" readonly style="flex:1;min-width:220px;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;background:#f9fafb;">
                     <button type="button" onclick="var i=document.getElementById('marketer-ref-url');i.select();navigator.clipboard.writeText(i.value);this.innerText='Copied!';setTimeout(()=>this.innerText='Copy Link',2000);" style="padding:7px 14px;background:#67513A;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;">Copy Link</button>
                     <a href="https://wa.me/?text={{ $waText }}" target="_blank" rel="noopener" style="padding:7px 14px;background:#25D366;color:#fff;border-radius:6px;font-size:13px;text-decoration:none;font-weight:600;">Share on WhatsApp</a>
-                    <a href="{{ $refUrl }}" target="_blank" class="btn" style="padding:7px 14px;font-size:13px;text-decoration:none;">Onboard Farmer ↗</a>
+                    <a href="{{ route('marketer.register-farmer') }}" class="btn" style="padding:7px 14px;font-size:13px;text-decoration:none;">+ Register Farmer</a>
                     <button type="button" onclick="window.print()" class="btn secondary" style="padding:7px 12px;font-size:13px;">Print QR Poster</button>
                 </div>
             </div>
@@ -193,5 +193,26 @@
         <p style="margin-bottom:0;">
             <a class="btn" href="{{ route('marketer.payouts.request') }}">Request a payout</a>
         </p>
+    </div>
+
+    <div class="card">
+        <h2>Set or Update Portal Password</h2>
+        <p class="muted small" style="margin-top:0;">
+            Keep your account ready for direct sign-in at <strong>partners.aduanefie.com/marketer-login</strong>.
+        </p>
+        <form method="post" action="{{ route('marketer.password.update') }}" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;align-items:end;">
+            @csrf
+            <div class="field" style="margin-bottom:0;">
+                <label for="new_password">New Password (min 8 chars)</label>
+                <input type="password" name="new_password" id="new_password" minlength="8" required autocomplete="new-password">
+            </div>
+            <div class="field" style="margin-bottom:0;">
+                <label for="new_password_confirmation">Confirm Password</label>
+                <input type="password" name="new_password_confirmation" id="new_password_confirmation" minlength="8" required autocomplete="new-password">
+            </div>
+            <div>
+                <button type="submit">Update Password</button>
+            </div>
+        </form>
     </div>
 @endsection

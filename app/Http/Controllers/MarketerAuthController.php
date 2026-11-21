@@ -5,12 +5,16 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\VerifiesHuman;
 use App\Models\Admin;
 use App\Services\AdminMfaService;
+use App\Traits\SmsGateway;
 use Gregwar\Captcha\CaptchaBuilder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\URL;
 
 /**
  * Login for the remote-marketer portal on partners.aduanefie.com.
@@ -119,5 +123,158 @@ class MarketerAuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('marketer.login');
+    }
+
+    public function showForgotPassword()
+    {
+        return view('marketer.forgot');
+    }
+
+    public function sendLoginLink(Request $request)
+    {
+        $request->validate([
+            'identifier' => 'required|string|max:120',
+        ]);
+
+        $raw = trim((string) $request->input('identifier'));
+        $roleId = (int) config('marketer.role_id', 5);
+        $digits = preg_replace('/\D+/', '', $raw);
+
+        $admin = Admin::where('role_id', $roleId)
+            ->where(function ($q) use ($raw, $digits) {
+                $q->whereRaw('LOWER(email) = ?', [strtolower($raw)]);
+                if (strlen($digits) >= 7) {
+                    $tail = substr($digits, -9);
+                    $q->orWhere('phone', 'like', "%{$tail}");
+                }
+            })
+            ->first();
+
+        if ($admin) {
+            self::sendReengagementNotice($admin, 1);
+        }
+
+        return back()->with(
+            'status',
+            'If an active Regional Marketer account matches that email or phone, we have sent a one-click sign-in link via SMS and email.'
+        );
+    }
+
+    public function magicLogin(Request $request, int $id)
+    {
+        $admin = Admin::where('id', $id)
+            ->where('role_id', (int) config('marketer.role_id', 5))
+            ->first();
+
+        if (! $admin) {
+            return redirect()->route('marketer.login')->withErrors([
+                'email' => 'Marketer account not found.',
+            ]);
+        }
+
+        $mfaRequired = (bool) config('marketer.mfa_required', false);
+        if ($mfaRequired) {
+            $mode = $this->mfa->begin($request, $admin, false);
+            return redirect()->route(
+                $mode === AdminMfaService::MODE_SETUP
+                    ? 'marketer.mfa.setup'
+                    : 'marketer.mfa.challenge'
+            );
+        }
+
+        Auth::guard('admin')->login($admin);
+        $admin->forceFill(['is_logged_in' => 1])->save();
+        $request->session()->regenerate();
+        $request->session()->put(AdminMfaService::SESSION_VERIFIED, [
+            'id' => $admin->id,
+            'at' => now()->getTimestamp(),
+        ]);
+
+        return redirect()->route('marketer.dashboard')->with(
+            'status',
+            'Signed in via one-time link. You can set a new password below anytime.'
+        );
+    }
+
+    public function updatePassword(Request $request)
+    {
+        $request->validate([
+            'new_password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $admin = Auth::guard('admin')->user();
+        if (! $admin || ! $admin->isMarketer()) {
+            abort(403);
+        }
+
+        $admin->forceFill([
+            'password' => Hash::make((string) $request->input('new_password')),
+        ])->save();
+
+        return back()->with('status', 'Your marketer portal password has been updated.');
+    }
+
+    public static function buildSignedLoginUrl(Admin $admin, int $hours = 168): string
+    {
+        $root = 'https://partners.aduanefie.com';
+        URL::forceRootUrl($root);
+        try {
+            return URL::temporarySignedRoute(
+                'marketer.magic-login',
+                now()->addHours($hours),
+                ['id' => $admin->id]
+            );
+        } finally {
+            URL::forceRootUrl(null);
+        }
+    }
+
+    public static function sendReengagementNotice(Admin $admin, int $hours = 168): array
+    {
+        if (empty($admin->marketer_code)) {
+            $regionSlug = strtoupper(substr(preg_replace('/[^A-Za-z]/', '', (string) ($admin->marketer_region ?: 'GH')), 0, 2) ?: 'GH');
+            $admin->forceFill([
+                'marketer_code' => 'MKT-' . $regionSlug . '-' . str_pad((string) $admin->id, 3, '0', STR_PAD_LEFT),
+            ])->save();
+        }
+
+        $loginLink = self::buildSignedLoginUrl($admin, $hours);
+        $code = $admin->marketer_code;
+        $firstName = trim((string) ($admin->f_name ?: 'Partner'));
+
+        $smsSent = false;
+        if (! empty($admin->phone)) {
+            try {
+                $smsText = "Hi {$firstName}, Aduanefie Partners Portal is upgraded! Sign in directly: {$loginLink} (Email: {$admin->email}, Code: {$code}). Earn 25 GHS/farmer + 20% order commissions.";
+                $smsSent = SmsGateway::send($admin->phone, $smsText) === 'success';
+            } catch (\Throwable $e) {
+                Log::warning('Marketer re-engagement SMS failed', ['id' => $admin->id, 'error' => $e->getMessage()]);
+            }
+        }
+
+        $emailSent = false;
+        if (! empty($admin->email)) {
+            try {
+                $body = "Hello {$firstName},\n\n"
+                    . "Welcome back to the Aduanefie Regional Marketers Portal!\n\n"
+                    . "Use your one-click sign-in link below to access your dashboard, view Regional Tours, verify Backyard Farms, and track your commissions:\n"
+                    . "{$loginLink}\n\n"
+                    . "Account Email: {$admin->email}\n"
+                    . "Referral Code: {$code}\n"
+                    . "Portal URL: https://partners.aduanefie.com/marketer-login\n\n"
+                    . "Once signed in, you can set a new password at the bottom of your dashboard.\n\n"
+                    . "— Aduanefie Partner Operations";
+
+                Mail::raw($body, function ($message) use ($admin) {
+                    $message->to($admin->email, trim($admin->f_name . ' ' . $admin->l_name))
+                        ->subject('Sign in to your Aduanefie Regional Marketer Portal');
+                });
+                $emailSent = true;
+            } catch (\Throwable $e) {
+                Log::warning('Marketer re-engagement Email failed', ['id' => $admin->id, 'error' => $e->getMessage()]);
+            }
+        }
+
+        return ['sms' => $smsSent, 'email' => $emailSent];
     }
 }

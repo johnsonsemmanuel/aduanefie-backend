@@ -18,19 +18,24 @@
     </div>
 
     <div class="card">
-        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <h5 class="card-title mb-0">Applications ({{ $applications->total() }})</h5>
-            <div class="d-flex gap-2">
-                <form action="{{ route('admin.backyard-farmers.index') }}" method="GET" class="d-flex gap-2">
-                    <select name="status" class="form-control form-control-sm" onchange="this.form.submit()">
-                        @foreach(['all', 'pending', 'verified', 'approved', 'rejected'] as $option)
-                            <option value="{{ $option }}" {{ $status === $option ? 'selected' : '' }}>{{ ucfirst($option) }}</option>
-                        @endforeach
-                    </select>
-                </form>
-                <a href="{{ route('admin.backyard-farmers.export', ['status' => $status]) }}" class="btn btn-outline-secondary btn-sm">
-                    <i class="tio-download"></i> Export CSV
-                </a>
+        <div class="card-header py-2 border-0">
+            <div class="search--button-wrapper">
+                <h5 class="card-title">
+                    Applications
+                    <span class="badge badge-soft-dark ml-2">{{ $applications->total() }}</span>
+                </h5>
+                <div class="btn--container">
+                    <form action="{{ route('admin.backyard-farmers.index') }}" method="GET" class="mb-0">
+                        <select name="status" class="form-control" onchange="this.form.submit()">
+                            @foreach(['all', 'pending', 'verified', 'approved', 'rejected'] as $option)
+                                <option value="{{ $option }}" {{ $status === $option ? 'selected' : '' }}>{{ ucfirst($option) }}</option>
+                            @endforeach
+                        </select>
+                    </form>
+                    <a href="{{ route('admin.backyard-farmers.export', ['status' => $status]) }}" class="btn btn--secondary">
+                        <i class="tio-download-to mr-1"></i> Export CSV
+                    </a>
+                </div>
             </div>
         </div>
 
@@ -94,7 +99,7 @@
             </table>
         </div>
 
-        <div class="card-footer">{{ $applications->links() }}</div>
+        <div class="card-footer">{{ $applications->links('pagination::bootstrap-4') }}</div>
     </div>
 </div>
 @endsection

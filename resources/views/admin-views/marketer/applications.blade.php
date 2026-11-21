@@ -4,21 +4,27 @@
 
 @section('content')
 <div class="content container-fluid">
-    <div class="page-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <div>
-            <h1 class="page-header-title mb-1">Remote Marketer Applications</h1>
-            <p class="text-muted mb-0">Review regional marketer applications. Approving automatically creates a Role-5 marketer account, assigns a referral code, and SMSs credentials.</p>
-        </div>
-        <div class="d-flex flex-wrap align-items-center gap-2">
-            <div class="btn-group">
-                @foreach(['pending' => 'Pending', 'approved' => 'Approved', 'rejected' => 'Rejected', 'all' => 'All'] as $k => $lbl)
-                    <a href="{{ route('admin.marketer-applications.index', ['status' => $k]) }}"
-                       class="btn btn-sm {{ $status === $k ? 'btn-primary' : 'btn-outline-secondary' }}">{{ $lbl }}</a>
-                @endforeach
+    <div class="page-header">
+        <div class="row align-items-center">
+            <div class="col-sm mb-2 mb-sm-0">
+                <h1 class="page-header-title">
+                    <span class="page-header-icon">
+                        <i class="tio-user-add"></i>
+                    </span>
+                    <span>Remote Marketer Applications</span>
+                </h1>
             </div>
-            <a href="{{ route('admin.marketer-applications.export', ['status' => $status]) }}" class="btn btn-sm btn-outline-primary">
-                <i class="tio-download-to mr-1"></i> Export CSV
-            </a>
+            <div class="col-sm-auto">
+                <div class="btn--container">
+                    @foreach(['pending' => 'Pending', 'approved' => 'Approved', 'rejected' => 'Rejected', 'all' => 'All'] as $k => $lbl)
+                        <a href="{{ route('admin.marketer-applications.index', ['status' => $k]) }}"
+                           class="btn {{ $status === $k ? 'btn--primary' : 'btn--secondary' }}">{{ $lbl }}</a>
+                    @endforeach
+                    <a href="{{ route('admin.marketer-applications.export', ['status' => $status]) }}" class="btn btn-outline-primary">
+                        <i class="tio-download-to mr-1"></i> Export CSV
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -67,7 +73,109 @@
                 </tbody>
             </table>
         </div>
-        <div class="card-footer">{{ $applications->links() }}</div>
+        <div class="page-area px-3 pb-3">{{ $applications->links('pagination::bootstrap-4') }}</div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header py-2 border-0">
+            <div class="search--button-wrapper">
+                <h5 class="card-title">
+                    Active Remote Marketers
+                    <span class="badge badge-soft-dark ml-2">{{ $totalMarketers ?? 0 }}</span>
+                </h5>
+                <form method="get" action="{{ route('admin.marketer-applications.index') }}" class="search-form">
+                    <input type="hidden" name="status" value="{{ $status }}">
+                    <div class="input-group input--group">
+                        <input type="search" name="q" value="{{ $search ?? '' }}" class="form-control" placeholder="Search name, email, code...">
+                        <button type="submit" class="btn btn--secondary"><i class="tio-search"></i></button>
+                    </div>
+                </form>
+                <div class="btn--container ml-2">
+                    @if(($missingCodeCount ?? 0) > 0)
+                        <form method="post" action="{{ route('admin.marketer-applications.backfill-codes') }}" class="mb-0">
+                            @csrf
+                            <button type="submit" class="btn btn--warning">Backfill {{ $missingCodeCount }} Codes</button>
+                        </form>
+                    @endif
+                </div>
+            </div>
+        </div>
+        <div class="card-body border-top border-bottom py-2">
+            <form method="post" action="{{ route('admin.marketer-applications.send-batch') }}" class="row align-items-center" onsubmit="return confirm('Send SMS + Email sign-in links to this batch of marketers?');">
+                @csrf
+                <div class="col-auto"><span class="small font-weight-bold text-dark">Batch Re-Engage (SMS + Email):</span></div>
+                <div class="col-auto d-flex align-items-center">
+                    <label class="small mb-0 mr-2">Offset</label>
+                    <input type="number" name="offset" value="0" min="0" class="form-control form-control-sm" style="width:85px;">
+                </div>
+                <div class="col-auto d-flex align-items-center">
+                    <label class="small mb-0 mr-2">Count</label>
+                    <input type="number" name="limit" value="20" min="1" max="30" class="form-control form-control-sm" style="width:75px;">
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn--primary">Send Login Batch</button>
+                </div>
+            </form>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover table-borderless table-thead-bordered table-nowrap table-align-middle card-table">
+                <thead class="thead-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Marketer</th>
+                        <th>Phone &amp; Email</th>
+                        <th>Region &amp; Code</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($activeMarketers ?? [] as $m)
+                        <tr>
+                            <td>#{{ $m->id }}</td>
+                            <td>
+                                <a href="{{ route('admin.marketer-applications.show', $m->id) }}" class="font-weight-bold text-dark">
+                                    {{ trim($m->f_name . ' ' . $m->l_name) }}
+                                </a>
+                            </td>
+                            <td>
+                                <small>{{ $m->phone ?: '-' }}</small><br>
+                                <small class="text-muted">{{ $m->email }}</small>
+                            </td>
+                            <td>
+                                {{ $m->marketer_region ?: 'Unassigned' }}<br>
+                                @if($m->marketer_code)
+                                    <span class="badge badge-soft-info">{{ $m->marketer_code }}</span>
+                                @else
+                                    <span class="badge badge-soft-warning">No Code</span>
+                                @endif
+                            </td>
+                            <td>
+                                <div class="btn--container justify-content-center">
+                                    <a href="{{ route('admin.marketer-applications.show', $m->id) }}"
+                                       class="btn action-btn btn--warning btn-outline-warning"
+                                       title="View Marketer Profile">
+                                        <i class="tio-visible-outlined"></i>
+                                    </a>
+                                    <form method="post" action="{{ route('admin.marketer-applications.send-login', $m->id) }}" class="mb-0">
+                                        @csrf
+                                        <button type="submit"
+                                                class="btn action-btn btn--primary btn-outline-primary"
+                                                title="Send Login Link (SMS + Email)">
+                                            <i class="tio-send"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="5" class="text-center text-muted py-4">No remote marketers found.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+        @if(isset($activeMarketers))
+            <div class="page-area px-3 py-3">{{ $activeMarketers->links('pagination::bootstrap-4') }}</div>
+        @endif
     </div>
 </div>
 @endsection

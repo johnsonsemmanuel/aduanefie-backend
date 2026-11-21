@@ -148,10 +148,14 @@
 </div>
 
 @hasSection('nav')
-    <nav class="mobile-bottom-nav" aria-label="Marketer mobile navigation">
+    <nav class="mobile-bottom-nav" aria-label="Marketer mobile navigation" style="grid-template-columns:repeat(5,1fr);">
         <a href="{{ route('marketer.dashboard') }}" class="{{ request()->routeIs('marketer.dashboard') ? 'active' : '' }}">
             <span class="nav-ico" aria-hidden="true">🏠</span>
             <span>Home</span>
+        </a>
+        <a href="{{ route('marketer.register-farmer') }}" class="{{ request()->routeIs('marketer.register-farmer*') ? 'active' : '' }}">
+            <span class="nav-ico" aria-hidden="true">➕</span>
+            <span>Register</span>
         </a>
         <a href="{{ route('marketer.regional-tours') }}" class="{{ request()->routeIs('marketer.regional-tours*') ? 'active' : '' }}">
             <span class="nav-ico" aria-hidden="true">🗺️</span>

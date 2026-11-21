@@ -8,6 +8,7 @@
         : 0;
 @endphp
 <a href="{{ route('marketer.dashboard') }}" class="{{ $active === 'dashboard' ? 'active' : '' }}">Dashboard</a>
+<a href="{{ route('marketer.register-farmer') }}" class="{{ $active === 'register' ? 'active' : '' }}">+ Register Farmer</a>
 <a href="{{ route('marketer.backyard-farms') }}" class="{{ $active === 'backyard' ? 'active' : '' }}">
     Backyard Farms
     @if($navPendingBackyard > 0)

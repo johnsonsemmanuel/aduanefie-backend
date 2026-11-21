@@ -138,7 +138,7 @@
             </table>
         </div>
         <div class="page-area">
-            {!! $stores->links() !!}
+            {!! $stores->links('pagination::bootstrap-4') !!}
         </div>
     </div>
 </div>

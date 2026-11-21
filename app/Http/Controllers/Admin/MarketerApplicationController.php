@@ -3,8 +3,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\MarketerAuthController;
 use App\Models\Admin;
 use App\Models\MarketerApplication;
+use App\Models\MarketerCommission;
+use App\Models\MarketerPayout;
+use App\Models\Order;
+use App\Models\Store;
+use App\Scopes\ZoneScope;
+use App\Services\MarketerCommissionService;
 use App\Traits\SmsGateway;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Http\Request;
@@ -20,13 +27,43 @@ class MarketerApplicationController extends Controller
         abort_unless(Auth::guard('admin')->user()?->role_id == 1, 403);
 
         $status = $request->query('status', 'pending');
+        $search = trim((string) $request->query('q', ''));
+
         $applications = MarketerApplication::query()
             ->when($status !== 'all', fn ($q) => $q->where('status', $status))
             ->latest('id')
             ->paginate(25)
             ->withQueryString();
 
-        return view('admin-views.marketer.applications', compact('applications', 'status'));
+        $roleId = (int) config('marketer.role_id', 5);
+        $activeMarketers = Admin::where('role_id', $roleId)
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('f_name', 'like', "%{$search}%")
+                        ->orWhere('l_name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%")
+                        ->orWhere('marketer_code', 'like', "%{$search}%")
+                        ->orWhere('marketer_region', 'like', "%{$search}%");
+                });
+            })
+            ->orderByDesc('id')
+            ->paginate(25, ['*'], 'marketers_page')
+            ->withQueryString();
+
+        $totalMarketers = Admin::where('role_id', $roleId)->count();
+        $missingCodeCount = Admin::where('role_id', $roleId)
+            ->where(fn ($q) => $q->whereNull('marketer_code')->orWhere('marketer_code', ''))
+            ->count();
+
+        return view('admin-views.marketer.applications', compact(
+            'applications',
+            'status',
+            'activeMarketers',
+            'search',
+            'totalMarketers',
+            'missingCodeCount'
+        ));
     }
 
     public function approve(Request $request, int $id)
@@ -141,5 +178,135 @@ class MarketerApplicationController extends Controller
         }, 'aduanefie-marketer-applications.csv', [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
+    }
+
+    public function backfillCodes()
+    {
+        abort_unless(Auth::guard('admin')->user()?->role_id == 1, 403);
+
+        $roleId = (int) config('marketer.role_id', 5);
+        $missing = Admin::where('role_id', $roleId)
+            ->where(fn ($q) => $q->whereNull('marketer_code')->orWhere('marketer_code', ''))
+            ->get();
+
+        foreach ($missing as $m) {
+            $slug = strtoupper(substr(preg_replace('/[^A-Za-z]/', '', (string) ($m->marketer_region ?: 'GH')), 0, 2) ?: 'GH');
+            $m->forceFill([
+                'marketer_code' => 'MKT-' . $slug . '-' . str_pad((string) $m->id, 3, '0', STR_PAD_LEFT),
+            ])->save();
+        }
+
+        Toastr::success('Assigned referral codes to ' . $missing->count() . ' marketer(s).');
+        return back();
+    }
+
+    public function showMarketer(int $id, MarketerCommissionService $commissionService)
+    {
+        abort_unless(Auth::guard('admin')->user()?->role_id == 1, 403);
+
+        $marketer = Admin::where('id', $id)
+            ->where('role_id', (int) config('marketer.role_id', 5))
+            ->firstOrFail();
+
+        $summary = $commissionService->summaryFor($marketer);
+
+        $stores = Store::withoutGlobalScope(ZoneScope::class)
+            ->where('marketer_id', $marketer->id)
+            ->orderByDesc('id')
+            ->get();
+
+        $storeIds = $stores->pluck('id')->all();
+        $orderStats = ! empty($storeIds)
+            ? Order::withoutGlobalScope(ZoneScope::class)
+                ->select(
+                    'store_id',
+                    \Illuminate\Support\Facades\DB::raw('COUNT(*) as delivered_orders_count'),
+                    \Illuminate\Support\Facades\DB::raw('COALESCE(SUM(order_amount), 0) as total_sales')
+                )
+                ->whereIn('store_id', $storeIds)
+                ->where('order_status', 'delivered')
+                ->groupBy('store_id')
+                ->get()
+                ->keyBy('store_id')
+            : collect();
+
+        $stores = $stores->map(function ($store) use ($orderStats) {
+            $os = $orderStats->get($store->id);
+            $store->delivered_orders_count = (int) ($os->delivered_orders_count ?? 0);
+            $store->total_sales = round((float) ($os->total_sales ?? 0), 2);
+            return $store;
+        });
+
+        $payouts = MarketerPayout::forMarketer($marketer->id)
+            ->latest('id')
+            ->limit(15)
+            ->get();
+
+        $recentCommissions = MarketerCommission::forMarketer($marketer->id)
+            ->with(['store', 'order'])
+            ->latest('id')
+            ->limit(15)
+            ->get();
+
+        return view('admin-views.marketer.show', compact(
+            'marketer',
+            'summary',
+            'stores',
+            'payouts',
+            'recentCommissions'
+        ));
+    }
+
+    public function sendMarketerLogin(int $id)
+    {
+        abort_unless(Auth::guard('admin')->user()?->role_id == 1, 403);
+
+        $marketer = Admin::where('id', $id)
+            ->where('role_id', (int) config('marketer.role_id', 5))
+            ->firstOrFail();
+
+        $res = MarketerAuthController::sendReengagementNotice($marketer, 168);
+        $channels = array_filter([
+            $res['sms'] ? 'SMS' : null,
+            $res['email'] ? 'Email' : null,
+        ]);
+
+        if (empty($channels)) {
+            Toastr::warning("Could not deliver SMS or Email to {$marketer->f_name}. Check SMS/Mail logs.");
+        } else {
+            Toastr::success("Sent sign-in link to {$marketer->f_name} via " . implode(' + ', $channels) . '.');
+        }
+
+        return back();
+    }
+
+    public function sendBatchLogins(Request $request)
+    {
+        abort_unless(Auth::guard('admin')->user()?->role_id == 1, 403);
+
+        $offset = max(0, (int) $request->input('offset', 0));
+        $limit = min(30, max(1, (int) $request->input('limit', 20)));
+        $roleId = (int) config('marketer.role_id', 5);
+
+        $batch = Admin::where('role_id', $roleId)
+            ->orderBy('id')
+            ->skip($offset)
+            ->take($limit)
+            ->get();
+
+        $smsOk = 0;
+        $emailOk = 0;
+        foreach ($batch as $marketer) {
+            $res = MarketerAuthController::sendReengagementNotice($marketer, 168);
+            if ($res['sms']) {
+                $smsOk++;
+            }
+            if ($res['email']) {
+                $emailOk++;
+            }
+        }
+
+        Toastr::success("Batch ({$batch->count()} marketers from offset {$offset}): {$smsOk} SMS sent, {$emailOk} Emails sent.");
+        return back();
     }
 }

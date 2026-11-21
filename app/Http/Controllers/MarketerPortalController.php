@@ -370,4 +370,93 @@ class MarketerPortalController extends Controller
             throw new \Illuminate\Validation\ValidationException($validator);
         }
     }
+
+    public function showRegisterFarmer()
+    {
+        $marketer = Auth::guard('admin')->user();
+        $zones = \App\Models\Zone::where('status', 1)->orderBy('name')->get(['id', 'name']);
+        $modules = \App\Models\Module::where('status', 1)->orderBy('id')->get(['id', 'module_name']);
+        $regions = [
+            'Greater Accra Region', 'Ashanti Region', 'Eastern Region', 'Central Region',
+            'Western Region', 'Western North Region', 'Volta Region', 'Oti Region',
+            'Bono Region', 'Bono East Region', 'Ahafo Region', 'Northern Region',
+            'Savannah Region', 'North East Region', 'Upper East Region', 'Upper West Region',
+        ];
+
+        return view('marketer.register-farmer', compact('marketer', 'zones', 'modules', 'regions'));
+    }
+
+    public function storeRegisterFarmer(Request $request)
+    {
+        $marketer = Auth::guard('admin')->user();
+
+        $data = $request->validate([
+            'farm_name' => 'required|string|max:191',
+            'farm_type' => 'required|in:commercial,cooperative,backyard,processor',
+            'owner_f_name' => 'required|string|max:100',
+            'owner_l_name' => 'nullable|string|max:100',
+            'phone' => 'required|string|max:20|unique:vendors,phone',
+            'email' => 'required|email|max:191|unique:vendors,email',
+            'region' => 'required|string|max:100',
+            'district' => 'nullable|string|max:120',
+            'zone_id' => 'required|integer|exists:zones,id',
+            'module_id' => 'required|integer|exists:modules,id',
+            'address' => 'required|string|max:255',
+            'primary_crops' => 'nullable|string|max:255',
+        ]);
+
+        $tempPass = \Illuminate\Support\Str::password(10, true, true, false, false);
+
+        $vendor = new \App\Models\Vendor();
+        $vendor->f_name = $data['owner_f_name'];
+        $vendor->l_name = $data['owner_l_name'] ?? '';
+        $vendor->email = $data['email'];
+        $vendor->phone = $data['phone'];
+        $vendor->password = \Illuminate\Support\Facades\Hash::make($tempPass);
+        $vendor->status = 0;
+        $vendor->save();
+
+        $store = new \App\Models\Store();
+        $store->name = $data['farm_name'];
+        $store->phone = $data['phone'];
+        $store->email = $data['email'];
+        $store->address = $data['address'];
+        $store->zone_id = (int) $data['zone_id'];
+        $store->module_id = (int) $data['module_id'];
+        $store->vendor_id = $vendor->id;
+        $store->status = 0;
+        $store->store_business_model = 'commission';
+        $store->delivery_time = '1-2 days';
+
+        $storeCols = \Illuminate\Support\Facades\Schema::getColumnListing('stores');
+        if (in_array('marketer_id', $storeCols, true)) {
+            $store->marketer_id = $marketer->id;
+        }
+        if (in_array('marketer_code', $storeCols, true)) {
+            $store->marketer_code = $marketer->marketer_code ?: ('MKT-GH-' . str_pad((string) $marketer->id, 3, '0', STR_PAD_LEFT));
+        }
+        if (in_array('farm_type', $storeCols, true)) {
+            $store->farm_type = $data['farm_type'];
+        }
+        if (in_array('is_backyard', $storeCols, true)) {
+            $store->is_backyard = $data['farm_type'] === 'backyard';
+        }
+        if (in_array('region', $storeCols, true)) {
+            $store->region = $data['region'];
+        }
+        if (in_array('district', $storeCols, true)) {
+            $store->district = $data['district'] ?? null;
+        }
+        if (in_array('cultivation_status', $storeCols, true)) {
+            $store->cultivation_status = 'active';
+        }
+        if (in_array('marketer_verification_notes', $storeCols, true) && ! empty($data['primary_crops'])) {
+            $store->marketer_verification_notes = 'Crops: ' . $data['primary_crops'];
+        }
+        $store->save();
+
+        return redirect()
+            ->route('marketer.dashboard')
+            ->with('status', "Registered {$store->name} under your referral code! It is now visible in your dashboard and Admin Remote Marketers queue.");
+    }
 }

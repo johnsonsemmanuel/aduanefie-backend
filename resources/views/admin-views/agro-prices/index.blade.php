@@ -16,15 +16,15 @@
                 Manage live Ghana wholesale &amp; retail commodity prices shown on the marketplace ticker and broadcast Hubtel SMS price alerts to farmers.
             </p>
         </div>
-        <div class="d-flex flex-wrap gap-2">
-            <form action="{{ route('admin.agro-prices.sync-live') }}" method="POST" class="d-inline">
+        <div class="btn--container">
+            <form action="{{ route('admin.agro-prices.sync-live') }}" method="POST" class="mb-0">
                 @csrf
-                <button type="submit" class="btn btn-primary btn-sm">
-                    <i class="tio-refresh"></i> Sync Live Prices (World Bank &amp; FAO/MoFA)
+                <button type="submit" class="btn btn--primary">
+                    <i class="tio-refresh mr-1"></i> Sync Live Prices (World Bank &amp; FAO/MoFA)
                 </button>
             </form>
-            <a href="https://aduanefie.com/market-prices" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary btn-sm">
-                <i class="tio-open-in-new"></i> View Live Index
+            <a href="https://aduanefie.com/market-prices" target="_blank" rel="noopener noreferrer" class="btn btn--secondary">
+                <i class="tio-open-in-new mr-1"></i> View Live Index
             </a>
         </div>
     </div>

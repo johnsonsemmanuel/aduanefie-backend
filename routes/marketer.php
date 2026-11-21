@@ -17,6 +17,13 @@ Route::get('marketer-login', [MarketerAuthController::class, 'showLogin'])->name
 Route::post('marketer-login', [MarketerAuthController::class, 'login'])
     ->name('marketer.login.submit')
     ->middleware('throttle:marketer-login');
+Route::get('marketer-forgot-password', [MarketerAuthController::class, 'showForgotPassword'])->name('marketer.forgot');
+Route::post('marketer-forgot-password', [MarketerAuthController::class, 'sendLoginLink'])
+    ->name('marketer.forgot.send')
+    ->middleware('throttle:marketer-login');
+Route::get('marketer-magic-login/{id}', [MarketerAuthController::class, 'magicLogin'])
+    ->name('marketer.magic-login')
+    ->middleware('signed');
 Route::post('marketer-logout', [MarketerAuthController::class, 'logout'])->name('marketer.logout');
 
 Route::get('marketer-mfa', [MarketerMfaController::class, 'showChallenge'])->name('marketer.mfa.challenge');
@@ -32,6 +39,8 @@ Route::get('marketer-mfa/recovery-codes', [MarketerMfaController::class, 'recove
 
 Route::middleware(MarketerAuthenticated::class)->prefix('marketer')->group(function () {
     Route::get('/', [MarketerPortalController::class, 'dashboard'])->name('marketer.dashboard');
+    Route::get('register-farmer', [MarketerPortalController::class, 'showRegisterFarmer'])->name('marketer.register-farmer');
+    Route::post('register-farmer', [MarketerPortalController::class, 'storeRegisterFarmer'])->name('marketer.register-farmer.store');
     Route::post('stores/{storeId}/verify', [MarketerPortalController::class, 'verifyStore'])->name('marketer.stores.verify');
     Route::get('backyard-farms', [MarketerPortalController::class, 'backyardFarms'])->name('marketer.backyard-farms');
     Route::post('backyard-farms/{id}/verify', [MarketerPortalController::class, 'verifyBackyardFarm'])->name('marketer.backyard-farms.verify');
@@ -41,4 +50,5 @@ Route::middleware(MarketerAuthenticated::class)->prefix('marketer')->group(funct
     Route::get('payouts', [MarketerPortalController::class, 'payouts'])->name('marketer.payouts');
     Route::get('payouts/request', [MarketerPortalController::class, 'showPayoutRequest'])->name('marketer.payouts.request');
     Route::post('payouts', [MarketerPortalController::class, 'requestPayout'])->name('marketer.payouts.store');
+    Route::post('password', [MarketerAuthController::class, 'updatePassword'])->name('marketer.password.update');
 });

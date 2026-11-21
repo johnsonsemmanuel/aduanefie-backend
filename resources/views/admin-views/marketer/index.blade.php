@@ -11,31 +11,34 @@
                 </span>
                 <span>Remote marketers</span>
             </h1>
-            <div class="d-flex flex-wrap align-items-center mb-3">
-                <a href="{{ route('admin.marketer.commissions') }}" class="btn btn--secondary mr-2">Commission ledger</a>
-                <a href="{{ route('admin.marketer.payouts') }}" class="btn btn--secondary mr-2">
+            <div class="btn--container mb-3">
+                <a href="https://partners.aduanefie.com/marketer-login" target="_blank" rel="noopener" class="btn btn--secondary">Marketer Portal ↗</a>
+                <a href="{{ route('admin.marketer.commissions') }}" class="btn btn--secondary">Commission ledger</a>
+                <a href="{{ route('admin.marketer.payouts') }}" class="btn btn--secondary">
                     Payouts
                     @if($openPayouts > 0)
                         <span class="badge badge-soft-danger ml-1">{{ $openPayouts }}</span>
                     @endif
                 </a>
-                <a href="{{ route('admin.marketer.stores') }}" class="btn btn--secondary mr-2">Store attribution</a>
-                <form method="post" action="{{ route('admin.marketer.accrue') }}" class="mb-0 mr-2">
+                <a href="{{ route('admin.marketer.stores') }}" class="btn btn--secondary">Store attribution</a>
+                <form method="post" action="{{ route('admin.marketer.accrue') }}" class="mb-0">
                     @csrf
                     <button type="submit" class="btn btn--primary">Run accrual now</button>
                 </form>
                 <form method="post" action="{{ route('admin.marketer.notify-all') }}" class="mb-0">
                     @csrf
                     <input type="hidden" name="region" value="{{ $selectedRegion ?? '' }}">
-                    <button type="submit" class="btn btn-outline-primary">Notify All (Email &amp; SMS)</button>
+                    <button type="submit" class="btn btn--secondary">Notify All (Email &amp; SMS)</button>
                 </form>
             </div>
         </div>
     </div>
 
-    <div class="alert alert-soft-info mb-3">
-        Each remote marketer earns a <strong>fixed Onboarding Bounty</strong> (default <strong>{{ number_format((float) config('marketer.default_onboarding_bounty', 25), 2) }} {{ $currency }}</strong> per verified farmer/stakeholder onboarded)
-        plus a <strong>Sales Commission Share</strong> (default <strong>{{ rtrim(rtrim(number_format((float) config('marketer.default_rate', 20), 2, '.', ''), '0'), '.') }}%</strong> of platform commission) on every delivered order from stores attributed to them.
+    <div class="card mb-3">
+        <div class="card-body py-2 px-3 text-dark">
+            Each remote marketer earns a <strong>fixed Onboarding Bounty</strong> (default <strong>{{ number_format((float) config('marketer.default_onboarding_bounty', 25), 2) }} {{ $currency }}</strong> per verified farmer/stakeholder onboarded)
+            plus a <strong>Sales Commission Share</strong> (default <strong>{{ rtrim(rtrim(number_format((float) config('marketer.default_rate', 20), 2, '.', ''), '0'), '.') }}%</strong> of platform commission) on every delivered order from stores attributed to them.
+        </div>
     </div>
 
     <div class="row mb-3">
@@ -164,7 +167,9 @@
                                 <td>
                                     <div class="d-flex align-items-center">
                                         <div>
-                                            <div class="font-weight-600">{{ $m->f_name }} {{ $m->l_name }}</div>
+                                            <div class="font-weight-600">
+                                                <a href="{{ route('admin.marketer-applications.show', $m->id) }}" class="text-dark">{{ $m->f_name }} {{ $m->l_name }}</a>
+                                            </div>
                                             <div class="text-muted small">{{ $m->email }}</div>
                                             @if(!empty($m->phone) && !str_starts_with((string) $m->phone, '000000'))
                                                 <div class="text-muted small">{{ $m->phone }}</div>
