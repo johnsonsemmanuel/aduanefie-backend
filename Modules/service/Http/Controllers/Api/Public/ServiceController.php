@@ -97,10 +97,10 @@ class ServiceController extends Controller
         return response()->json(['bookings' => $bookings], 200);
     }
 
-    public function bookingDetails($id)
+    public function bookingDetails(Request $request, $id)
     {
-        $booking = ServiceBooking::with('service')->find($id);
-        if (!$booking) {
+        $booking = $this->bookingForViewer($request, $id);
+        if ($booking === null) {
             return response()->json(['errors' => ['Booking not found']], 404);
         }
         return response()->json(['booking' => $booking], 200);
@@ -108,8 +108,8 @@ class ServiceController extends Controller
 
     public function cancelBooking(Request $request, $id)
     {
-        $booking = ServiceBooking::find($id);
-        if (!$booking) {
+        $booking = $this->bookingForViewer($request, $id);
+        if ($booking === null) {
             return response()->json(['errors' => ['Booking not found']], 404);
         }
 
@@ -119,5 +119,29 @@ class ServiceController extends Controller
         $booking->save();
 
         return response()->json(['booking' => $booking, 'message' => 'Booking cancelled'], 200);
+    }
+
+    /**
+     * Resolve a booking only for its owner (authenticated customer or the
+     * guest that created it). Raw numeric ids alone must never grant access to
+     * another customer's address and coordinates, nor let them cancel it.
+     */
+    private function bookingForViewer(Request $request, $id)
+    {
+        $user = auth('api')->user();
+        $guestId = $request->input('guest_id');
+
+        if (!$user && !$guestId) {
+            return null;
+        }
+
+        $query = ServiceBooking::with('service')->where('id', $id);
+        if ($user) {
+            $query->where('user_id', $user->id);
+        } else {
+            $query->where('guest_id', $guestId);
+        }
+
+        return $query->first();
     }
 }

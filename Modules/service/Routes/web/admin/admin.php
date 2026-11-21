@@ -9,7 +9,7 @@
 |
 */
 
-Route::group(['prefix' => 'service', 'as' => 'service.'], function () {
+Route::group(['prefix' => 'service', 'as' => 'service.', 'middleware' => ['module:service']], function () {
     Route::get('/dashboard', [\Modules\Service\Http\Controllers\Web\Admin\DashboardController::class, 'index'])->name('dashboard');
     Route::resource('/categories', \Modules\Service\Http\Controllers\Web\Admin\ServiceCategoryController::class);
     Route::resource('/providers', \Modules\Service\Http\Controllers\Web\Admin\ServiceProviderController::class);

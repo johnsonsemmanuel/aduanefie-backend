@@ -43,13 +43,17 @@ class RouteServiceProvider extends ServiceProvider
      */
     protected function mapWebRoutes()
     {
-        Route::middleware('web')
+        // These routes live under /admin and /vendor-panel, so they must carry
+        // the same guards as the main admin.php and vendor.php route files.
+        // Previously only `web` was applied, leaving every CRUD endpoint
+        // reachable by anonymous visitors.
+        Route::middleware(['web', 'admin', 'admin-mfa', 'current-module'])
             ->prefix('admin')
             ->as('admin.')
             ->namespace($this->moduleNamespace)
             ->group(module_path('Service', '/Routes/web/admin/admin.php'));
 
-        Route::middleware('web')
+        Route::middleware(['web', 'vendor'])
             ->prefix('vendor-panel')
             ->as('vendor.')
             ->namespace($this->moduleNamespace)

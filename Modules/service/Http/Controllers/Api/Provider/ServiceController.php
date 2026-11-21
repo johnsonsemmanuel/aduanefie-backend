@@ -103,7 +103,12 @@ class ServiceController extends Controller
 
     public function serviceList(Request $request)
     {
-        $query = Service::with('category');
+        $providerId = $this->authenticatedProviderId($request);
+        if ($providerId === null) {
+            return $this->unauthorized();
+        }
+
+        $query = Service::with('category')->where('provider_id', $providerId);
         if ($request->has('category_id')) {
             $query->where('category_id', $request->category_id);
         }
@@ -111,9 +116,14 @@ class ServiceController extends Controller
         return response()->json(['services' => $services], 200);
     }
 
-    public function editService($id)
+    public function editService(Request $request, $id)
     {
-        $service = Service::with('category')->find($id);
+        $providerId = $this->authenticatedProviderId($request);
+        if ($providerId === null) {
+            return $this->unauthorized();
+        }
+
+        $service = Service::with('category')->where('provider_id', $providerId)->find($id);
         if (!$service) {
             return response()->json(['errors' => ['Service not found']], 404);
         }
@@ -138,7 +148,10 @@ class ServiceController extends Controller
             return response()->json(['errors' => $validator->errors()], 403);
         }
 
-        $providerId = auth('api')->user() ? auth('api')->user()->id : $request->input('provider_id');
+        $providerId = $this->authenticatedProviderId($request);
+        if ($providerId === null) {
+            return $this->unauthorized();
+        }
 
         $service = Service::create(array_merge($request->only([
             'category_id', 'title', 'slug', 'description', 'short_description',
@@ -150,7 +163,12 @@ class ServiceController extends Controller
 
     public function updateService(Request $request, $id)
     {
-        $service = Service::find($id);
+        $providerId = $this->authenticatedProviderId($request);
+        if ($providerId === null) {
+            return $this->unauthorized();
+        }
+
+        $service = Service::where('provider_id', $providerId)->find($id);
         if (!$service) {
             return response()->json(['errors' => ['Service not found']], 404);
         }
@@ -175,9 +193,14 @@ class ServiceController extends Controller
         return response()->json(['service' => $service], 200);
     }
 
-    public function toggleServiceStatus($id)
+    public function toggleServiceStatus(Request $request, $id)
     {
-        $service = Service::find($id);
+        $providerId = $this->authenticatedProviderId($request);
+        if ($providerId === null) {
+            return $this->unauthorized();
+        }
+
+        $service = Service::where('provider_id', $providerId)->find($id);
         if (!$service) {
             return response()->json(['errors' => ['Service not found']], 404);
         }
@@ -188,9 +211,14 @@ class ServiceController extends Controller
         return response()->json(['service' => $service, 'message' => 'Service status updated'], 200);
     }
 
-    public function deleteService($id)
+    public function deleteService(Request $request, $id)
     {
-        $service = Service::find($id);
+        $providerId = $this->authenticatedProviderId($request);
+        if ($providerId === null) {
+            return $this->unauthorized();
+        }
+
+        $service = Service::where('provider_id', $providerId)->find($id);
         if (!$service) {
             return response()->json(['errors' => ['Service not found']], 404);
         }
@@ -201,7 +229,10 @@ class ServiceController extends Controller
 
     public function bookingList(Request $request)
     {
-        $providerId = auth('api')->user() ? auth('api')->user()->id : null;
+        $providerId = $this->authenticatedProviderId($request);
+        if ($providerId === null) {
+            return $this->unauthorized();
+        }
         $query = ServiceBooking::with('service')->where('provider_id', $providerId);
 
         if ($request->has('status')) {
@@ -212,9 +243,14 @@ class ServiceController extends Controller
         return response()->json(['bookings' => $bookings], 200);
     }
 
-    public function bookingDetails($id)
+    public function bookingDetails(Request $request, $id)
     {
-        $booking = ServiceBooking::with('service')->find($id);
+        $providerId = $this->authenticatedProviderId($request);
+        if ($providerId === null) {
+            return $this->unauthorized();
+        }
+
+        $booking = ServiceBooking::with('service')->where('provider_id', $providerId)->find($id);
         if (!$booking) {
             return response()->json(['errors' => ['Booking not found']], 404);
         }
@@ -223,7 +259,12 @@ class ServiceController extends Controller
 
     public function acceptBooking(Request $request, $id)
     {
-        $booking = ServiceBooking::find($id);
+        $providerId = $this->authenticatedProviderId($request);
+        if ($providerId === null) {
+            return $this->unauthorized();
+        }
+
+        $booking = ServiceBooking::where('provider_id', $providerId)->find($id);
         if (!$booking) {
             return response()->json(['errors' => ['Booking not found']], 404);
         }
@@ -236,7 +277,12 @@ class ServiceController extends Controller
 
     public function completeBooking(Request $request, $id)
     {
-        $booking = ServiceBooking::find($id);
+        $providerId = $this->authenticatedProviderId($request);
+        if ($providerId === null) {
+            return $this->unauthorized();
+        }
+
+        $booking = ServiceBooking::where('provider_id', $providerId)->find($id);
         if (!$booking) {
             return response()->json(['errors' => ['Booking not found']], 404);
         }
@@ -250,7 +296,12 @@ class ServiceController extends Controller
 
     public function cancelBooking(Request $request, $id)
     {
-        $booking = ServiceBooking::find($id);
+        $providerId = $this->authenticatedProviderId($request);
+        if ($providerId === null) {
+            return $this->unauthorized();
+        }
+
+        $booking = ServiceBooking::where('provider_id', $providerId)->find($id);
         if (!$booking) {
             return response()->json(['errors' => ['Booking not found']], 404);
         }
@@ -265,14 +316,36 @@ class ServiceController extends Controller
 
     public function profile(Request $request)
     {
-        $user = auth('api')->user();
-        return response()->json(['provider' => $user], 200);
+        $vendor = $request->vendor ?? null;
+        if (!isset($vendor)) {
+            return $this->unauthorized();
+        }
+        return response()->json(['provider' => $vendor], 200);
     }
 
     public function profileUpdate(Request $request)
     {
-        $user = auth('api')->user();
-        $user->update($request->only(['name', 'email', 'phone', 'description']));
-        return response()->json(['provider' => $user, 'message' => 'Profile updated'], 200);
+        $vendor = $request->vendor ?? null;
+        if (!isset($vendor)) {
+            return $this->unauthorized();
+        }
+        $vendor->update($request->only(['f_name', 'l_name', 'email', 'phone']));
+        return response()->json(['provider' => $vendor, 'message' => 'Profile updated'], 200);
+    }
+
+    private function unauthorized()
+    {
+        return response()->json(['errors' => [['code' => 'auth-001', 'message' => 'Unauthorized.']]], 401);
+    }
+
+    /**
+     * The provider is the vendor authenticated by vendor.api. Never fall back
+     * to a client-supplied provider_id or to a Passport user from another guard.
+     */
+    private function authenticatedProviderId(Request $request)
+    {
+        $vendor = $request->vendor ?? null;
+
+        return isset($vendor) ? $vendor->id : null;
     }
 }
