@@ -7,7 +7,9 @@
     <div class="page-header d-flex flex-wrap justify-content-between align-items-center gap-2">
         <div>
             <h1 class="page-header-title">
-                <span class="page-header-icon"><i class="tio-leaf"></i></span>
+                <span class="page-header-icon">
+                    <img src="{{ asset('public/assets/admin/img/total-store.png') }}" class="w--26" alt="">
+                </span>
                 <span>Backyard Farm Applications</span>
             </h1>
             <p class="text-muted mb-0">

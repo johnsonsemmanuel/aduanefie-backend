@@ -8,7 +8,7 @@
         <div>
             <h1 class="page-header-title">
                 <span class="page-header-icon">
-                    <i class="tio-chart-bar-4"></i>
+                    <img src="{{ asset('public/assets/admin/img/addon_setting.png') }}" class="w--26" alt="">
                 </span>
                 <span>Ghana Agro Market Prices &amp; SMS Alerts</span>
             </h1>

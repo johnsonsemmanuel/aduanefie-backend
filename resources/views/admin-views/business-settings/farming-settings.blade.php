@@ -12,7 +12,7 @@
         <div class="page-header">
             <h1 class="page-header-title">
                 <span class="page-header-icon">
-                    <i class="tio-settings-outlined"></i>
+                    <img src="{{ asset('public/assets/admin/img/addon_setting.png') }}" class="w--26" alt="">
                 </span>
                 <span>Farming &amp; SMS Settings</span>
             </h1>
