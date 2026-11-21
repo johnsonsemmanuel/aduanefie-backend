@@ -695,6 +695,58 @@ class FarmerController extends Controller
     }
 
     /**
+     * Low-bandwidth SMS keyword trigger: farmers reply "READY <item_id>"
+     * (or "HARVEST <item_id>") to mark their crop harvest_ready without data.
+     */
+    public function sms_harvest_ready(Request $request)
+    {
+        $from = preg_replace('/\D/', '', (string) ($request->input('from') ?? $request->input('phone') ?? ''));
+        $text = trim((string) ($request->input('message') ?? $request->input('text') ?? ''));
+
+        if ($from === '' || ! preg_match('/^(?:READY|HARVEST)\s+#?(\d+)/i', $text, $matches)) {
+            return response()->json([
+                'status' => 'ignored',
+                'message' => 'Send "READY <product_id>" from your registered farm phone.',
+            ], 422);
+        }
+
+        $itemId = (int) $matches[1];
+        $item = Item::with('store')->find($itemId);
+        if (! $item || ! $item->store) {
+            return response()->json(['status' => 'not_found', 'message' => 'Product not found.'], 404);
+        }
+
+        $storePhone = preg_replace('/\D/', '', (string) ($item->store->phone ?? ''));
+        $vendorPhone = preg_replace('/\D/', '', (string) ($item->store->vendor?->phone ?? ''));
+        $fromTail = substr($from, -9);
+
+        $authorized = ($storePhone !== '' && substr($storePhone, -9) === $fromTail)
+            || ($vendorPhone !== '' && substr($vendorPhone, -9) === $fromTail);
+
+        if (! $authorized) {
+            return response()->json(['status' => 'forbidden', 'message' => 'Sender phone does not match store owner.'], 403);
+        }
+
+        $item->farming_status = 'harvest_ready';
+        $item->save();
+
+        try {
+            \App\Traits\SmsGateway::send(
+                $request->input('from') ?? $request->input('phone'),
+                "Aduanefie: {$item->name} (#{$item->id}) is now marked HARVEST READY on the marketplace."
+            );
+        } catch (\Throwable $e) {
+            // best effort
+        }
+
+        return response()->json([
+            'status' => 'updated',
+            'item_id' => $item->id,
+            'farming_status' => 'harvest_ready',
+        ], 200);
+    }
+
+    /**
      * Map a pest/disease type to matching approved Farm Inputs & Fertiliser
      * products so farmers can purchase treatments in 1 tap.
      */
