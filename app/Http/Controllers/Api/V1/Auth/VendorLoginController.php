@@ -313,6 +313,7 @@ class VendorLoginController extends Controller
                         'store_id'=> $store->id,
                         'package_id'=> $store->package_id,
                         'type'=> 'subscription',
+                        'onboarding_token'=> Helpers::storeOnboardingToken($store),
                         'message'=>translate('messages.application_placed_successfully')],200);
                 }
                 elseif($request->business_plan == 'commission' ){

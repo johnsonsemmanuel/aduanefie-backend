@@ -19,9 +19,8 @@ class VendorTokenIsValid
      */
     public function handle(Request $request, Closure $next)
     {
-        $token=$request->bearerToken();
-        if(strlen($token)<1)
-        {
+        $token = $request->bearerToken();
+        if (!is_string($token) || $token === '') {
             return response()->json([
                 'errors' => [
                     ['code' => 'auth-001', 'message' => 'Unauthorized.']
@@ -35,33 +34,35 @@ class VendorTokenIsValid
                 'errors' => $errors
             ], 403);
         }
-        $vendor_type= $request->header('vendorType');
-        if($vendor_type == 'owner'){
+
+        $unauthorized = response()->json([
+            'errors' => [
+                ['code' => 'auth-001', 'message' => 'Unauthorized.']
+            ]
+        ], 401);
+
+        $vendor_type = $request->header('vendorType');
+        if ($vendor_type === 'owner') {
             $vendor = Vendor::where('auth_token', $token)->first();
-            if(!isset($vendor))
-            {
-                return response()->json([
-                    'errors' => [
-                        ['code' => 'auth-001', 'message' => 'Unauthorized.']
-                    ]
-                ], 401);
+            if (!isset($vendor)) {
+                return $unauthorized;
             }
-            $request['vendor']=$vendor;
+            $request['vendor'] = $vendor;
             Config::set('module.current_module_data', $vendor->stores[0]->module);
-        }elseif($vendor_type == 'employee'){
-            $vendor = VendorEmployee::where('auth_token', $token)->first();
-            if(!isset($vendor))
-            {
-                return response()->json([
-                    'errors' => [
-                        ['code' => 'auth-001', 'message' => 'Unauthorized.']
-                    ]
-                ], 401);
+        } elseif ($vendor_type === 'employee') {
+            $employee = VendorEmployee::where('auth_token', $token)->first();
+            if (!isset($employee) || !isset($employee->vendor)) {
+                return $unauthorized;
             }
-            $request['vendor']=$vendor->vendor;
-            $request['vendor_employee']=$vendor;
-            Config::set('module.current_module_data', $vendor->vendor->stores[0]->module);
+            $request['vendor'] = $employee->vendor;
+            $request['vendor_employee'] = $employee;
+            Config::set('module.current_module_data', $employee->vendor->stores[0]->module);
+        } else {
+            // Default deny: an unknown vendorType must never reach a downstream
+            // controller with an unauthenticated (or missing) vendor identity.
+            return $unauthorized;
         }
+
         return $next($request);
     }
 }

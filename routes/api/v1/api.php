@@ -71,12 +71,17 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
         Route::post('social-register', 'SocialAuthController@social_register');
     });
 
-    //Store Subscription
+    // Store Subscription. package-view is read-only and needed before sign-in.
+    // business_plan validates a signed, single-purpose onboarding token in the
+    // controller, so it never acts on a store chosen by the caller.
     Route::group(['prefix' => 'vendor','namespace' => 'Vendor'], function () {
         Route::get('package-view', 'SubscriptionController@package_view');
         Route::post('business_plan', 'SubscriptionController@business_plan');
-        Route::post('subscription/payment/api', 'SubscriptionController@subscription_payment_api')->name('subscription_payment_api');
-        Route::post('package-renew', 'SubscriptionController@package_renew_change_update_api');
+    });
+
+    // Subscription management must act only on the authenticated vendor's own
+    // store. The store is derived from $request->vendor inside the controller.
+    Route::group(['prefix' => 'vendor', 'namespace' => 'Vendor', 'middleware' => ['vendor.api']], function () {
         Route::post('cancel-subscription', 'SubscriptionController@cancelSubscription');
         Route::get('check-product-limits', 'SubscriptionController@checkProductLimits');
     });

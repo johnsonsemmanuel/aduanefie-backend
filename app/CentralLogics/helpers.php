@@ -2563,6 +2563,67 @@ class Helpers
         return str_ireplace(['\'', '"', ';', '<', '>'], ' ', $str);
     }
 
+    /**
+     * Signed, single-purpose onboarding token. Issued when a store is created
+     * during self-registration and required to finalise that store's business
+     * plan. It is bound to the store id and creation time with an HMAC keyed by
+     * the application key, so a caller cannot finalise an arbitrary store by
+     * guessing its numeric id. No server-side state or migration is required.
+     */
+    public static function storeOnboardingToken($store)
+    {
+        $payload = $store->id . '|' . ($store->created_at?->timestamp ?? 0);
+        $signature = hash_hmac('sha256', $payload, self::onboardingSigningKey());
+
+        return base64_encode($payload . '|' . $signature);
+    }
+
+    /**
+     * Resolve a pending store from an onboarding token, or null when the token
+     * is malformed, tampered with, or targets a store that is no longer in the
+     * pending ('none') state. Requiring the pending state makes the token
+     * effectively single-use: once the plan is chosen it cannot be replayed.
+     */
+    public static function resolveStoreFromOnboardingToken($token, $claimedStoreId = null)
+    {
+        if (!is_string($token) || $token === '') {
+            return null;
+        }
+
+        $decoded = base64_decode($token, true);
+        if ($decoded === false) {
+            return null;
+        }
+
+        $parts = explode('|', $decoded);
+        if (count($parts) !== 3) {
+            return null;
+        }
+        [$id, $timestamp, $signature] = $parts;
+        if (!ctype_digit($id) || !ctype_digit($timestamp)) {
+            return null;
+        }
+
+        $payload = $id . '|' . $timestamp;
+        $expected = hash_hmac('sha256', $payload, self::onboardingSigningKey());
+        if (!hash_equals($expected, $signature)) {
+            return null;
+        }
+
+        if ($claimedStoreId !== null && (string) $claimedStoreId !== $id) {
+            return null;
+        }
+
+        return Store::where('id', (int) $id)
+            ->where('store_business_model', 'none')
+            ->first();
+    }
+
+    private static function onboardingSigningKey()
+    {
+        return hash('sha256', (string) config('app.key'));
+    }
+
     //Generate referer code
 
     public static function generate_referer_code() {

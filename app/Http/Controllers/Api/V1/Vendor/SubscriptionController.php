@@ -34,7 +34,8 @@ class SubscriptionController extends Controller
 
 
         $validator = Validator::make($request->all(), [
-            'store_id' => 'required',
+            'store_id' => 'nullable',
+            'onboarding_token' => 'required|string',
             'payment' => 'nullable',
             'business_plan' => 'required|in:subscription,commission',
             'package_id' => 'nullable|required_if:business_plan,subscription',
@@ -45,7 +46,15 @@ class SubscriptionController extends Controller
             return response()->json(['errors' => Helpers::error_processor($validator)], 403);
         }
 
-        $store = Store::Where('id', $request->store_id)->first();
+        // The store is resolved from the signed token issued at registration,
+        // never from client-supplied input. A tampered or replayed token (the
+        // store is no longer pending) resolves to null and is rejected.
+        $store = Helpers::resolveStoreFromOnboardingToken($request->onboarding_token, $request->store_id);
+        if (!$store) {
+            return response()->json([
+                'errors' => [['code' => 'onboarding_token', 'message' => 'Invalid or expired store onboarding token.']]
+            ], 403);
+        }
         if ($request->business_plan == 'subscription' && $request->package_id != null) {
             $package = SubscriptionPackage::withoutGlobalScope('translate')->find($request->package_id);
             $pending_bill = SubscriptionBillingAndRefundHistory::where([
@@ -162,20 +171,23 @@ class SubscriptionController extends Controller
     {
 
         $validator = Validator::make($request->all(), [
-            'store_id' => 'required',
             'subscription_id' => 'required',
         ]);
         if ($validator->fails()) {
             return response()->json(['errors' => Helpers::error_processor($validator)], 403);
         }
 
-        StoreSubscription::where(['id' => $request->subscription_id, 'store_id' => $request->store_id])->update([
+        $store = $this->authenticatedStore($request);
+        if (!$store) {
+            return response()->json(['errors' => [['code' => 'auth-001', 'message' => 'Unauthorized.']]], 401);
+        }
+
+        StoreSubscription::where(['id' => $request->subscription_id, 'store_id' => $store->id])->update([
             'is_canceled' => 1,
             'canceled_by' => 'store',
         ]);
 
         try {
-            $store = Store::where('id', $request->store_id)->first();
             if($store?->module?->module_type == 'rental' && addon_published_status('Rental')){
                 if( Helpers::getRentalNotificationStatusData('provider','provider_subscription_cancel','push_notification_status',$store->id)  &&  $store?->vendor?->firebase_token){
                     $data = [
@@ -230,19 +242,23 @@ class SubscriptionController extends Controller
     {
 
         $validator = Validator::make($request->all(), [
-            'store_id' => 'required',
             'package_id' => 'required',
         ]);
         if ($validator->fails()) {
             return response()->json(['errors' => Helpers::error_processor($validator)], 403);
         }
 
-        $disable_item_count = 0;
-        if (data_get(Helpers::subscriptionConditionsCheck(store_id: $request->store_id, package_id: $request->package_id), 'disable_item_count') > 0) {
-            $disable_item_count = (int) (data_get(Helpers::subscriptionConditionsCheck(store_id: $request->store_id, package_id: $request->package_id), 'disable_item_count', 0));
+        $store = $this->authenticatedStore($request);
+        if (!$store) {
+            return response()->json(['errors' => [['code' => 'auth-001', 'message' => 'Unauthorized.']]], 401);
         }
 
-        $store = Store::where('id', $request->store_id)->with('store_sub_update_application')->first();
+        $disable_item_count = 0;
+        if (data_get(Helpers::subscriptionConditionsCheck(store_id: $store->id, package_id: $request->package_id), 'disable_item_count') > 0) {
+            $disable_item_count = (int) (data_get(Helpers::subscriptionConditionsCheck(store_id: $store->id, package_id: $request->package_id), 'disable_item_count', 0));
+        }
+
+        $store->load('store_sub_update_application');
         $store_subscription = $store->store_sub_update_application;
         $cash_backs = [];
 
@@ -255,5 +271,19 @@ class SubscriptionController extends Controller
             'back_amount' => (float)data_get($cash_backs, 'back_amount', 0),
             'days' => (int) data_get($cash_backs, 'days', 0)
         ], 200);
+    }
+
+    /**
+     * Resolve the store owned by the authenticated vendor. The vendor is set by
+     * the vendor.api middleware, so this can never be chosen by the caller.
+     */
+    private function authenticatedStore(Request $request)
+    {
+        $vendor = $request->vendor;
+        if (!isset($vendor)) {
+            return null;
+        }
+
+        return $vendor->stores()->first();
     }
 }
