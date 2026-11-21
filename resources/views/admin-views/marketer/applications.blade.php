@@ -6,7 +6,12 @@
 <div class="content container-fluid">
     <div class="page-header d-flex flex-wrap justify-content-between align-items-center gap-2">
         <div>
-            <h1 class="page-header-title mb-1">Remote Marketer Applications</h1>
+            <h1 class="page-header-title mb-1">
+                <span class="page-header-icon">
+                    <i class="tio-user-add"></i>
+                </span>
+                <span>Remote Marketer Applications</span>
+            </h1>
             <p class="text-muted mb-0">Review regional marketer applications. Approving automatically creates a Role-5 marketer account, assigns a referral code, and SMSs credentials.</p>
         </div>
         <div class="d-flex flex-wrap align-items-center gap-2">
