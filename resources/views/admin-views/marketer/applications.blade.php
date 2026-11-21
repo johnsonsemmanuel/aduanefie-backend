@@ -72,7 +72,7 @@
                 </tbody>
             </table>
         </div>
-        <div class="card-footer">{{ $applications->links() }}</div>
+        <div class="card-footer">{{ $applications->links('pagination::bootstrap-4') }}</div>
     </div>
 
     <div class="card mt-4">
@@ -155,7 +155,7 @@
             </table>
         </div>
         @if(isset($activeMarketers))
-            <div class="card-footer">{{ $activeMarketers->links() }}</div>
+            <div class="card-footer">{{ $activeMarketers->links('pagination::bootstrap-4') }}</div>
         @endif
     </div>
 </div>

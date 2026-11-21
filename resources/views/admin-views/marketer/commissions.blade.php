@@ -129,7 +129,7 @@
             </table>
         </div>
         <div class="page-area">
-            {!! $items->links() !!}
+            {!! $items->links('pagination::bootstrap-4') !!}
         </div>
     </div>
 </div>

@@ -94,7 +94,7 @@
             </table>
         </div>
 
-        <div class="card-footer">{{ $applications->links() }}</div>
+        <div class="card-footer">{{ $applications->links('pagination::bootstrap-4') }}</div>
     </div>
 </div>
 @endsection
