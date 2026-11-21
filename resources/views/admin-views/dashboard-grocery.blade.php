@@ -212,6 +212,8 @@
         </div>
         <!-- End Stats -->
 
+        @include('admin-views.partials._agro-ops-strip')
+
         <div class="row g-2">
             <div class="col-lg-8 col--xl-8">
                 <div class="card h-100">

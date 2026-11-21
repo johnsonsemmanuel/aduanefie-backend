@@ -11,7 +11,7 @@
     <div class="page-header d-flex flex-wrap justify-content-between align-items-center gap-2">
         <div class="d-flex align-items-center gap-2">
             <span class="page-header-icon">
-                <i class="tio-user-outlined"></i>
+                <img src="{{ asset('public/assets/admin/img/role.png') }}" class="w--26" alt="">
             </span>
             <div>
                 <h1 class="page-header-title mb-0">{{ trim($marketer->f_name . ' ' . $marketer->l_name) }}</h1>

@@ -9,7 +9,7 @@
             <div class="col-sm mb-2 mb-sm-0">
                 <h1 class="page-header-title">
                     <span class="page-header-icon">
-                        <i class="tio-map-outlined"></i>
+                        <img src="{{ asset('public/assets/admin/img/banner.png') }}" class="w--26" alt="">
                     </span>
                     <span>Regional Tours &amp; Farmer Visits</span>
                 </h1>
