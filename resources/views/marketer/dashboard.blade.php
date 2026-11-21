@@ -194,4 +194,25 @@
             <a class="btn" href="{{ route('marketer.payouts.request') }}">Request a payout</a>
         </p>
     </div>
+
+    <div class="card">
+        <h2>Set or Update Portal Password</h2>
+        <p class="muted small" style="margin-top:0;">
+            Keep your account ready for direct sign-in at <strong>partners.aduanefie.com/marketer-login</strong>.
+        </p>
+        <form method="post" action="{{ route('marketer.password.update') }}" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;align-items:end;">
+            @csrf
+            <div class="field" style="margin-bottom:0;">
+                <label for="new_password">New Password (min 8 chars)</label>
+                <input type="password" name="new_password" id="new_password" minlength="8" required autocomplete="new-password">
+            </div>
+            <div class="field" style="margin-bottom:0;">
+                <label for="new_password_confirmation">Confirm Password</label>
+                <input type="password" name="new_password_confirmation" id="new_password_confirmation" minlength="8" required autocomplete="new-password">
+            </div>
+            <div>
+                <button type="submit">Update Password</button>
+            </div>
+        </form>
+    </div>
 @endsection

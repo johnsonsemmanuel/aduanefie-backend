@@ -362,6 +362,9 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
         Route::group(['prefix' => 'marketer-applications', 'as' => 'marketer-applications.'], function () {
             Route::get('/', 'MarketerApplicationController@index')->name('index');
             Route::get('export', 'MarketerApplicationController@exportCsv')->name('export');
+            Route::post('backfill-codes', 'MarketerApplicationController@backfillCodes')->name('backfill-codes');
+            Route::post('marketers/{id}/send-login', 'MarketerApplicationController@sendMarketerLogin')->name('send-login');
+            Route::post('marketers/send-batch', 'MarketerApplicationController@sendBatchLogins')->name('send-batch');
             Route::post('{id}/approve', 'MarketerApplicationController@approve')->name('approve');
             Route::post('{id}/reject', 'MarketerApplicationController@reject')->name('reject');
         });

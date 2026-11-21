@@ -441,7 +441,7 @@
                                             </div>
                                             <div class="col-sm-6 col-lg-3">
                                                 <label class="input-label mb-1">{{ translate('Agro Unit') }}</label>
-                                                <select name="agro_unit" class="form-control">
+                                                <select name="agro_unit" class="form-control" onchange="(function(sel){var w=sel.form&&sel.form.querySelector('[name=unit_weight_kg]');if(!w)return;var map={kg:'1.00',bag_50kg:'50.00',bag_100kg:'100.00',crate:'52.00',ton:'1000.00'};if(map[sel.value])w.value=map[sel.value];})(this)">
                                                     <option value="">{{ translate('Standard Unit') }}</option>
                                                     <option value="kg">{{ translate('Kilogram (kg)') }}</option>
                                                     <option value="bag_50kg">{{ translate('50kg Bag') }}</option>

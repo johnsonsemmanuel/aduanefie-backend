@@ -69,5 +69,82 @@
         </div>
         <div class="card-footer">{{ $applications->links() }}</div>
     </div>
+
+    <div class="card mt-4">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+                <h4 class="mb-0">Active Remote Marketers ({{ $totalMarketers ?? 0 }})</h4>
+                <small class="text-muted">Send one-click signed login links via SMS &amp; Email so marketers can access <strong>partners.aduanefie.com/marketer-login</strong>.</small>
+            </div>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                @if(($missingCodeCount ?? 0) > 0)
+                    <form method="post" action="{{ route('admin.marketer-applications.backfill-codes') }}" class="d-inline">
+                        @csrf
+                        <button type="submit" class="btn btn-sm btn-warning">Backfill {{ $missingCodeCount }} Missing Code(s)</button>
+                    </form>
+                @endif
+                <form method="get" action="{{ route('admin.marketer-applications.index') }}" class="d-flex gap-1">
+                    <input type="hidden" name="status" value="{{ $status }}">
+                    <input type="text" name="q" value="{{ $search ?? '' }}" class="form-control form-control-sm" placeholder="Search name, email, code...">
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Search</button>
+                </form>
+            </div>
+        </div>
+        <div class="card-body border-bottom py-2">
+            <form method="post" action="{{ route('admin.marketer-applications.send-batch') }}" class="d-flex flex-wrap align-items-center gap-2" onsubmit="return confirm('Send SMS + Email sign-in links to this batch of marketers?');">
+                @csrf
+                <span class="small font-weight-bold">Batch Re-Engage (SMS + Email):</span>
+                <label class="small mb-0">Offset</label>
+                <input type="number" name="offset" value="0" min="0" class="form-control form-control-sm" style="width:85px;">
+                <label class="small mb-0">Count</label>
+                <input type="number" name="limit" value="20" min="1" max="30" class="form-control form-control-sm" style="width:75px;">
+                <button type="submit" class="btn btn-sm btn-primary">Send Login Batch</button>
+            </form>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-borderless table-thead-bordered table-align-middle">
+                <thead class="thead-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Marketer</th>
+                        <th>Phone &amp; Email</th>
+                        <th>Region &amp; Code</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($activeMarketers ?? [] as $m)
+                        <tr>
+                            <td>#{{ $m->id }}</td>
+                            <td><strong>{{ trim($m->f_name . ' ' . $m->l_name) }}</strong></td>
+                            <td>
+                                <small>{{ $m->phone ?: '-' }}</small><br>
+                                <small class="text-muted">{{ $m->email }}</small>
+                            </td>
+                            <td>
+                                {{ $m->marketer_region ?: 'Unassigned' }}<br>
+                                @if($m->marketer_code)
+                                    <span class="badge badge-soft-info">{{ $m->marketer_code }}</span>
+                                @else
+                                    <span class="badge badge-soft-warning">No Code</span>
+                                @endif
+                            </td>
+                            <td>
+                                <form method="post" action="{{ route('admin.marketer-applications.send-login', $m->id) }}" class="d-inline">
+                                    @csrf
+                                    <button type="submit" class="btn btn-sm btn-outline-primary">Send Login Link (SMS + Email)</button>
+                                </form>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="5" class="text-center text-muted py-4">No remote marketers found.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+        @if(isset($activeMarketers))
+            <div class="card-footer">{{ $activeMarketers->links() }}</div>
+        @endif
+    </div>
 </div>
 @endsection
