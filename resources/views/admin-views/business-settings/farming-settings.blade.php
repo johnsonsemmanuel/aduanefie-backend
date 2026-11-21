@@ -109,8 +109,18 @@
             <!-- SMS Configuration -->
             <div class="col-md-12">
                 <div class="card">
-                    <div class="card-header">
-                        <h4 class="card-title">{{translate('messages.integram_settings')}}</h4>
+                    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <h4 class="card-title mb-0">{{translate('messages.integram_settings')}}</h4>
+                        @if(isset($smsBalance) && isset($smsBalance['units']))
+                            @php($lowCredits = $smsBalance['units'] < 100)
+                            <span class="badge {{ $lowCredits ? 'badge-soft-warning' : 'badge-soft-success' }} px-3 py-2" style="font-size: 0.85rem;">
+                                <i class="tio-sms mr-1"></i>
+                                SMS Balance: <strong>{{ number_format($smsBalance['units']) }}</strong> credits
+                                @if($lowCredits)
+                                    — Low Balance
+                                @endif
+                            </span>
+                        @endif
                     </div>
                     <div class="card-body p-30">
                         <form action="{{route('admin.business-settings.update-farming-settings')}}" method="POST" id="intekhost-form">
@@ -121,7 +131,12 @@
                                 <div class="col-md-6 col-lg-6">
                                     <div class="form-group mb-30">
                                         <label class="form-label">{{translate('messages.api_key')}} *</label>
-                                        <input type="text" name="intekhost_api_key" class="form-control" value="{{ $settings['intekhost_api_key'] }}" placeholder="{{translate('messages.api_key_placeholder')}}">
+                                        <div class="input-group">
+                                            <input type="password" id="intekhost_api_key_input" name="intekhost_api_key" class="form-control" value="{{ $settings['intekhost_api_key'] }}" placeholder="{{translate('messages.api_key_placeholder')}}" autocomplete="off">
+                                            <div class="input-group-append">
+                                                <button type="button" class="btn btn-outline-secondary" onclick="(function(btn){var inp=document.getElementById('intekhost_api_key_input');if(!inp)return;var show=inp.type==='password';inp.type=show?'text':'password';btn.textContent=show?'Hide':'Show';})(this)">Show</button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -137,6 +152,18 @@
 
                             <div class="d-flex justify-content-end mt-4">
                                 <button type="submit" class="btn btn--primary">{{translate('messages.update_settings')}}</button>
+                            </div>
+                        </form>
+
+                        <hr class="my-4">
+                        <form action="{{route('admin.business-settings.test-intekhost-sms')}}" method="POST" class="row g-2 align-items-end">
+                            @csrf
+                            <div class="col-md-6 col-lg-5">
+                                <label class="form-label mb-1">Send Test SMS</label>
+                                <input type="tel" name="test_phone" class="form-control" placeholder="e.g. 0549172627 or +233549172627" required>
+                            </div>
+                            <div class="col-md-auto">
+                                <button type="submit" class="btn btn-outline-primary">Send Test SMS</button>
                             </div>
                         </form>
                     </div>

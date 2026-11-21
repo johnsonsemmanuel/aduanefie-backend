@@ -767,6 +767,28 @@ class BusinessSettingsController extends Controller
                 'value' => $request['subscription_business_model'] ?? 1
             ]);
         }
+        $activationMode = DB::table('external_configurations')->where('key', 'activation_mode')->first();
+        $driveMondBaseUrl = DB::table('external_configurations')->where('key', 'drivemond_base_url')->first();
+        if ($activationMode && $activationMode->value == 1 && $driveMondBaseUrl && $driveMondBaseUrl->value != null) {
+            $name = \App\Models\BusinessSetting::where('key', 'business_name')->first();
+            $logo = \App\Models\BusinessSetting::where('key', 'logo')->first();
+
+            $app_minimum_version_android=BusinessSetting::where(['key'=>'app_minimum_version_android'])->first()?->value;
+            $app_url_android=BusinessSetting::where(['key'=>'app_url_android'])->first()?->value;
+            $app_minimum_version_ios=BusinessSetting::where(['key'=>'app_minimum_version_ios'])->first()?->value;
+            $app_url_ios=BusinessSetting::where(['key'=>'app_url_ios'])->first()?->value;
+
+            $response = Http::post($driveMondBaseUrl->value . '/api/store-configurations', [
+                'mart_business_name' => $name->value ?? "Aduanefie",
+                'mart_business_logo' => \App\CentralLogics\Helpers::get_full_url('business', $logo?->value ?? '', $logo?->storage[0]?->value ?? 'public', 'favicon') ?? asset('public/assets/admin/img/160x160/img2.jpg'),
+                'mart_app_minimum_version_android' => $app_minimum_version_android,
+                'mart_app_url_android' => $app_url_android,
+                'mart_app_minimum_version_ios' => $app_minimum_version_ios,
+                'mart_app_url_ios' => $app_url_ios,
+
+            ]);
+        }
+
         Toastr::success(translate('messages.successfully_updated_to_changes_restart_app'));
         return back();
     }
@@ -1332,6 +1354,28 @@ class BusinessSettingsController extends Controller
             Helpers::businessUpdateOrInsert(['key' => 'app_url_ios'], [
                 'value' => $request['app_url_ios']
             ]);
+
+            $activationMode = DB::table('external_configurations')->where('key', 'activation_mode')->first();
+            $driveMondBaseUrl = DB::table('external_configurations')->where('key', 'drivemond_base_url')->first();
+            if ($activationMode && $activationMode->value == 1 && $driveMondBaseUrl && $driveMondBaseUrl->value != null) {
+                $name = \App\Models\BusinessSetting::where('key', 'business_name')->first();
+                $logo = \App\Models\BusinessSetting::where('key', 'logo')->first();
+
+                $app_minimum_version_android=BusinessSetting::where(['key'=>'app_minimum_version_android'])->first()?->value;
+                $app_url_android=BusinessSetting::where(['key'=>'app_url_android'])->first()?->value;
+                $app_minimum_version_ios=BusinessSetting::where(['key'=>'app_minimum_version_ios'])->first()?->value;
+                $app_url_ios=BusinessSetting::where(['key'=>'app_url_ios'])->first()?->value;
+
+                $response = Http::post($driveMondBaseUrl->value . '/api/store-configurations', [
+                    'mart_business_name' => $name->value ?? "Aduanefie",
+                    'mart_business_logo' => \App\CentralLogics\Helpers::get_full_url('business', $logo?->value ?? '', $logo?->storage[0]?->value ?? 'public', 'favicon') ?? asset('public/assets/admin/img/160x160/img2.jpg'),
+                    'mart_app_minimum_version_android' => $app_minimum_version_android,
+                    'mart_app_url_android' => $app_url_android,
+                    'mart_app_minimum_version_ios' => $app_minimum_version_ios,
+                    'mart_app_url_ios' => $app_url_ios,
+
+                ]);
+            }
 
             Toastr::success(translate('messages.User_app_settings_updated'));
             return back();
@@ -2635,7 +2679,29 @@ class BusinessSettingsController extends Controller
             'intekhost_sender_id' => Helpers::get_business_settings('intekhost_sender_id') ?? '',
         ];
 
-        return view('admin-views.business-settings.farming-settings', compact('settings'));
+        $smsBalance = \App\Traits\SmsGateway::intekhostBalance();
+
+        return view('admin-views.business-settings.farming-settings', compact('settings', 'smsBalance'));
+    }
+
+    public function test_intekhost_sms(Request $request)
+    {
+        $request->validate([
+            'test_phone' => 'required|string|min:9|max:20',
+        ]);
+
+        $status = \App\Traits\SmsGateway::intekhost(
+            $request->input('test_phone'),
+            'Aduanefie test SMS: your IntekHost SMS integration is active.'
+        );
+
+        if ($status === 'success') {
+            Toastr::success(translate('Test SMS sent successfully.'));
+        } else {
+            Toastr::error(translate('Test SMS failed. Check laravel.log or IntekHost sender ID status.'));
+        }
+
+        return back();
     }
 
     public function update_farming_settings(Request $request)
@@ -2691,8 +2757,14 @@ class BusinessSettingsController extends Controller
             Helpers::insert_business_settings_key('social_login', '[{"login_medium":"google","client_id":"","client_secret":"","status":"0"},{"login_medium":"facebook","client_id":"","client_secret":"","status":""}]');
             $data = BusinessSetting::where('key', 'social_login')->first();
         }
+        $apple = BusinessSetting::where('key', 'apple_login')->first();
+        if (!$apple) {
+            Helpers::insert_business_settings_key('apple_login', '[{"login_medium":"apple","client_id":"","client_secret":"","team_id":"","key_id":"","service_file":"","redirect_url":"","status":""}]');
+            $apple = BusinessSetting::where('key', 'apple_login')->first();
+        }
+        $appleLoginServices = json_decode($apple->value, true);
         $socialLoginServices = json_decode($data->value, true);
-        return view('admin-views.business-settings.social-login.view', compact('socialLoginServices'));
+        return view('admin-views.business-settings.social-login.view', compact('socialLoginServices', 'appleLoginServices'));
     }
 
     public function updateSocialLogin($service, Request $request)
@@ -2726,8 +2798,42 @@ class BusinessSettingsController extends Controller
         return redirect()->back();
     }
 
+    public function updateAppleLogin($service, Request $request)
+    {
+        $appleLogin = BusinessSetting::where('key', 'apple_login')->firstOrNew(['key' => 'apple_login']);
+        $credential_array = [];
+        if ($request->hasfile('service_file')) {
+            $fileName = Helpers::upload('apple-login/', 'p8', $request->file('service_file'));
+        }
+        foreach (json_decode($appleLogin['value'], true) as $key => $data) {
+            if ($data['login_medium'] == $service) {
+                $cred = [
+                    'login_medium' => $service,
+                    'client_id' => $request['client_id'],
+                    'client_id_app' => $request['client_id_app'],
+                    'client_secret' => $request['client_secret'],
+                    'status' => $request['status'],
+                    'team_id' => $request['team_id'],
+                    'key_id' => $request['key_id'],
+                    'service_file' => isset($fileName) ? $fileName : $data['service_file'],
+                    'redirect_url_flutter' => $request['redirect_url_flutter'],
+                    'redirect_url_react' => $request['redirect_url_react'],
+                ];
+                array_push($credential_array, $cred);
+            } else {
+                array_push($credential_array, $data);
+            }
+        }
+        $appleLogin->value = $credential_array;
+
+        $appleLogin->save();
+
+        Toastr::success(translate('messages.credential_updated', ['service' => $service]));
+        return redirect()->back();
+    }
+
     public function login_settings(){
-        $data = array_column(BusinessSetting::whereIn('key',['manual_login_status','otp_login_status','social_login_status','google_login_status','facebook_login_status','email_verification_status','phone_verification_status'
+        $data = array_column(BusinessSetting::whereIn('key',['manual_login_status','otp_login_status','social_login_status','google_login_status','facebook_login_status','apple_login_status','email_verification_status','phone_verification_status'
         ])->get(['key','value'])->toArray(), 'value', 'key');
 
         return view('admin-views.login-setup.login_page',compact('data'));
@@ -2737,6 +2843,10 @@ class BusinessSettingsController extends Controller
     {
         $social_login = [];
         $social_login_data=Helpers::get_business_settings('social_login') ?? [];
+        foreach ($social_login_data as $social) {
+            $social_login[$social['login_medium']] = (boolean)$social['status'];
+        }
+        $social_login_data=Helpers::get_business_settings('apple_login') ?? [];
         foreach ($social_login_data as $social) {
             $social_login[$social['login_medium']] = (boolean)$social['status'];
         }
@@ -2763,7 +2873,7 @@ class BusinessSettingsController extends Controller
                 return back();
             }
         }
-        if( $request['social_login_status'] &&  !$request['google_login_status'] && !$request['facebook_login_status']){
+        if( $request['social_login_status'] &&  !$request['google_login_status'] && !$request['facebook_login_status'] && !$request['apple_login_status']){
             Session::flash('select-one-method-social-login', true);
             return back();
         }
@@ -2775,6 +2885,11 @@ class BusinessSettingsController extends Controller
 
         if(($request['social_login_status'] && $request['facebook_login_status'] && !isset($social_login['facebook'])) || ($request['social_login_status'] && ($request['facebook_login_status'] && isset($social_login['facebook'])) && !$social_login['facebook'])){
             Session::flash('setup-facebook', true);
+            return back();
+        }
+
+        if(($request['social_login_status'] && $request['apple_login_status'] && !isset($social_login['apple'])) || ($request['social_login_status'] && ($request['apple_login_status'] && isset($social_login['apple'])) && !$social_login['apple'])){
+            Session::flash('setup-apple', true);
             return back();
         }
 
@@ -2807,6 +2922,10 @@ class BusinessSettingsController extends Controller
 
         Helpers::businessUpdateOrInsert(['key' => 'facebook_login_status'], [
             'value' => $request['social_login_status']?($request['facebook_login_status'] ? 1 : 0):0
+        ]);
+
+        Helpers::businessUpdateOrInsert(['key' => 'apple_login_status'], [
+            'value' => $request['social_login_status']?($request['apple_login_status'] ? 1 : 0):0
         ]);
 
         Helpers::businessUpdateOrInsert(['key' => 'email_verification_status'], [

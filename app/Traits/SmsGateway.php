@@ -4,7 +4,9 @@ namespace App\Traits;
 
 use SimpleXMLElement;
 use Twilio\Rest\Client;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use GuzzleHttp\Client as HpptClient;
 use App\Models\Setting;
 
@@ -625,10 +627,17 @@ trait  SmsGateway
             ?? env('INTEKHOST_API_KEY', '');
         $sender_id = $config['sender_id']
             ?? \App\Models\BusinessSetting::where('key', 'intekhost_sender_id')->value('value')
-            ?? env('INTEKHOST_SENDER_ID', 12);
+            ?? env('INTEKHOST_SENDER_ID', 226);
         $url = $config['api_url'] ?? 'https://inteksms.top/api/v1/messages/send';
 
         if (empty($api_key)) {
+            Log::warning('IntekHost SMS skipped: missing API key.');
+            return 'error';
+        }
+
+        // Normalize phone number (strip spaces, hyphens, parentheses)
+        $cleanReceiver = preg_replace('/[\s\-\(\)]+/', '', trim((string) $receiver));
+        if (empty($cleanReceiver)) {
             return 'error';
         }
 
@@ -644,15 +653,61 @@ trait  SmsGateway
                 ->acceptJson()
                 ->timeout(12)
                 ->post($url, [
-                    'sender_id' => $sender_id,
+                    'sender_id' => is_numeric($sender_id) ? (int) $sender_id : $sender_id,
                     'title' => 'Aduanefie',
                     'message' => $body,
-                    'recipients' => [$receiver],
+                    'recipients' => [$cleanReceiver],
                 ]);
-            return $res->successful() ? 'success' : 'error';
+            if ($res->successful()) {
+                return 'success';
+            }
+
+            Log::warning('IntekHost SMS send failed', [
+                'status' => $res->status(),
+                'sender_id' => $sender_id,
+                'recipient_tail' => substr($cleanReceiver, -4),
+                'body' => mb_substr($res->body(), 0, 500),
+            ]);
+            return 'error';
         } catch (\Exception $exception) {
+            Log::warning('IntekHost SMS exception', [
+                'message' => $exception->getMessage(),
+                'recipient_tail' => substr($cleanReceiver, -4),
+            ]);
             return 'error';
         }
+    }
+
+    public static function intekhostBalance(): ?array
+    {
+        $config = self::get_settings('intekhost') ?? [];
+        $api_key = $config['api_key']
+            ?? \App\Models\BusinessSetting::where('key', 'intekhost_api_key')->value('value')
+            ?? env('INTEKHOST_API_KEY', '');
+
+        if (empty($api_key)) {
+            return null;
+        }
+
+        return Cache::remember('intekhost_sms_balance', 60, function () use ($api_key) {
+            try {
+                $res = Http::withToken($api_key)
+                    ->acceptJson()
+                    ->timeout(5)
+                    ->get('https://inteksms.top/api/v1/balance');
+                if ($res->successful()) {
+                    $json = $res->json();
+                    $units = $json['balance_units'] ?? $json['balance'] ?? $json['data']['balance_units'] ?? null;
+                    return [
+                        'ok' => true,
+                        'units' => is_numeric($units) ? (int) $units : null,
+                    ];
+                }
+            } catch (\Exception $e) {
+                Log::warning('IntekHost balance check failed', ['message' => $e->getMessage()]);
+            }
+            return null;
+        });
     }
 
 

@@ -8,6 +8,7 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
     Route::group(['middleware' => ['admin', 'admin-mfa', 'current-module']], function () {
         Route::get('/test', function () {
         });
+        // Route::get('drivemond-panel', 'DriveMondController@drivemondExternalLogin')->name('drivemond-panel');
         Route::get('get-all-stores', 'VendorController@get_all_stores')->name('get_all_stores');
         Route::get('lang/{locale}', 'LanguageController@lang')->name('lang');
         Route::get('settings', 'SystemController@settings')->name('settings');
@@ -386,6 +387,7 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
             Route::POST('app-settings', 'BusinessSettingsController@update_app_settings')->name('app-settings');
             Route::get('farming-settings', 'BusinessSettingsController@farming_settings')->name('farming-settings');
             Route::post('farming-settings/update', 'BusinessSettingsController@update_farming_settings')->name('update-farming-settings');
+            Route::post('farming-settings/test-sms', 'BusinessSettingsController@test_intekhost_sms')->name('test-intekhost-sms');
             Route::get('pages/admin-landing-page-settings/{tab?}', 'BusinessSettingsController@admin_landing_page_settings')->name('admin-landing-page-settings');
             Route::POST('pages/admin-landing-page-settings/{tab}', 'BusinessSettingsController@update_admin_landing_page_settings')->name('admin-landing-page-settings');
             Route::get('promotional-status/{id}/{status}', 'BusinessSettingsController@promotional_status')->name('promotional-status');
@@ -490,6 +492,10 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
                 Route::delete('/delete/{file_path}', 'FileManagerController@destroy')->name('destroy');
             });
 
+            Route::group(['prefix' => 'external-system', 'as' => 'external-system.'], function () {
+                Route::get('drivemond-configuration', 'ExternalConfigurationController@index')->name('drivemond-configuration');
+                Route::post('update-drivemond-configuration', 'ExternalConfigurationController@updateDrivemondConfiguration')->name('update-drivemond-configuration');
+            });
             Route::group(['prefix' => 'third-party', 'as' => 'third-party.'], function () {
                 Route::get('sms-module', 'SMSModuleController@sms_index')->name('sms-module');
                 Route::post('sms-module-update/{sms_module}', 'SMSModuleController@sms_update')->name('sms-module-update');
@@ -679,6 +685,9 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
         Route::group(['prefix' => 'social-login', 'as' => 'social-login.', 'middleware' => ['module:business_settings']], function () {
             Route::get('view', 'BusinessSettingsController@viewSocialLogin')->name('view');
             Route::post('update/{service}', 'BusinessSettingsController@updateSocialLogin')->name('update');
+        });
+        Route::group(['prefix' => 'apple-login', 'as' => 'apple-login.'], function () {
+            Route::post('update/{service}', 'BusinessSettingsController@updateAppleLogin')->name('update');
         });
         Route::get('store/report', function () {
             return view('store_report');
