@@ -355,6 +355,19 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
         Route::post('quote', 'CrossBorderController@quote');
     });
 
+    // Shared group buying. Deliberately module-agnostic: any module that sells
+    // physical goods can create and join a group.
+    Route::group(['prefix' => 'group-buys'], function () {
+        Route::get('/', 'GroupBuyController@index');
+        Route::get('my', 'GroupBuyController@my');
+        Route::post('/', 'GroupBuyController@store');
+        Route::get('{id}', 'GroupBuyController@show');
+        Route::post('{id}/join', 'GroupBuyController@join');
+        Route::post('{id}/leave', 'GroupBuyController@leave');
+        Route::post('{id}/cancel', 'GroupBuyController@cancel');
+        Route::post('{id}/quote', 'GroupBuyController@quote');
+    });
+
     Route::group(['prefix' => 'testimonial'], function () {
         Route::get('/', 'TestimonialController@get_tetimonial_lists');
 

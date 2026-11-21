@@ -325,6 +325,15 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
             Route::delete('destroy/{id}', 'TradeRfqController@destroy')->name('destroy');
         });
 
+        Route::group(['prefix' => 'group-buys', 'as' => 'group-buys.', 'middleware' => ['module:settings']], function () {
+            Route::get('/', 'GroupBuyController@index')->name('index');
+            Route::get('{id}', 'GroupBuyController@show')->name('show');
+            Route::post('cancel/{id}', 'GroupBuyController@cancel')->name('cancel');
+            Route::post('expire/{id}', 'GroupBuyController@expire')->name('expire');
+            Route::post('ship/{participant}', 'GroupBuyController@ship')->name('ship');
+            Route::post('deliver/{participant}', 'GroupBuyController@deliver')->name('deliver');
+        });
+
         Route::group(['prefix' => 'footer-links', 'as' => 'footer-links.', 'middleware' => ['module:settings']], function () {
             Route::get('/', 'FooterLinkController@index')->name('index');
             Route::post('update', 'FooterLinkController@update')->name('update');

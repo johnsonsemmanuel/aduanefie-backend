@@ -28,6 +28,10 @@ class Kernel extends ConsoleKernel
         // holding period. Hourly is enough for a 14-day hold, and the command
         // is idempotent so a missed run simply catches up.
         $schedule->command('marketer:accrue')->hourly()->withoutOverlapping();
+
+        // Group buys that did not fill are released and their members are
+        // notified-through their own orders-that no charge was taken.
+        $schedule->command('group-buys:expire')->everyTenMinutes()->withoutOverlapping();
     }
 
     /**

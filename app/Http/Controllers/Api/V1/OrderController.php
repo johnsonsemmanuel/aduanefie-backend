@@ -13,6 +13,7 @@ use App\Models\Country;
 use App\Models\Module;
 use App\Models\Coupon;
 use App\Services\CrossBorder\ShippingQuoteService;
+use App\Services\GroupBuy\GroupBuyService;
 use App\Models\Refund;
 use App\Mail\PlaceOrder;
 use App\Models\DMVehicle;
@@ -112,6 +113,7 @@ class OrderController extends Controller
             'shipping_rate_id' => 'nullable|integer',
             'shipping_method_id' => 'nullable|integer',
             'incoterm' => 'nullable|string|size:3',
+            'group_buy_id' => 'nullable|integer',
             'guest_id' => $request->user ? 'nullable' : 'required',
             'contact_person_name' => $request->user ? 'nullable' : 'required',
             'contact_person_number' => $request->user ? 'nullable' : 'required',
@@ -121,6 +123,30 @@ class OrderController extends Controller
 
         if ($validator->fails()) {
             return response()->json(['errors' => Helpers::error_processor($validator)], 403);
+        }
+
+        // Shared group buy: hard guard. An incomplete group can never reach
+        // checkout, and the item price is re-derived here from the pooled
+        // quantity. There is deliberately no retail-price fallback.
+        $groupBuyCheckout = null;
+        if ($request->filled('group_buy_id')) {
+            try {
+                $groupBuyCheckout = app(GroupBuyService::class)->authorizeCheckout(
+                    (int) $request->group_buy_id,
+                    $request->user ? (int) $request->user->id : null,
+                    $request->user ? null : $request->input('guest_id')
+                );
+            } catch (\InvalidArgumentException $e) {
+                return response()->json([
+                    'errors' => [['code' => 'group_buy', 'message' => $e->getMessage()]],
+                ], 403);
+            }
+
+            if ((int) $groupBuyCheckout['group']->store_id !== (int) $request->store_id) {
+                return response()->json([
+                    'errors' => [['code' => 'group_buy', 'message' => 'The group buy belongs to a different store.']],
+                ], 403);
+            }
         }
 
         if($request->create_new_user){
@@ -614,6 +640,10 @@ class OrderController extends Controller
             ? $zone->id
             : ($isCrossBorder ? $store->zone_id : end(json_decode($request->header('zoneId'), true)));
         $order->module_id = $request->header('moduleId');
+        if ($groupBuyCheckout && \Illuminate\Support\Facades\Schema::hasColumn('orders', 'group_buy_id')) {
+            $order->group_buy_id = $groupBuyCheckout['group']->id;
+            $order->group_buy_participant_id = $groupBuyCheckout['participant']->id;
+        }
         $order->parcel_category_id = $request->parcel_category_id;
         // A customer checkout has no vendor session, so get_store_data() would
         // dereference null. Only consult it when a vendor is actually logged in
@@ -723,6 +753,10 @@ class OrderController extends Controller
         ->when(isset($request->is_buy_now) && $request->is_buy_now == 1 && $request->cart_id, function ($query) use ($request) {
             return $query->where('id',$request->cart_id);
         })
+        ->when($groupBuyCheckout, function ($query) use ($groupBuyCheckout) {
+            // A group share is exactly one item, never the rest of the cart.
+            return $query->where('item_id', $groupBuyCheckout['group']->item_id);
+        })
         ->get()->map(function ($data) {
             $data->add_on_ids = json_decode($data->add_on_ids,true);
             $data->add_on_qtys = json_decode($data->add_on_qtys,true);
@@ -732,6 +766,17 @@ class OrderController extends Controller
 
         if(isset($request->is_buy_now) && $request->is_buy_now == 1){
             $carts = json_decode($request['cart'], true);
+            if ($groupBuyCheckout) {
+                $carts = array_values(array_filter($carts, fn ($line) =>
+                    (int) ($line['item_id'] ?? 0) === (int) $groupBuyCheckout['group']->item_id
+                ));
+            }
+        }
+
+        if ($groupBuyCheckout && count($carts) !== 1) {
+            return response()->json([
+                'errors' => [['code' => 'group_buy', 'message' => 'A group share must contain exactly one item line.']],
+            ], 403);
         }
 
         if ($request->order_type !== 'parcel') {
@@ -918,6 +963,21 @@ class OrderController extends Controller
                             } else {
                                 $price = $product['price'];
                                 $stock = $product->stock;
+                            }
+
+                            if ($groupBuyCheckout && (int) $c['item_id'] === (int) $groupBuyCheckout['group']->item_id) {
+                                // The member's unit count and price are fixed by
+                                // the group. Never trust a client-side tier price.
+                                $expectedQty = (int) $groupBuyCheckout['participant']->share_units;
+                                if ((int) $c['quantity'] !== $expectedQty) {
+                                    return response()->json([
+                                        'errors' => [[
+                                            'code' => 'group_buy',
+                                            'message' => 'Your group share is fixed at '.$expectedQty.' units.',
+                                        ]],
+                                    ], 403);
+                                }
+                                $price = $groupBuyCheckout['unit_price'];
                             }
 
                             $isPreOrderItem = ($product->farming_status ?? 'in_stock') === 'farming'
@@ -1163,6 +1223,25 @@ class OrderController extends Controller
 
         try {
             DB::beginTransaction();
+
+            if ($groupBuyCheckout) {
+                // The pre-transaction check can race. Lock this member's share
+                // and re-check inside the transaction so a simultaneous request
+                // cannot claim the same share twice.
+                $lockedParticipant = \App\Models\GroupBuyParticipant::whereKey($groupBuyCheckout['participant']->id)
+                    ->lockForUpdate()
+                    ->first();
+                if (! $lockedParticipant || Order::where('group_buy_participant_id', $lockedParticipant->id)->exists()) {
+                    DB::rollBack();
+                    return response()->json([
+                        'errors' => [[
+                            'code' => 'group_buy',
+                            'message' => 'This group share has already been checked out.',
+                        ]],
+                    ], 403);
+                }
+            }
+
             $order->save();
             if ($request->order_type !== 'parcel') {
                 if (count($order_details) == 0) {
@@ -1224,6 +1303,9 @@ class OrderController extends Controller
 
             DB::commit();
 
+            if ($groupBuyCheckout) {
+                app(GroupBuyService::class)->markOrdered($groupBuyCheckout['participant'], $order->id);
+            }
 
             $payments = $order->payments()->where('payment_method','cash_on_delivery')->exists();
             $order_mail_status = Helpers::get_mail_status('place_order_mail_status_user');
@@ -1342,6 +1424,17 @@ class OrderController extends Controller
 
         if ($validator->fails()) {
             return response()->json(['errors' => Helpers::error_processor($validator)], 403);
+        }
+
+        // Second order entry point: fail closed. Group shares must go through
+        // the guarded place_order path so pricing and fill-state are checked.
+        if ($request->filled('group_buy_id')) {
+            return response()->json([
+                'errors' => [[
+                    'code' => 'group_buy',
+                    'message' => 'Group buys are not supported on the prescription checkout path.',
+                ]],
+            ], 403);
         }
 
         $coupon = null;
