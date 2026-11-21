@@ -198,7 +198,7 @@
     <div class="card">
         <h2>Set or Update Portal Password</h2>
         <p class="muted small" style="margin-top:0;">
-            Keep your account ready for direct sign-in at <strong>partners.aduanefie.com/marketer-login</strong>.
+            Keep your account ready for direct sign-in at <strong>admin.aduanefie.com/marketer-login</strong>.
         </p>
         <form method="post" action="{{ route('marketer.password.update') }}" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;align-items:end;">
             @csrf

@@ -21,7 +21,7 @@
                         <span class="badge badge-soft-danger ml-1">{{ $openPayouts }}</span>
                     @endif
                 </a>
-                <a href="https://partners.aduanefie.com/marketer-login" target="_blank" rel="noopener" class="btn btn--secondary">Marketer Portal ↗</a>
+                <a href="{{ route('marketer.login') }}" target="_blank" rel="noopener" class="btn btn--secondary">Marketer Portal ↗</a>
                 <form method="post" action="{{ route('admin.marketer.accrue') }}" class="mb-0">
                     @csrf
                     <button type="submit" class="btn btn--primary">Run accrual now</button>

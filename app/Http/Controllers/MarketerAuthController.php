@@ -216,7 +216,7 @@ class MarketerAuthController extends Controller
 
     public static function buildSignedLoginUrl(Admin $admin, int $hours = 168): string
     {
-        $root = 'https://partners.aduanefie.com';
+        $root = 'https://admin.aduanefie.com';
         URL::forceRootUrl($root);
         try {
             return URL::temporarySignedRoute(
@@ -261,9 +261,9 @@ class MarketerAuthController extends Controller
                     . "{$loginLink}\n\n"
                     . "Account Email: {$admin->email}\n"
                     . "Referral Code: {$code}\n"
-                    . "Portal URL: https://partners.aduanefie.com/marketer-login\n\n"
+                    . "Portal URL: https://admin.aduanefie.com/marketer-login\n\n"
                     . "Once signed in, you can set a new password at the bottom of your dashboard.\n\n"
-                    . "Aduanefie Partner Operations";
+                    . "— Aduanefie Partner Operations";
 
                 Mail::raw($body, function ($message) use ($admin) {
                     $message->to($admin->email, trim($admin->f_name . ' ' . $admin->l_name))

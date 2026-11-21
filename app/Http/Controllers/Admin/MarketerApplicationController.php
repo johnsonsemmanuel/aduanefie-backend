@@ -113,7 +113,7 @@ class MarketerApplicationController extends Controller
             $code = $admin->marketer_code ?: ('MKT-' . $admin->id);
             SmsGateway::send(
                 $app->phone,
-                "Welcome to Aduanefie Partners! Your Regional Marketer account is active. Login at https://partners.aduanefie.com/marketer-login with {$app->email} / Temp Pass: {$tempPassword}. Your referral code: {$code}"
+                "Welcome to Aduanefie! Your Regional Marketer account is active. Login at https://admin.aduanefie.com/marketer-login with {$app->email} / Temp Pass: {$tempPassword}. Your referral code: {$code}"
             );
         } catch (\Throwable $e) {
             // SMS failure should not roll back approval

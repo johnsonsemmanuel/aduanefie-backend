@@ -399,8 +399,10 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
     Route::post('sms/inbound/harvest', 'Vendor\FarmerController@sms_harvest_ready')
         ->middleware('throttle:api-public-write');
 
-    // Public Remote Marketer self-application
+    // Public Remote Marketer self-application + Paystack account resolution
     Route::post('marketer-applications', 'MarketerApplicationController@store')
+        ->middleware('throttle:api-public-write');
+    Route::post('marketer-applications/verify-payout', 'MarketerApplicationController@verifyPayout')
         ->middleware('throttle:api-public-write');
 
     Route::group(['prefix' => 'testimonial'], function () {

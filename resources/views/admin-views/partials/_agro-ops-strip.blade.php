@@ -113,7 +113,7 @@
                 </a>
             </div>
             <div class="col-sm-6 col-lg-3">
-                <a class="order--card h-100" href="https://partners.aduanefie.com/marketer-login" target="_blank" rel="noopener">
+                <a class="order--card h-100" href="{{ route('marketer.login') }}" target="_blank" rel="noopener">
                     <div class="d-flex justify-content-between align-items-center">
                         <h6 class="card-subtitle d-flex m-0 align-items-center">
                             <i class="tio-open-in-new text-primary mr-2"></i>
