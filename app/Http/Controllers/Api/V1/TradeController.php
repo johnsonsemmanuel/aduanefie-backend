@@ -375,4 +375,212 @@ class TradeController extends Controller
             ['id' => 12, 'commodity' => 'Sesame Seed', 'category' => 'Legumes & Oilseeds', 'unit' => '50 kg bag', 'market_hub' => 'Saboba / Tamale (GCX)', 'wholesale_price_ghs' => 760.00, 'retail_price_ghs' => 860.00, 'price_change_pct' => 2.1, 'trend' => 'up', 'source_platform' => 'GCX Spot'],
         ];
     }
+
+    protected function buildOrderEsperWorksContext($id): ?array
+    {
+        $order = DB::table('orders')->where('id', $id)->first();
+        if (!$order) {
+            return null;
+        }
+        $store = $order->store_id ? DB::table('stores')->where('id', $order->store_id)->first() : null;
+        $details = DB::table('order_details')->where('order_id', $order->id)->get();
+        $address = $order->delivery_address ? json_decode($order->delivery_address, true) : [];
+
+        $unitLabels = [
+            'kg' => 'Kilogram (kg)',
+            'bag_50kg' => '50kg Bag',
+            'bag_100kg' => '100kg Bag',
+            'crate' => 'Crate',
+            'bunch' => 'Bunch',
+            'ton' => 'Metric Ton',
+            'box' => 'Export Box',
+        ];
+
+        $lineItems = [];
+        $totalWeightKg = 0.0;
+        foreach ($details as $d) {
+            $itemInfo = $d->item_details ? json_decode($d->item_details, true) : [];
+            $agroUnit = $itemInfo['agro_unit'] ?? null;
+            $unitLabel = $agroUnit ? ($unitLabels[$agroUnit] ?? $agroUnit) : ($itemInfo['unit_type'] ?? 'Unit');
+            $grade = $itemInfo['crop_grade'] ?? 'Standard Grade';
+            $unitKg = (float) ($itemInfo['unit_weight_kg'] ?? 0);
+            $qty = (int) ($d->quantity ?? 1);
+            $lineKg = round($unitKg * $qty, 2);
+            $totalWeightKg += $lineKg;
+            $price = (float) ($d->price ?? 0);
+
+            $lineItems[] = [
+                'name' => $itemInfo['name'] ?? 'Agro Commodity',
+                'quantity' => $qty,
+                'unit' => $unitLabel,
+                'crop_grade' => $grade,
+                'unit_weight_kg' => $unitKg,
+                'line_weight_kg' => $lineKg,
+                'unit_price' => round($price, 2),
+                'line_total' => round($price * $qty, 2),
+            ];
+        }
+
+        return [
+            'order' => $order,
+            'store' => $store,
+            'address' => $address,
+            'line_items' => $lineItems,
+            'total_weight_kg' => round($totalWeightKg, 2),
+        ];
+    }
+
+    public function esperworks_invoice(Request $request, $id)
+    {
+        $ctx = $this->buildOrderEsperWorksContext($id);
+        if (!$ctx) {
+            return response()->json(['message' => 'Order not found'], 404);
+        }
+
+        $order = $ctx['order'];
+        $store = $ctx['store'];
+        $address = $ctx['address'];
+        $lineItems = $ctx['line_items'];
+        $totalWeightKg = $ctx['total_weight_kg'];
+
+        $baseUrl = rtrim(env('ESPERWORKS_API_URL', 'https://api.tryesperworks.com/api/v1'), '/');
+        $apiKey = env('ESPERWORKS_API_KEY') ?: (Schema::hasTable('business_settings')
+            ? DB::table('business_settings')->where('key', 'esperworks_api_key')->value('value')
+            : null);
+
+        $invoiceNumber = 'EW-ADU-INV-' . str_pad((string) $order->id, 6, '0', STR_PAD_LEFT);
+        $payload = [
+            'reference' => $invoiceNumber,
+            'currency' => 'GHS',
+            'issue_date' => now()->toDateString(),
+            'client' => [
+                'name' => $address['contact_person_name'] ?? 'Aduanefie Buyer',
+                'phone' => $address['contact_person_number'] ?? '',
+                'email' => $address['contact_person_email'] ?? '',
+                'address' => $address['address'] ?? '',
+            ],
+            'supplier' => [
+                'name' => $store->name ?? 'Aduanefie Verified Farm',
+                'phone' => $store->phone ?? '',
+                'address' => $store->address ?? 'Ghana',
+                'tin' => $store->tin ?? '',
+            ],
+            'items' => $lineItems,
+            'delivery_charge' => round((float) ($order->delivery_charge ?? 0), 2),
+            'insurance_fee' => round((float) ($order->insurance_fee ?? 0), 2),
+            'total_amount' => round((float) ($order->order_amount ?? 0), 2),
+            'total_weight_kg' => $totalWeightKg,
+            'provider' => 'EsperWorks (tryesperworks.com)',
+        ];
+
+        $remoteUrl = null;
+        $remoteStatus = 'local_generated';
+        if (!empty($apiKey)) {
+            try {
+                $res = Http::timeout(8)
+                    ->withToken($apiKey)
+                    ->withHeaders([
+                        'X-API-Key' => $apiKey,
+                        'Accept' => 'application/json',
+                    ])
+                    ->post("{$baseUrl}/invoices", $payload);
+
+                if ($res->successful()) {
+                    $body = $res->json();
+                    $remoteUrl = $body['invoice_url'] ?? $body['data']['invoice_url'] ?? $body['url'] ?? null;
+                    $remoteStatus = 'synced_with_esperworks';
+                }
+            } catch (\Throwable $e) {
+                $remoteStatus = 'esperworks_fallback';
+            }
+        }
+
+        return response()->json([
+            'invoice_number' => $invoiceNumber,
+            'status' => $remoteStatus,
+            'esperworks_url' => $remoteUrl,
+            'invoice' => $payload,
+        ], 200);
+    }
+
+    public function esperworks_contract(Request $request, $id)
+    {
+        $ctx = $this->buildOrderEsperWorksContext($id);
+        if (!$ctx) {
+            return response()->json(['message' => 'Order not found'], 404);
+        }
+
+        $order = $ctx['order'];
+        $store = $ctx['store'];
+        $address = $ctx['address'];
+        $lineItems = $ctx['line_items'];
+        $totalWeightKg = $ctx['total_weight_kg'];
+
+        $baseUrl = rtrim(env('ESPERWORKS_API_URL', 'https://api.tryesperworks.com/api/v1'), '/');
+        $apiKey = env('ESPERWORKS_API_KEY') ?: (Schema::hasTable('business_settings')
+            ? DB::table('business_settings')->where('key', 'esperworks_api_key')->value('value')
+            : null);
+
+        $contractNumber = 'EW-ADU-CTR-' . str_pad((string) $order->id, 6, '0', STR_PAD_LEFT);
+        $payload = [
+            'contract_number' => $contractNumber,
+            'title' => 'Agro Commodity Supply, Grading & Escrow Assurance Agreement',
+            'effective_date' => now()->toDateString(),
+            'currency' => 'GHS',
+            'buyer' => [
+                'name' => $address['contact_person_name'] ?? 'Aduanefie Buyer',
+                'phone' => $address['contact_person_number'] ?? '',
+                'email' => $address['contact_person_email'] ?? '',
+                'delivery_address' => $address['address'] ?? '',
+            ],
+            'supplier' => [
+                'name' => $store->name ?? 'Aduanefie Verified Farm',
+                'phone' => $store->phone ?? '',
+                'address' => $store->address ?? 'Ghana',
+                'tin' => $store->tin ?? '',
+            ],
+            'items' => $lineItems,
+            'total_weight_kg' => $totalWeightKg,
+            'total_amount' => round((float) ($order->order_amount ?? 0), 2),
+            'is_insured' => (bool) ($order->is_insured ?? false),
+            'insurance_fee' => round((float) ($order->insurance_fee ?? 0), 2),
+            'terms' => [
+                'quality_inspection' => 'Produce must match the stated Crop Grade and Agro Unit weight at farm-gate dispatch and buyer delivery.',
+                'escrow_release' => 'Funds are held in Aduanefie Trade Assurance and released upon confirmed delivery or within 24 hours of waybill sign-off.',
+                'transit_coverage' => ((bool) ($order->is_insured ?? false))
+                    ? 'Covered under Trade & Crop Insurance against verified transit spoilage or non-delivery.'
+                    : 'Standard carrier liability applies.',
+            ],
+            'provider' => 'EsperWorks e-Sign (tryesperworks.com)',
+        ];
+
+        $remoteSignUrl = null;
+        $remoteStatus = 'ready_for_signature';
+        if (!empty($apiKey)) {
+            try {
+                $res = Http::timeout(8)
+                    ->withToken($apiKey)
+                    ->withHeaders([
+                        'X-API-Key' => $apiKey,
+                        'Accept' => 'application/json',
+                    ])
+                    ->post("{$baseUrl}/contracts", $payload);
+
+                if ($res->successful()) {
+                    $body = $res->json();
+                    $remoteSignUrl = $body['signing_url'] ?? $body['data']['signing_url'] ?? $body['url'] ?? null;
+                    $remoteStatus = 'synced_with_esperworks';
+                }
+            } catch (\Throwable $e) {
+                $remoteStatus = 'esperworks_fallback';
+            }
+        }
+
+        return response()->json([
+            'contract_number' => $contractNumber,
+            'status' => $remoteStatus,
+            'esperworks_signing_url' => $remoteSignUrl,
+            'contract' => $payload,
+        ], 200);
+    }
 }

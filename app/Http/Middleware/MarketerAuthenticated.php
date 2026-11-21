@@ -25,11 +25,12 @@ class MarketerAuthenticated
     public function handle(Request $request, Closure $next)
     {
         $admin = Auth::guard('admin')->user();
+        $mfaRequired = (bool) config('marketer.mfa_required', false);
 
         if (!$admin
             || !$admin->isMarketer()
             || (int) $admin->is_logged_in === 0
-            || !$this->mfa->isVerifiedFor($admin)) {
+            || ($mfaRequired && !$this->mfa->isVerifiedFor($admin))) {
             Auth::guard('admin')->logout();
 
             return redirect()->route('marketer.login');

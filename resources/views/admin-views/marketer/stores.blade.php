@@ -106,14 +106,14 @@
                                 {{ \Illuminate\Support\Carbon::parse($store->marketer_assigned_at)->format('Y-m-d H:i') }}
                                 <div class="text-muted small">Earlier deliveries are excluded</div>
                             @else
-                                —
+                                -
                             @endif
                         </td>
                         <td>
                             <form method="post" action="{{ route('admin.marketer.stores.assign', $store->id) }}" class="d-flex align-items-center">
                                 @csrf
                                 <select name="marketer_id" class="form-control form-control-sm mr-2">
-                                    <option value="">— none —</option>
+                                    <option value="">- none -</option>
                                     @foreach($marketers as $m)
                                         <option value="{{ $m->id }}" @selected((int) $store->marketer_id === (int) $m->id)>
                                             {{ $m->f_name }} {{ $m->l_name }}

@@ -147,6 +147,7 @@ class Store extends Model
         'verified_at',
         'marketer_id',
         'marketer_assigned_at',
+        'delivery_radius_km',
     ];
 
     /**
@@ -177,6 +178,7 @@ class Store extends Model
         'self_delivery_system'=>'integer',
         'open'=>'integer',
         'gst_code'=>'string',
+        'delivery_radius_km'=>'float',
         'off_day'=>'string',
         'gst'=>'string',
         'veg'=>'integer',
@@ -199,7 +201,7 @@ class Store extends Model
     /**
      * @var string[]
      */
-    protected $appends = ['gst_status','gst_code','logo_full_url','cover_photo_full_url','meta_image_full_url','farm_type','is_backyard','cultivation_status','next_harvest_date','farm_size_acres','primary_crops'];
+    protected $appends = ['gst_status','gst_code','logo_full_url','cover_photo_full_url','meta_image_full_url','farm_type','is_backyard','cultivation_status','next_harvest_date','farm_size_acres','primary_crops','delivery_radius_km'];
 
     /**
      * The attributes that should be hidden for arrays.
@@ -369,6 +371,11 @@ class Store extends Model
     public function getPrimaryCropsAttribute($value)
     {
         return $value;
+    }
+
+    public function getDeliveryRadiusKmAttribute($value): ?float
+    {
+        return $value ? (float) $value : null;
     }
 
     /**

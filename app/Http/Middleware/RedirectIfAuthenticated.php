@@ -34,6 +34,11 @@ class RedirectIfAuthenticated
                 break;
             case 'vendor':
                 if (Auth::guard($guard)->check()) {
+                    $vendor = Auth::guard($guard)->user();
+                    if ($vendor->hasConfirmedTwoFactor() && !app(\App\Services\AdminMfaService::class)->isVerifiedFor($vendor, 'vendor')) {
+                        Auth::guard($guard)->logout();
+                        break;
+                    }
                     return redirect()->route('vendor.dashboard');
                 }
                 break;

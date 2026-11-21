@@ -98,7 +98,7 @@
                     <form action="{{ route('admin.agro-prices.send-sms') }}" method="POST">
                         @csrf
                         <div class="mb-2">
-                            <label class="input-label">Test Phone (optional — leave blank to broadcast to all active stores)</label>
+                            <label class="input-label">Test Phone (optional - leave blank to broadcast to all active stores)</label>
                             <input type="text" name="test_phone" class="form-control" placeholder="e.g. +233240000000">
                         </div>
                         <div class="mb-3">

@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Admin;
+use App\Models\GroupBuyParticipant;
 use App\Models\Order;
 use App\Models\Store;
 use App\Models\AdminWallet;
@@ -10,12 +11,14 @@ use App\CentralLogics\Helpers;
 use App\CentralLogics\OrderLogic;
 use App\Models\AccountTransaction;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use App\Mail\OrderVerificationMail;
 use App\CentralLogics\CustomerLogic;
 use Illuminate\Support\Facades\Mail;
 use App\Models\SubscriptionBillingAndRefundHistory;
 use Brian2694\Toastr\Facades\Toastr;
 use Modules\Rental\Entities\Trips;
+use App\Services\GroupBuy\GroupBuyService;
 
 if (! function_exists('translate')) {
     function translate($key, $replace = [])
@@ -130,8 +133,17 @@ if (! function_exists('order_place')) {
             $order?->store?->store_sub?->decrement('max_order' , 1);
         }
 
-
         OrderLogic::update_unpaid_order_payment(order_id:$order->id, payment_method:$data->payment_method);
+
+        // Group buy: when a member's share order is paid, mark the participant as paid
+        // so the escrow tracker knows this member has settled their share.
+        if (Schema::hasColumn('orders', 'group_buy_participant_id') && $order->group_buy_participant_id) {
+            $participant = \App\Models\GroupBuyParticipant::find($order->group_buy_participant_id);
+            if ($participant && $participant->payment_status !== 'paid') {
+                app(\App\Services\GroupBuy\GroupBuyService::class)->markPaid($participant);
+            }
+        }
+
         try {
             Helpers::send_order_notification($order);
             $address = json_decode($order->delivery_address, true);

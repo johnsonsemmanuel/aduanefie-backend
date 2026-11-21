@@ -5,13 +5,17 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\GroupBuy;
 use App\Models\GroupBuyParticipant;
+use App\Services\GroupBuy\GroupBuyNotificationService;
 use App\Services\GroupBuy\GroupBuyService;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Http\Request;
 
 class GroupBuyController extends Controller
 {
-    public function __construct(private GroupBuyService $groups)
+    public function __construct(
+        private GroupBuyService $groups,
+        private GroupBuyNotificationService $notifications,
+    )
     {
     }
 
@@ -78,6 +82,27 @@ class GroupBuyController extends Controller
         $participant = GroupBuyParticipant::findOrFail($participantId);
         $this->groups->markDelivered($participant);
         Toastr::success('Member marked as delivered.');
+
+        return back();
+    }
+
+    public function sendReminder($id)
+    {
+        $group = GroupBuy::findOrFail($id);
+        $this->notifications->paymentReminder($group);
+        Toastr::success('Payment reminders sent to unpaid members.');
+
+        return back();
+    }
+
+    public function releaseEscrow($id)
+    {
+        try {
+            $this->groups->releaseEscrow(GroupBuy::findOrFail($id));
+            Toastr::success('Escrow released to the store.');
+        } catch (\InvalidArgumentException $e) {
+            Toastr::error($e->getMessage());
+        }
 
         return back();
     }

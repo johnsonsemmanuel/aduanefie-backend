@@ -455,6 +455,49 @@
                                             <input type="number" name="minimum_order_qty" id="minimum_order_qty" class="form-control" placeholder="{{ translate('messages.min_order_qty') }}">
                                         </div>
                                     </div>
+                                    <div class="col-sm-6 col-lg-3">
+                                        <div class="form-group">
+                                            <label class="input-label">{{ translate('Agro Unit') }}</label>
+                                            <select name="agro_unit" class="form-control">
+                                                <option value="">{{ translate('Standard Unit') }}</option>
+                                                <option value="kg">{{ translate('Kilogram (kg)') }}</option>
+                                                <option value="bag_50kg">{{ translate('50kg Bag') }}</option>
+                                                <option value="bag_100kg">{{ translate('100kg Bag') }}</option>
+                                                <option value="crate">{{ translate('Crate') }}</option>
+                                                <option value="bunch">{{ translate('Bunch') }}</option>
+                                                <option value="ton">{{ translate('Metric Ton') }}</option>
+                                                <option value="box">{{ translate('Export Box') }}</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 col-lg-3">
+                                        <div class="form-group">
+                                            <label class="input-label">{{ translate('Unit Weight (kg)') }}</label>
+                                            <input type="number" step="0.01" min="0" name="unit_weight_kg" class="form-control" placeholder="e.g. 50.00">
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 col-lg-3">
+                                        <div class="form-group">
+                                            <label class="input-label">{{ translate('Crop Grade') }}</label>
+                                            <select name="crop_grade" class="form-control">
+                                                <option value="">{{ translate('Select Grade') }}</option>
+                                                <option value="Grade A (Export)">{{ translate('Grade A (Export)') }}</option>
+                                                <option value="Grade B (Market)">{{ translate('Grade B (Market)') }}</option>
+                                                <option value="Grade C (Processing)">{{ translate('Grade C (Processing)') }}</option>
+                                                <option value="Organic Certified">{{ translate('Organic Certified') }}</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 col-lg-3">
+                                        <div class="form-group">
+                                            <label class="input-label">{{ translate('Harvest Status') }}</label>
+                                            <select name="farming_status" class="form-control">
+                                                <option value="in_stock">{{ translate('In Stock (Ready)') }}</option>
+                                                <option value="farming">{{ translate('Live Farming (Growing)') }}</option>
+                                                <option value="harvest_ready">{{ translate('Harvest Ready') }}</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                     <div class="col-sm-6 col-lg-4">
                                         <div class="form-group">
                                             <label class="input-label">{{ translate('messages.hs_code') }}</label>

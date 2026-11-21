@@ -258,7 +258,14 @@ class AiChatController extends Controller
         $clean = trim($prompt);
         $lower = strtolower($clean);
 
-        $stopWords = ['find', 'show', 'me', 'want', 'need', 'buy', 'looking', 'for', 'any', 'have', 'do', 'you', 'the', 'a', 'an', 'in', 'from', 'to', 'price', 'how', 'much', 'what', 'which', 'is', 'are', 'available', 'book', 'preorder', 'pre-order', 'ahead', 'farming', 'ready'];
+        $stopWords = [
+            'find', 'show', 'me', 'want', 'need', 'buy', 'looking', 'for', 'any', 'have', 'do', 'you',
+            'the', 'a', 'an', 'in', 'from', 'to', 'price', 'how', 'much', 'what', 'which', 'is', 'are',
+            'available', 'book', 'preorder', 'pre-order', 'ahead', 'farming', 'ready',
+            'today', 'todays', 'best', 'deal', 'deals', 'discount', 'discounts', 'offer', 'offers',
+            'promo', 'grocery', 'groceries', 'food', 'shop', 'items', 'products', 'produce',
+            'recommend', 'recommended', 'top', 'popular', 'cheap',
+        ];
         $terms = collect(preg_split('/[^a-z0-9]+/i', $lower))
             ->filter(fn ($t) => strlen($t) >= 3 && ! in_array($t, $stopWords, true))
             ->take(5)
@@ -266,6 +273,8 @@ class AiChatController extends Controller
 
         $wantsPreOrder = str_contains($lower, 'pre-order') || str_contains($lower, 'preorder') || str_contains($lower, 'book ahead') || str_contains($lower, 'farming');
         $wantsBackyard = str_contains($lower, 'backyard');
+        $wantsDeals = str_contains($lower, 'deal') || str_contains($lower, 'discount') || str_contains($lower, 'offer') || str_contains($lower, 'promo') || str_contains($lower, 'cheap');
+        $wantsPopular = str_contains($lower, 'popular') || str_contains($lower, 'best') || str_contains($lower, 'top') || str_contains($lower, 'recommend');
 
         $productsQuery = Item::active()
             ->with(['store'])
@@ -278,6 +287,9 @@ class AiChatController extends Controller
         if ($wantsBackyard && Schema::hasColumn('items', 'is_backyard')) {
             $productsQuery->where('is_backyard', true);
         }
+        if ($wantsDeals) {
+            $productsQuery->where('discount', '>', 0);
+        }
 
         if ($terms->isNotEmpty()) {
             $productsQuery->where(function ($q) use ($terms) {
@@ -288,7 +300,20 @@ class AiChatController extends Controller
             });
         }
 
-        $items = $productsQuery->orderByDesc('order_count')->limit(5)->get();
+        $items = $wantsDeals
+            ? $productsQuery->orderByDesc('discount')->orderByDesc('order_count')->limit(5)->get()
+            : $productsQuery->orderByDesc('order_count')->limit(5)->get();
+
+        // If user asked for deals and none currently have discount > 0, surface top popular items instead of generic welcome
+        if ($items->isEmpty() && ($wantsDeals || $wantsPopular) && $terms->isEmpty()) {
+            $items = Item::active()
+                ->with(['store'])
+                ->when($moduleId, fn ($q) => $q->where('module_id', $moduleId))
+                ->when(! empty($zoneIds), fn ($q) => $q->whereHas('store', fn ($sq) => $sq->whereIn('zone_id', $zoneIds)))
+                ->orderByDesc('order_count')
+                ->limit(5)
+                ->get();
+        }
 
         $stores = Store::active()
             ->when($moduleId, fn ($q) => $q->where('module_id', $moduleId))
@@ -348,9 +373,9 @@ class AiChatController extends Controller
             $lines[] = 'Here are matching produce and farm listings on Aduanefie:';
             foreach ($formattedProducts as $p) {
                 $tag = $p['farming_status'] === 'farming'
-                    ? ($p['pre_order_available'] ? ' (Currently Farming — Pre-Order Available)' : ' (Currently Farming)')
+                    ? ($p['pre_order_available'] ? ' (Currently Farming - Pre-Order Available)' : ' (Currently Farming)')
                     : ($p['farming_status'] === 'harvest_ready' ? ' (Harvest Ready)' : '');
-                $lines[] = sprintf('• %s — %s%s%s', $p['name'], Helpers::format_currency($p['price']), $p['store_name'] ? " from {$p['store_name']}" : '', $tag);
+                $lines[] = sprintf('• %s - %s%s%s', $p['name'], Helpers::format_currency($p['price']), $p['store_name'] ? " from {$p['store_name']}" : '', $tag);
             }
         } elseif (! empty($formattedStores)) {
             $lines[] = 'Here are matching verified farms & suppliers on Aduanefie:';

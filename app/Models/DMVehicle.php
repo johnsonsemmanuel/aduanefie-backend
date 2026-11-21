@@ -16,6 +16,9 @@ class DMVehicle extends Model
         'extra_charges' => 'float',
         'starting_coverage_area' => 'float',
         'maximum_coverage_area' => 'float',
+        'max_weight_kg' => 'float',
+        'per_km_rate' => 'float',
+        'is_cold_chain' => 'boolean',
     ];
 
     public function translations()

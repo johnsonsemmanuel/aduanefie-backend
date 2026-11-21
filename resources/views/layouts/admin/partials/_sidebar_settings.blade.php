@@ -141,6 +141,8 @@
 {{--                        </li>--}}
 {{--                    @endif--}}
 
+{{-- Subscription SaaS management hidden from sidebar (Aduanefie uses commission/escrow trade) --}}
+{{--
                     @if (\App\CentralLogics\Helpers::module_permission_check('subscription'))
                         <li class="navbar-vertical-aside-has-menu @yield('subscription')">
                             <a class="js-navbar-vertical-aside-menu-link nav-link nav-link-toggle" id="tourb-3"
@@ -183,6 +185,7 @@
                             </ul>
                         </li>
                     @endif
+--}}
 
                     @if (\App\CentralLogics\Helpers::module_permission_check('settings'))
 

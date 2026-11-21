@@ -341,6 +341,10 @@ class ItemController extends Controller
         $item->pre_order_enabled = $request->boolean('pre_order_enabled');
         $item->planting_date = $request->filled('planting_date') ? $request->input('planting_date') : null;
         $item->expected_harvest_date = $request->filled('expected_harvest_date') ? $request->input('expected_harvest_date') : null;
+        $item->agro_unit = $request->filled('agro_unit') ? $request->input('agro_unit') : null;
+        $item->unit_weight_kg = $request->filled('unit_weight_kg') ? (float) $request->input('unit_weight_kg') : null;
+        $item->crop_grade = $request->filled('crop_grade') ? $request->input('crop_grade') : null;
+        $item->harvest_date = $request->filled('harvest_date') ? $request->input('harvest_date') : null;
         $item->moq = max(1, (int) $request->input('moq', 1));
         $tiers = [];
         foreach ((array) $request->input('tier_min_qty', []) as $idx => $minQty) {
@@ -416,6 +420,17 @@ class ItemController extends Controller
         $product->status = $request->status;
         $product->save();
         Toastr::success(translate('messages.item_status_updated'));
+        return back();
+    }
+
+    public function farmingStatus(Request $request)
+    {
+        $product = Item::withoutGlobalScope(StoreScope::class)->findOrFail($request->id);
+        if (in_array($request->farming_status, ['in_stock', 'farming', 'harvest_ready'], true)) {
+            $product->farming_status = $request->farming_status;
+            $product->save();
+            Toastr::success(translate('Harvest status updated'));
+        }
         return back();
     }
 
@@ -662,6 +677,10 @@ class ItemController extends Controller
         $item->pre_order_enabled = $request->boolean('pre_order_enabled');
         $item->planting_date = $request->filled('planting_date') ? $request->input('planting_date') : null;
         $item->expected_harvest_date = $request->filled('expected_harvest_date') ? $request->input('expected_harvest_date') : null;
+        $item->agro_unit = $request->filled('agro_unit') ? $request->input('agro_unit') : null;
+        $item->unit_weight_kg = $request->filled('unit_weight_kg') ? (float) $request->input('unit_weight_kg') : null;
+        $item->crop_grade = $request->filled('crop_grade') ? $request->input('crop_grade') : null;
+        $item->harvest_date = $request->filled('harvest_date') ? $request->input('harvest_date') : null;
         $item->moq = max(1, (int) $request->input('moq', 1));
         $tiers = [];
         foreach ((array) $request->input('tier_min_qty', []) as $idx => $minQty) {

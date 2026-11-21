@@ -42,6 +42,11 @@ class GroupBuyController extends Controller
                 'member_share_ghs' => round($this->groups->resolvedUnitPrice($group) * $group->share_units, 2),
                 'spots_left' => max(0, $group->member_limit - $group->committed_count),
                 'viewer' => $this->viewer($request, $group),
+                // Explicit flags: the UI must never infer editing rights from
+                // being on the "my groups" tab, which also lists joined groups.
+                'is_organizer' => $this->isOrganizer($request, $group),
+                'can_edit' => $this->isOrganizer($request, $group)
+                    && $group->status === GroupBuy::STATUS_OPEN,
             ]),
         ], 200);
     }
@@ -61,19 +66,55 @@ class GroupBuyController extends Controller
             return response()->json(['errors' => $validator->errors()], 403);
         }
 
+        $identity = $this->identity($request);
+        if (! $identity['user_id'] && ! $identity['guest_id']) {
+            return response()->json(['errors' => [['code' => 'permission', 'message' => 'A sign-in or guest reference is required.']]], 403);
+        }
+
         try {
             $group = $this->groups->create(array_merge($validator->validated(), [
                 'module_id' => $request->header('moduleId'),
-                'organizer_id' => $request->user ? (int) $request->user->id : null,
-                'organizer_guest_id' => $request->user ? null : $request->input('guest_id'),
-                'actor_type' => $request->user ? 'customer' : 'guest',
-                'actor_id' => $request->user ? (int) $request->user->id : null,
+                'organizer_id' => $identity['user_id'],
+                'organizer_guest_id' => $identity['guest_id'],
+                'actor_type' => $identity['user_id'] ? 'customer' : 'guest',
+                'actor_id' => $identity['user_id'],
             ]));
         } catch (\InvalidArgumentException $e) {
             return response()->json(['errors' => [['code' => 'group_buy', 'message' => $e->getMessage()]]], 403);
         }
 
         return response()->json(['data' => $group->fresh()], 201);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $group = GroupBuy::find($id);
+        if (! $group) {
+            return response()->json(['errors' => [['code' => 'group_buy', 'message' => 'Group buy not found.']]], 404);
+        }
+        if (! $this->isOrganizer($request, $group)) {
+            return response()->json(['errors' => [['code' => 'permission', 'message' => 'Only the organiser can edit this group.']]], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'target_value_ghs' => 'nullable|numeric|min:1',
+            'member_limit' => 'nullable|integer|min:2|max:20',
+            'destination_country' => 'nullable|string|size:2',
+            'incoterm' => 'nullable|string|in:DDP,DAP,CIF,FOB,EXW',
+            'closes_at' => 'nullable|date|after:now',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 403);
+        }
+
+        try {
+            $updated = $this->groups->update($group, $validator->validated());
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['errors' => [['code' => 'update', 'message' => $e->getMessage()]]], 403);
+        }
+
+        return response()->json(['data' => $updated, 'message' => 'Group details updated.']);
     }
 
     public function join(Request $request, $id)
@@ -92,11 +133,12 @@ class GroupBuyController extends Controller
             return response()->json(['errors' => $validator->errors()], 403);
         }
 
+        $identity = $this->identity($request);
         try {
             $participant = $this->groups->join(
                 $group,
-                $request->user ? (int) $request->user->id : null,
-                $request->user ? null : $request->input('guest_id'),
+                $identity['user_id'],
+                $identity['guest_id'],
                 $validator->validated()
             );
         } catch (\InvalidArgumentException $e) {
@@ -142,9 +184,7 @@ class GroupBuyController extends Controller
             return response()->json(['errors' => [['code' => 'group_buy', 'message' => 'Group buy not found.']]], 404);
         }
 
-        $isOrganizer = $request->user
-            && (int) $group->organizer_id === (int) $request->user->id;
-        if (! $isOrganizer) {
+        if (! $this->isOrganizer($request, $group)) {
             return response()->json(['errors' => [['code' => 'permission', 'message' => 'Only the organiser can cancel this group.']]], 403);
         }
 
@@ -175,14 +215,24 @@ class GroupBuyController extends Controller
 
     public function my(Request $request)
     {
-        $userId = $request->user ? (int) $request->user->id : null;
-        $guestId = $request->input('guest_id');
+        $identity = $this->identity($request);
+        $userId = $identity['user_id'];
+        $guestId = $identity['guest_id'];
+
+        // With no identity the old query fell through to "every participant",
+        // leaking all groups. Fail closed instead.
+        if (! $userId && ! $guestId) {
+            return response()->json(['data' => []], 200);
+        }
 
         $ids = GroupBuyParticipant::query()
             ->when($userId, fn ($q) => $q->orWhere('user_id', $userId))
             ->when($guestId, fn ($q) => $q->orWhere('guest_id', $guestId))
             ->pluck('group_buy_id')
             ->merge(GroupBuy::where('organizer_id', $userId)->pluck('id'))
+            ->when($guestId, fn ($collection) => $collection->merge(
+                GroupBuy::where('organizer_guest_id', $guestId)->pluck('id')
+            ))
             ->unique()
             ->values();
 
@@ -196,16 +246,223 @@ class GroupBuyController extends Controller
                     return ($userId && (int) $p->user_id === $userId) || ($guestId && $p->guest_id === $guestId);
                 });
                 $group->my_participant = $member;
+                $group->is_organizer = $userId
+                    ? (int) $group->organizer_id === $userId
+                    : (bool) ($guestId && $group->organizer_guest_id === $guestId);
                 return $group;
             });
 
         return response()->json(['data' => $groups], 200);
     }
 
+    /**
+     * Everyone in the group: the organiser plus every participant. Delivery
+     * addresses are deliberately excluded - members do not need to see each
+     * other's private address, and the supplier ships to each member directly.
+     */
+    public function members(Request $request, $id)
+    {
+        $group = GroupBuy::find($id);
+        if (! $group) {
+            return response()->json(['errors' => [['code' => 'group_buy', 'message' => 'Group buy not found.']]], 404);
+        }
+        if (! $this->isInsider($request, $group)) {
+            return response()->json(['errors' => [['code' => 'permission', 'message' => 'Only members can see the group list.']]], 403);
+        }
+
+        $identity = $this->identity($request);
+        $rows = $group->participants()
+            ->with('user:id,f_name,l_name,image')
+            ->orderBy('id')
+            ->get()
+            ->map(function (GroupBuyParticipant $p) use ($group, $identity) {
+                $isOrganizer = $identity['user_id']
+                    ? (int) $group->organizer_id === $identity['user_id']
+                    : (bool) ($identity['guest_id'] && $group->organizer_guest_id === $identity['guest_id']);
+
+                return [
+                    'participant_id' => $p->id,
+                    'name' => $p->user?->full_name ?: ($p->guest_id ? 'Guest member' : 'Member'),
+                    'role' => $this->isParticipantOrganizer($group, $p) ? 'organiser' : 'member',
+                    'share_units' => $p->share_units,
+                    'item_share_ghs' => $p->item_share_ghs,
+                    'payment_status' => $p->payment_status,
+                    'fulfillment_status' => $p->fulfillment_status,
+                    'joined_at' => $p->joined_at,
+                    'is_self' => $identity['user_id']
+                        ? (int) $p->user_id === $identity['user_id']
+                        : (bool) ($identity['guest_id'] && $p->guest_id === $identity['guest_id']),
+                    'is_organizer' => $isOrganizer,
+                ];
+            });
+
+        // The organiser often has no participant row of their own.
+        $organizerIsMember = $group->participants->contains(function (GroupBuyParticipant $p) use ($group) {
+            return $this->isParticipantOrganizer($group, $p);
+        });
+        if (! $organizerIsMember) {
+            $organizer = $group->organizer;
+            $rows->prepend([
+                'participant_id' => null,
+                'name' => $organizer?->full_name ?: 'Group organiser',
+                'role' => 'organiser',
+                'share_units' => null,
+                'item_share_ghs' => null,
+                'payment_status' => null,
+                'fulfillment_status' => null,
+                'joined_at' => null,
+                'is_self' => (bool) ($identity['user_id'] && (int) $group->organizer_id === $identity['user_id']),
+                'is_organizer' => true,
+            ]);
+        }
+
+        return response()->json(['data' => $rows->values()], 200);
+    }
+
+    public function messages(Request $request, $id)
+    {
+        $group = GroupBuy::find($id);
+        if (! $group) {
+            return response()->json(['errors' => [['code' => 'group_buy', 'message' => 'Group buy not found.']]], 404);
+        }
+        if (! $this->isInsider($request, $group)) {
+            return response()->json(['errors' => [['code' => 'permission', 'message' => 'Only members can read this chat.']]], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'after' => 'nullable|integer|min:0',
+            'limit' => 'nullable|integer|min:1|max:100',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 403);
+        }
+
+        $identity = $this->identity($request);
+        $messages = $this->groups->messages(
+            $group,
+            (int) $request->input('after', 0),
+            (int) $request->input('limit', 50)
+        );
+
+        $rows = array_map(function ($message) use ($identity) {
+            return [
+                'id' => $message->id,
+                'sender_name' => $message->sender_name,
+                'body' => $message->body,
+                'created_at' => $message->created_at,
+                'is_self' => $identity['user_id']
+                    ? (int) $message->sender_user_id === $identity['user_id']
+                    : (bool) ($identity['guest_id'] && $message->sender_guest_id === $identity['guest_id']),
+            ];
+        }, $messages);
+
+        $lastId = end($rows);
+        return response()->json([
+            'data' => $rows,
+            'next_after' => $lastId ? $lastId['id'] : (int) $request->input('after', 0),
+        ], 200);
+    }
+
+    public function sendMessage(Request $request, $id)
+    {
+        $group = GroupBuy::find($id);
+        if (! $group) {
+            return response()->json(['errors' => [['code' => 'group_buy', 'message' => 'Group buy not found.']]], 404);
+        }
+        if (! $this->isInsider($request, $group)) {
+            return response()->json(['errors' => [['code' => 'permission', 'message' => 'Only members can post in this chat.']]], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'message' => 'required|string|max:1000',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 403);
+        }
+
+        $identity = $this->identity($request);
+        try {
+            $message = $this->groups->postMessage(
+                $group,
+                $identity['user_id'],
+                $identity['guest_id'],
+                $identity['name'],
+                $validator->validated()['message']
+            );
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['errors' => [['code' => 'message', 'message' => $e->getMessage()]]], 403);
+        }
+
+        return response()->json(['data' => [
+            'id' => $message->id,
+            'sender_name' => $message->sender_name,
+            'body' => $message->body,
+            'created_at' => $message->created_at,
+            'is_self' => true,
+        ]], 201);
+    }
+
+    /**
+     * Resolve identity from the Passport guard only. The old controller read
+     * `$request->user`, which Laravel fills from request input as well - a
+     * client could post user[id]=victim and impersonate another buyer.
+     */
+    private function identity(Request $request): array
+    {
+        $user = auth('api')->user();
+
+        return [
+            'user_id' => $user ? (int) $user->id : null,
+            'guest_id' => $user ? null : ($request->input('guest_id')
+                ? (string) $request->input('guest_id')
+                : null),
+            'name' => $user ? ($user->full_name ?: 'Member') : 'Guest',
+        ];
+    }
+
+    private function isOrganizer(Request $request, GroupBuy $group): bool
+    {
+        $identity = $this->identity($request);
+        if ($identity['user_id']) {
+            return (bool) $group->organizer_id && (int) $group->organizer_id === $identity['user_id'];
+        }
+
+        return (bool) ($group->organizer_guest_id && $identity['guest_id']
+            && $group->organizer_guest_id === $identity['guest_id']);
+    }
+
+    private function isParticipantOrganizer(GroupBuy $group, GroupBuyParticipant $participant): bool
+    {
+        if ($group->organizer_id && (int) $participant->user_id === (int) $group->organizer_id) {
+            return true;
+        }
+
+        return (bool) ($group->organizer_guest_id && $participant->guest_id
+            && $participant->guest_id === $group->organizer_guest_id);
+    }
+
+    private function isInsider(Request $request, GroupBuy $group): bool
+    {
+        if ($this->isOrganizer($request, $group)) {
+            return true;
+        }
+
+        $identity = $this->identity($request);
+        if (! $identity['user_id'] && ! $identity['guest_id']) {
+            return false;
+        }
+
+        return GroupBuyParticipant::where('group_buy_id', $group->id)
+            ->when($identity['user_id'], fn ($q) => $q->where('user_id', $identity['user_id']))
+            ->when(! $identity['user_id'] && $identity['guest_id'], fn ($q) => $q->where('guest_id', $identity['guest_id']))
+            ->exists();
+    }
+
     private function participantFor(Request $request, GroupBuy $group): ?GroupBuyParticipant
     {
-        $userId = $request->user ? (int) $request->user->id : null;
-        $guestId = $request->input('guest_id');
+        $identity = $this->identity($request);
+        $userId = $identity['user_id'];
+        $guestId = $identity['guest_id'];
 
         if (! $userId && ! $guestId) {
             // Never fall through to an unscoped lookup: that would expose an

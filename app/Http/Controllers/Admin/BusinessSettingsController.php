@@ -144,6 +144,7 @@ class BusinessSettingsController extends Controller
             'insurance_max_fee' => $request->input('insurance_max_fee', 0),
             'insurance_provider_name' => $request->input('insurance_provider_name', 'Aduanefie Trade & Crop Assurance'),
             'insurance_policy_summary' => $request->input('insurance_policy_summary', 'Protects crop harvests, cross-border transit, and order quality under Aduanefie Escrow.'),
+            'esperworks_api_key' => $request->input('esperworks_api_key', ''),
         ];
         foreach ($fields as $key => $val) {
             Helpers::businessUpdateOrInsert(['key' => $key], [
@@ -2661,6 +2662,59 @@ class BusinessSettingsController extends Controller
         ]);
 
         Toastr::success(translate('messages.config_data_updated'));
+        return back();
+    }
+
+    public function farming_settings()
+    {
+        $settings = [
+            'farming_module_enabled' => Helpers::get_business_settings('farming_module_enabled') ?? true,
+            'default_farming_status' => Helpers::get_business_settings('default_farming_status') ?? 'farming',
+            'default_crop_cycle_days' => Helpers::get_business_settings('default_crop_cycle_days') ?? 60,
+            'pre_order_enabled_by_default' => Helpers::get_business_settings('pre_order_enabled_by_default') ?? true,
+            'pre_order_limit_default' => Helpers::get_business_settings('pre_order_limit_default') ?? 10,
+            'harvest_notification_enabled' => Helpers::get_business_settings('harvest_notification_enabled') ?? true,
+            'growth_notification_enabled' => Helpers::get_business_settings('growth_notification_enabled') ?? true,
+            'intekhost_api_key' => Helpers::get_business_settings('intekhost_api_key') ?? '',
+            'intekhost_sender_id' => Helpers::get_business_settings('intekhost_sender_id') ?? '',
+        ];
+
+        return view('admin-views.business-settings.farming-settings', compact('settings'));
+    }
+
+    public function update_farming_settings(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'default_crop_cycle_days' => 'nullable|numeric|min:1',
+            'pre_order_limit_default' => 'nullable|numeric|min:1',
+            'intekhost_api_key' => 'nullable|string',
+            'intekhost_sender_id' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            Toastr::error(translate('messages.please_check_inputs'));
+            return back();
+        }
+
+        $settings = [
+            'farming_module_enabled' => $request->has('farming_module_enabled') ? true : false,
+            'default_farming_status' => $request->input('default_farming_status', 'farming'),
+            'default_crop_cycle_days' => $request->input('default_crop_cycle_days', 60),
+            'pre_order_enabled_by_default' => $request->has('pre_order_enabled_by_default') ? true : false,
+            'pre_order_limit_default' => $request->input('pre_order_limit_default', 10),
+            'harvest_notification_enabled' => $request->has('harvest_notification_enabled') ? true : false,
+            'growth_notification_enabled' => $request->has('growth_notification_enabled') ? true : false,
+            'intekhost_api_key' => $request->input('intekhost_api_key'),
+            'intekhost_sender_id' => $request->input('intekhost_sender_id'),
+        ];
+
+        foreach ($settings as $key => $value) {
+            Helpers::businessUpdateOrInsert(['key' => $key], [
+                'value' => $value,
+            ]);
+        }
+
+        Toastr::success(translate('messages.settings_updated'));
         return back();
     }
 

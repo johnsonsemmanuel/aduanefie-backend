@@ -3,7 +3,11 @@
 @section('title', 'Marketer dashboard')
 
 @section('topbar')
-    {{ $marketer->f_name }} {{ $marketer->l_name }}<br>
+    {{ $marketer->f_name }} {{ $marketer->l_name }}
+    @if(!empty($marketer->marketer_region))
+        <span class="badge">{{ $marketer->marketer_region }}</span>
+    @endif
+    <br>
     <span class="small">{{ $marketer->email }}</span>
 @endsection
 
@@ -13,35 +17,42 @@
 
 @section('content')
     <div class="card">
-        <h1>Your stores</h1>
+        <h1>Your Earnings &amp; Farmer Onboarding</h1>
         <p class="muted small" style="margin-top:0;">
-            You earn {{ rtrim(rtrim(number_format($marketer->marketerCommissionRate(), 3), '0'), '.') }}%
-            of Aduanefie's commission on each delivered order from these stores.
-            A commission can be requested {{ (int) config('marketer.holding_days', 14) }} days after delivery.
+            You earn <strong>{{ number_format($summary['onboarding_bounty_rate'] ?? 25, 2) }} {{ $summary['currency'] }}</strong> for every verified farmer / agro-stakeholder you bring onboard, plus
+            <strong>{{ rtrim(rtrim(number_format($marketer->marketerCommissionRate(), 3), '0'), '.') }}%</strong>
+            of Aduanefie's commission on every delivered order from your attributed farms.
+            Sales commissions become requestable {{ (int) config('marketer.holding_days', 14) }} days after delivery.
         </p>
 
         <div class="grid">
             <div class="stat">
-                <div class="label">Stores</div>
+                <div class="label">Farmers Onboarded</div>
                 <div class="value">{{ $summary['stores'] }}</div>
+                <div class="small muted">{{ $summary['verified_stores'] ?? 0 }} verified live · {{ (int) $summary['stores'] - (int) ($summary['verified_stores'] ?? 0) }} awaiting verification</div>
             </div>
             <div class="stat">
-                <div class="label">On hold</div>
+                <div class="label">Onboarding Bounty</div>
+                <div class="value">{{ number_format($summary['onboarding_bounty_earned'] ?? 0, 2) }} {{ $summary['currency'] }}</div>
+                <div class="small muted">@ {{ number_format($summary['onboarding_bounty_rate'] ?? 25, 2) }} {{ $summary['currency'] }} / farmer · {{ number_format(((int) $summary['stores'] - (int) ($summary['verified_stores'] ?? 0)) * (float) ($summary['onboarding_bounty_rate'] ?? 25), 2) }} {{ $summary['currency'] }} pending verification</div>
+            </div>
+            <div class="stat">
+                <div class="label">Total Farmer Sales</div>
+                <div class="value">{{ number_format($summary['total_sales'] ?? 0, 2) }} {{ $summary['currency'] }}</div>
+                <div class="small muted">{{ $summary['delivered_orders_count'] ?? 0 }} delivered orders</div>
+            </div>
+            <div class="stat">
+                <div class="label">Commission On Hold</div>
                 <div class="value">{{ number_format($summary['pending'], 2) }} {{ $summary['currency'] }}</div>
                 <div class="small muted">{{ $summary['pending_count'] }} orders</div>
             </div>
             <div class="stat">
-                <div class="label">Available</div>
+                <div class="label">Available to Withdraw</div>
                 <div class="value">{{ number_format($summary['eligible'], 2) }} {{ $summary['currency'] }}</div>
                 <div class="small muted">{{ $summary['eligible_count'] }} orders</div>
             </div>
             <div class="stat">
-                <div class="label">Requested / in payout</div>
-                <div class="value">{{ number_format($summary['in_payout'], 2) }} {{ $summary['currency'] }}</div>
-                <div class="small muted">{{ $summary['in_payout_count'] }} orders</div>
-            </div>
-            <div class="stat">
-                <div class="label">Paid to date</div>
+                <div class="label">Paid to Date</div>
                 <div class="value">{{ number_format($summary['paid'], 2) }} {{ $summary['currency'] }}</div>
                 <div class="small muted">{{ $summary['paid_count'] }} orders</div>
             </div>
@@ -54,7 +65,7 @@
         @endif
         <p class="small muted" style="margin-bottom:8px;">
             Your farmer referral code: <strong>{{ $marketer->marketer_code ?? ('MKT-' . $marketer->id) }}</strong>
-            — share this when onboarding commercial farms or backyard growers.
+            - share this when onboarding commercial farms or backyard growers.
         </p>
         @php
             $refCode = $marketer->marketer_code ?? ('MKT-' . $marketer->id);
@@ -63,6 +74,7 @@
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <input type="text" id="marketer-ref-url" value="{{ $refUrl }}" readonly style="flex:1;min-width:240px;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;background:#f9fafb;">
             <button type="button" onclick="var i=document.getElementById('marketer-ref-url');i.select();navigator.clipboard.writeText(i.value);this.innerText='Copied!';setTimeout(()=>this.innerText='Copy Onboarding Link',2000);" style="padding:7px 14px;background:#166534;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;">Copy Onboarding Link</button>
+            <a href="{{ $refUrl }}" target="_blank" class="btn" style="padding:7px 14px;font-size:13px;text-decoration:none;">Onboard Farmer Now ↗</a>
         </div>
     </div>
 
@@ -73,15 +85,32 @@
         @else
             <table>
                 <thead>
-                <tr><th>Store</th><th>Type</th><th>Cultivation</th><th>Status</th><th>Field verification</th></tr>
+                <tr><th>Farmer / Store</th><th>Type &amp; Region</th><th>Cultivation</th><th>Orders &amp; Sales</th><th>Your Commission</th><th>Field verification</th></tr>
                 </thead>
                 <tbody>
                 @foreach($stores as $store)
                     <tr>
-                        <td>{{ $store->name }}</td>
-                        <td>{{ ($store->is_backyard ?? false) ? 'Backyard Grower' : ucfirst($store->farm_type ?? $store->store_business_model) }}</td>
+                        <td>
+                            <strong>{{ $store->name }}</strong>
+                            @if(!empty($store->phone))
+                                <div class="small muted">{{ $store->phone }}</div>
+                            @endif
+                        </td>
+                        <td>
+                            {{ ($store->is_backyard ?? false) ? 'Backyard Grower' : ucfirst($store->farm_type ?? $store->store_business_model) }}
+                            @if(!empty($store->region))
+                                <div class="small muted">{{ $store->region }}{{ !empty($store->district) ? ' · ' . $store->district : '' }}</div>
+                            @endif
+                        </td>
                         <td>{{ ucfirst(str_replace('_', ' ', $store->cultivation_status ?? 'active')) }}</td>
-                        <td>{{ $store->status ? 'live' : 'not live' }}</td>
+                        <td>
+                            <strong>{{ number_format($store->total_sales ?? 0, 2) }} {{ $summary['currency'] }}</strong>
+                            <div class="small muted">{{ $store->delivered_orders_count ?? 0 }} delivered orders</div>
+                        </td>
+                        <td>
+                            <strong>{{ number_format($store->commission_earned ?? 0, 2) }} {{ $summary['currency'] }}</strong>
+                            <div class="small muted">+ {{ number_format($summary['onboarding_bounty_rate'] ?? 25, 2) }} {{ $summary['currency'] }} bounty</div>
+                        </td>
                         <td>
                             @if($store->marketer_verified ?? false)
                                 <span class="badge paid">Verified</span>
@@ -146,7 +175,7 @@
                         <td>{{ number_format($payout->amount, 2) }} {{ $payout->currency }}</td>
                         <td><span class="badge {{ $payout->status }}">{{ $payout->status }}</span></td>
                         <td>{{ $payout->requested_at }}</td>
-                        <td>{{ $payout->paid_at ?? '—' }}</td>
+                        <td>{{ $payout->paid_at ?? '-' }}</td>
                     </tr>
                 @endforeach
                 </tbody>

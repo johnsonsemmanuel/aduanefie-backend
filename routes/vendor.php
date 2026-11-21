@@ -116,6 +116,7 @@ Route::group(['namespace' => 'Vendor', 'as' => 'vendor.'], function () {
             Route::get('list', 'ItemController@list')->name('list');
             Route::delete('delete/{id}', 'ItemController@delete')->name('delete');
             Route::get('status/{id}/{status}', 'ItemController@status')->name('status');
+            Route::get('farming-status/{id}/{farming_status}', 'ItemController@farmingStatus')->name('farming-status');
             Route::post('search', 'ItemController@search')->name('search');
             Route::get('view/{id}', 'ItemController@view')->name('view');
             Route::get('remove-image', 'ItemController@remove_image')->name('remove-image');

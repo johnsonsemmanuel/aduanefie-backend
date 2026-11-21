@@ -23,7 +23,7 @@ class CurrencyRate extends Model
 
     /**
      * Convert an amount between currencies. Returns null when no rate is
-     * configured — callers must treat that as "cannot quote" rather than
+     * configured - callers must treat that as "cannot quote" rather than
      * silently charging the wrong currency.
      */
     public static function convert(float $amount, string $from, string $to): ?float

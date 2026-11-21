@@ -577,6 +577,15 @@
                                                                     {{ $detail['quantity'] }} x
                                                                     {{ \App\CentralLogics\Helpers::format_currency($detail['price']) }}
                                                                 </h6>
+                                                                @if (!empty($detail->item['agro_unit']) || !empty($detail->item['crop_grade']) || !empty($detail->item['unit_weight_kg']))
+                                                                    <div class="small text-muted">
+                                                                        {{ implode(' · ', array_filter([
+                                                                            $detail->item['agro_unit'] ?? null,
+                                                                            $detail->item['crop_grade'] ?? null,
+                                                                            !empty($detail->item['unit_weight_kg']) ? (round((float)$detail->item['unit_weight_kg'] * (int)$detail['quantity'], 1) . ' kg total') : null,
+                                                                        ])) }}
+                                                                    </div>
+                                                                @endif
                                                                 @if ($order->store && $order->store->module->module_type == 'food')
                                                                     @if (isset($detail['variation']) ? json_decode($detail['variation'], true) : [])
                                                                         @foreach (json_decode($detail['variation'], true) as $variation)
@@ -715,6 +724,15 @@
                                                                     {{ $detail['quantity'] }} x
                                                                     {{ \App\CentralLogics\Helpers::format_currency($detail['price']) }}
                                                                 </h6>
+                                                                @if (!empty($detail->item['agro_unit']) || !empty($detail->item['crop_grade']) || !empty($detail->item['unit_weight_kg']))
+                                                                    <div class="small text-muted">
+                                                                        {{ implode(' · ', array_filter([
+                                                                            $detail->item['agro_unit'] ?? null,
+                                                                            $detail->item['crop_grade'] ?? null,
+                                                                            !empty($detail->item['unit_weight_kg']) ? (round((float)$detail->item['unit_weight_kg'] * (int)$detail['quantity'], 1) . ' kg total') : null,
+                                                                        ])) }}
+                                                                    </div>
+                                                                @endif
                                                                 @if ($order->store && $order->store->module->module_type == 'food')
                                                                     @if (isset($detail['variation']) ? json_decode($detail['variation'], true) : [])
                                                                         @foreach (json_decode($detail['variation'], true) as $variation)

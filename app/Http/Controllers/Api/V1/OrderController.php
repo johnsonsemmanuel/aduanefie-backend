@@ -1191,6 +1191,13 @@ class OrderController extends Controller
             $order->insurance_fee = $insuranceFee;
             $order->insurance_coverage_type = $applyInsurance ? ($isCrossBorder ? 'cross_border_and_crop' : 'crop_and_transit') : null;
         }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('orders', 'recurring_frequency')) {
+            $freq = $request->input('recurring_frequency');
+            if (!in_array($freq, ['one_time', 'weekly', 'biweekly', 'monthly'], true)) {
+                $freq = $request->boolean('monthly_subscribe') ? 'monthly' : 'one_time';
+            }
+            $order->recurring_frequency = $freq;
+        }
         if ($request->payment_method == 'wallet' && $request->user->wallet_balance < $order->order_amount) {
             return response()->json([
                 'errors' => [
@@ -2546,9 +2553,21 @@ class OrderController extends Controller
         $free_delivery_by = null;
 
         if ($order_type === 'parcel') {
-            $per_km = (float) ($settings['parcel_per_km_shipping_charge'] ?? 1);
+            $vehicle_id = $request->input('vehicle_id') ?? $request->input('dm_vehicle_id');
+            $weight_kg = max(0, (float) ($request->input('weight_kg') ?? 0));
+            $is_cold_chain = filter_var($request->input('is_cold_chain', false), FILTER_VALIDATE_BOOLEAN);
+            $vehicle = $vehicle_id ? DMVehicle::active()->find($vehicle_id) : null;
+
+            $per_km = ($vehicle && $vehicle->per_km_rate > 0)
+                ? (float) $vehicle->per_km_rate
+                : (float) ($settings['parcel_per_km_shipping_charge'] ?? 1);
             $min_charge = (float) ($settings['parcel_minimum_shipping_charge'] ?? 10);
-            $delivery_charge = max($min_charge, round($distance * $per_km, config('round_up_to_digit', 2)));
+            $distance_charge = max($min_charge, round($distance * $per_km, config('round_up_to_digit', 2)));
+            $vehicle_extra = $vehicle ? (float) $vehicle->extra_charges : 0;
+            // Weight surcharge above 25 kg baseline (0.25 per extra kg) + 15% cold-chain premium
+            $weight_surcharge = $weight_kg > 25 ? round(($weight_kg - 25) * 0.25, config('round_up_to_digit', 2)) : 0;
+            $cold_chain_surcharge = $is_cold_chain ? round(($distance_charge + $vehicle_extra) * 0.15, config('round_up_to_digit', 2)) : 0;
+            $delivery_charge = round($distance_charge + $vehicle_extra + $weight_surcharge + $cold_chain_surcharge, config('round_up_to_digit', 2));
         } elseif ($order_type !== 'take_away') {
             $per_km = ($store && $store->per_km_shipping_charge > 0)
                 ? (float) $store->per_km_shipping_charge

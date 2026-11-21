@@ -135,7 +135,7 @@
 
                 <td>
                     <div style="text-align: end; margin-inline-end:15px;">
-                        <img style="max-width:250px;border:0;" src="{{asset('/storage/app/public/business/'.$logo)}}" title=""
+                        <img style="max-width:250px;border:0;" src="{{ \App\CentralLogics\Helpers::get_business_logo_url() }}" title=""
                             class="sitelogo" width="60%"  alt=""/>
                     </div>
                 </td>

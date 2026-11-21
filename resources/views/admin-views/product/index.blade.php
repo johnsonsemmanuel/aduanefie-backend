@@ -439,6 +439,37 @@
                                                     @endfor
                                                 </div>
                                             </div>
+                                            <div class="col-sm-6 col-lg-3">
+                                                <label class="input-label mb-1">{{ translate('Agro Unit') }}</label>
+                                                <select name="agro_unit" class="form-control">
+                                                    <option value="">{{ translate('Standard Unit') }}</option>
+                                                    <option value="kg">{{ translate('Kilogram (kg)') }}</option>
+                                                    <option value="bag_50kg">{{ translate('50kg Bag') }}</option>
+                                                    <option value="bag_100kg">{{ translate('100kg Bag') }}</option>
+                                                    <option value="crate">{{ translate('Crate') }}</option>
+                                                    <option value="bunch">{{ translate('Bunch') }}</option>
+                                                    <option value="ton">{{ translate('Metric Ton') }}</option>
+                                                    <option value="box">{{ translate('Export Box') }}</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-sm-6 col-lg-3">
+                                                <label class="input-label mb-1">{{ translate('Unit Weight (kg)') }}</label>
+                                                <input type="number" step="0.01" min="0" name="unit_weight_kg" class="form-control" placeholder="e.g. 50.00">
+                                            </div>
+                                            <div class="col-sm-6 col-lg-3">
+                                                <label class="input-label mb-1">{{ translate('Crop Grade') }}</label>
+                                                <select name="crop_grade" class="form-control">
+                                                    <option value="">{{ translate('Select Grade') }}</option>
+                                                    <option value="Grade A (Export)">{{ translate('Grade A (Export)') }}</option>
+                                                    <option value="Grade B (Market)">{{ translate('Grade B (Market)') }}</option>
+                                                    <option value="Grade C (Processing)">{{ translate('Grade C (Processing)') }}</option>
+                                                    <option value="Organic Certified">{{ translate('Organic Certified') }}</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-sm-6 col-lg-3">
+                                                <label class="input-label mb-1">{{ translate('Harvest Date') }}</label>
+                                                <input type="date" name="harvest_date" class="form-control">
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

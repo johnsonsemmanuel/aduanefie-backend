@@ -64,8 +64,8 @@
                             @endif
                         </td>
                         <td>{{ $payout->requested_at }}</td>
-                        <td>{{ $payout->paid_at ?? '—' }}</td>
-                        <td>{{ $payout->reference ?? '—' }}</td>
+                        <td>{{ $payout->paid_at ?? '-' }}</td>
+                        <td>{{ $payout->reference ?? '-' }}</td>
                     </tr>
                 @endforeach
                 </tbody>

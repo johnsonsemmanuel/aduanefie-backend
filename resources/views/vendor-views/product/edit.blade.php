@@ -498,6 +498,49 @@
                                             <input type="number" name="minimum_order_qty" id="minimum_order_qty" class="form-control" value="{{ $product->minimum_order_qty ?? '' }}" placeholder="{{ translate('messages.min_order_qty') }}">
                                         </div>
                                     </div>
+                                    <div class="col-sm-6 col-lg-3">
+                                        <div class="form-group">
+                                            <label class="input-label">{{ translate('Agro Unit') }}</label>
+                                            <select name="agro_unit" class="form-control">
+                                                <option value="" {{ empty($product->agro_unit) ? 'selected' : '' }}>{{ translate('Standard Unit') }}</option>
+                                                <option value="kg" {{ $product->agro_unit === 'kg' ? 'selected' : '' }}>{{ translate('Kilogram (kg)') }}</option>
+                                                <option value="bag_50kg" {{ $product->agro_unit === 'bag_50kg' ? 'selected' : '' }}>{{ translate('50kg Bag') }}</option>
+                                                <option value="bag_100kg" {{ $product->agro_unit === 'bag_100kg' ? 'selected' : '' }}>{{ translate('100kg Bag') }}</option>
+                                                <option value="crate" {{ $product->agro_unit === 'crate' ? 'selected' : '' }}>{{ translate('Crate') }}</option>
+                                                <option value="bunch" {{ $product->agro_unit === 'bunch' ? 'selected' : '' }}>{{ translate('Bunch') }}</option>
+                                                <option value="ton" {{ $product->agro_unit === 'ton' ? 'selected' : '' }}>{{ translate('Metric Ton') }}</option>
+                                                <option value="box" {{ $product->agro_unit === 'box' ? 'selected' : '' }}>{{ translate('Export Box') }}</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 col-lg-3">
+                                        <div class="form-group">
+                                            <label class="input-label">{{ translate('Unit Weight (kg)') }}</label>
+                                            <input type="number" step="0.01" min="0" name="unit_weight_kg" class="form-control" value="{{ $product->unit_weight_kg ?? '' }}" placeholder="e.g. 50.00">
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 col-lg-3">
+                                        <div class="form-group">
+                                            <label class="input-label">{{ translate('Crop Grade') }}</label>
+                                            <select name="crop_grade" class="form-control">
+                                                <option value="" {{ empty($product->crop_grade) ? 'selected' : '' }}>{{ translate('Select Grade') }}</option>
+                                                <option value="Grade A (Export)" {{ $product->crop_grade === 'Grade A (Export)' ? 'selected' : '' }}>{{ translate('Grade A (Export)') }}</option>
+                                                <option value="Grade B (Market)" {{ $product->crop_grade === 'Grade B (Market)' ? 'selected' : '' }}>{{ translate('Grade B (Market)') }}</option>
+                                                <option value="Grade C (Processing)" {{ $product->crop_grade === 'Grade C (Processing)' ? 'selected' : '' }}>{{ translate('Grade C (Processing)') }}</option>
+                                                <option value="Organic Certified" {{ $product->crop_grade === 'Organic Certified' ? 'selected' : '' }}>{{ translate('Organic Certified') }}</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 col-lg-3">
+                                        <div class="form-group">
+                                            <label class="input-label">{{ translate('Harvest Status') }}</label>
+                                            <select name="farming_status" class="form-control">
+                                                <option value="in_stock" {{ ($product->farming_status ?? 'in_stock') === 'in_stock' ? 'selected' : '' }}>{{ translate('In Stock (Ready)') }}</option>
+                                                <option value="farming" {{ $product->farming_status === 'farming' ? 'selected' : '' }}>{{ translate('Live Farming (Growing)') }}</option>
+                                                <option value="harvest_ready" {{ $product->farming_status === 'harvest_ready' ? 'selected' : '' }}>{{ translate('Harvest Ready') }}</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
                                 @endif
                             </div>

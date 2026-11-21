@@ -28,7 +28,7 @@
         }
 
         :root {
-            --base: #006161
+            --base: #67513A
         }
 
         .main-table {
@@ -135,7 +135,7 @@ font-weight: 700
         <tr>
             <td class="main-table-td">
                 @php($store_logo = \App\Models\BusinessSetting::where(['key' => 'logo'])->first()->value)
-                <img style="width:120px;display:block;margin:10px 0" onerror="this.src='{{asset('/public/assets/admin/img/favicon.png')}}'" src="{{ asset('storage/app/public/business/' . $store_logo) }}" alt="public/img">
+                <img style="width:120px;display:block;margin:10px 0" onerror="this.src='{{asset('/public/assets/admin/img/favicon.png')}}'" src="{{ \App\CentralLogics\Helpers::get_business_logo_url() }}" alt="public/img">
                 <h2>Refund Request , Refund # 853730</h2>
                 <div class="mb-1">Hi Admin,</div>
                 <div class="mb-2"><a href="" class="text-base">mBappe</a> has requested refund for for the  <span class="text-base">order # 38578923</span></div>

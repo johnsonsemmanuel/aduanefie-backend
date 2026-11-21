@@ -610,6 +610,40 @@ trait  SmsGateway
     }
 
 
+    public static function intekhost($receiver, $message): string
+    {
+        $config = self::get_settings('intekhost');
+        $response = 'error';
+        if (isset($config) && $config['status'] == 1) {
+            $api_key = $config['api_key'] ?? '';
+            $sender_id = $config['sender_id'] ?? 12;
+            $url = $config['api_url'] ?? 'https://inteksms.top/api/v1/messages/send';
+
+            try {
+                $res = Http::post($url, [
+                    'sender_id' => $sender_id,
+                    'title' => 'Aduanefie',
+                    'message' => $message,
+                    'recipients' => [$receiver],
+                ], [
+                    'headers' => [
+                        'Authorization' => 'Bearer ' . $api_key,
+                        'Content-Type' => 'application/json',
+                    ],
+                ]);
+                if ($res->successful()) {
+                    $response = 'success';
+                } else {
+                    $response = 'error';
+                }
+            } catch (\Exception $exception) {
+                $response = 'error';
+            }
+        }
+        return $response;
+    }
+
+
 
 
     public static function get_settings($name)

@@ -18,6 +18,12 @@
                     @csrf
                     <button type="submit" class="btn btn--primary">Run accrual now</button>
                 </form>
+                <a href="{{ route('admin.marketer.commissions.export', array_filter([
+                    'marketer_id' => $marketerId ?: null,
+                    'status' => $status ?: null,
+                    'store_id' => $storeId ?: null,
+                    'search' => $search ?: null,
+                ])) }}" class="btn btn--secondary">Export CSV</a>
             </div>
         </div>
     </div>
@@ -90,12 +96,12 @@
                                 </div>
                             @endif
                         </td>
-                        <td>{{ $c->store?->name ?? '—' }}</td>
+                        <td>{{ $c->store?->name ?? '-' }}</td>
                         <td>
                             {{ $c->marketer?->f_name }} {{ $c->marketer?->l_name }}
                             <div class="text-muted small">{{ $c->marketer?->email }}</div>
                         </td>
-                        <td>{{ $c->order?->delivered ?? '—' }}</td>
+                        <td>{{ $c->order?->delivered ?? '-' }}</td>
                         <td>{{ number_format($c->base_amount, 2) }} {{ $c->currency }}</td>
                         <td>{{ rtrim(rtrim(number_format($c->rate, 3), '0'), '.') }}%</td>
                         <td class="font-weight-600">{{ number_format($c->amount, 2) }} {{ $c->currency }}</td>

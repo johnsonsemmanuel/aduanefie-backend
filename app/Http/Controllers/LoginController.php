@@ -118,11 +118,21 @@ class LoginController extends Controller
                 Cookie::forget('e_token');
                 Cookie::forget('p_token');
             }
+
             if ($auth == 'admin') {
                 return 'admin';
-            } else {
-                return 'vendor';
             }
+
+            if ($auth == 'vendor') {
+                $mode = app(AdminMfaService::class)
+                    ->begin(request(), auth('vendor')->user(), (bool) $remember, 'vendor');
+
+                return $mode === AdminMfaService::MODE_SETUP
+                    ? 'vendor_mfa_setup'
+                    : 'vendor_mfa';
+            }
+
+            return 'vendor';
         }
         return false;
     }
@@ -288,6 +298,12 @@ class LoginController extends Controller
                 return redirect()->route('vendor.providerDashboard');
             }
             return redirect()->route('vendor.dashboard');
+        }
+
+        if ($data === 'vendor_mfa' || $data === 'vendor_mfa_setup') {
+            return redirect()->route(
+                $data === 'vendor_mfa_setup' ? 'vendor.mfa.setup' : 'vendor.mfa.challenge'
+            );
         }
 
         return redirect()->back()->withInput($request->only('email', 'remember'))

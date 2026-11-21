@@ -29,7 +29,7 @@
         }
 
         :root {
-            --base: #006161
+            --base: #67513A
         }
 
         .main-table {
@@ -207,7 +207,7 @@ font-weight: 700
                             <td class="p-10">
                                 <span class="d-block text-center">
                                     @php($store_logo = \App\Models\BusinessSetting::where(['key' => 'logo'])->first()->value)
-                                    <img style="width: 125px" class="mb-" src="{{ asset('storage/app/public/business/' . $store_logo) }}" alt="">
+                                    <img style="width: 125px" class="mb-" src="{{ \App\CentralLogics\Helpers::get_business_logo_url() }}" alt="">
                                     <h3 class="mb-3 mt-0">Order Info</h3>
                                 </span>
                             </td>

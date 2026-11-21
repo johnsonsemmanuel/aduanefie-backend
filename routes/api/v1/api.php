@@ -198,6 +198,8 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             Route::get('dashboard', 'FarmerController@dashboard');
             Route::get('products', 'FarmerController@products');
             Route::patch('products/{id}/farming-status', 'FarmerController@update_farming_status');
+            Route::patch('products/{id}/dates', 'FarmerController@update_dates');
+            Route::post('products/{id}/growth-update', 'FarmerController@update_growth');
             Route::post('products/{id}/sms-broadcast', 'FarmerController@broadcast_sms');
             Route::get('products/{id}/subscribers', 'FarmerController@get_subscribers');
 
@@ -214,6 +216,14 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
                 Route::patch('{id}', 'FarmerController@update_plot');
                 Route::delete('{id}', 'FarmerController@delete_plot');
                 Route::get('{id}/items', 'FarmerController@plot_items');
+            });
+
+            // Aggregation hubs
+            Route::group(['prefix' => 'aggregation-hubs'], function () {
+                Route::get('/', 'FarmerController@aggregation_hubs');
+                Route::post('/', 'FarmerController@create_aggregation_hub');
+                Route::patch('{id}', 'FarmerController@update_aggregation_hub');
+                Route::delete('{id}', 'FarmerController@delete_aggregation_hub');
             });
 
             // Agro-service booking
@@ -362,6 +372,12 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
         Route::get('my', 'GroupBuyController@my');
         Route::post('/', 'GroupBuyController@store');
         Route::get('{id}', 'GroupBuyController@show');
+        // Organiser edit + member list + member-only chat. Membership and
+        // ownership are checked in the controller, not by a route param.
+        Route::put('{id}', 'GroupBuyController@update');
+        Route::get('{id}/members', 'GroupBuyController@members');
+        Route::get('{id}/messages', 'GroupBuyController@messages');
+        Route::post('{id}/messages', 'GroupBuyController@sendMessage');
         Route::post('{id}/join', 'GroupBuyController@join');
         Route::post('{id}/leave', 'GroupBuyController@leave');
         Route::post('{id}/cancel', 'GroupBuyController@cancel');
@@ -584,6 +600,8 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             Route::post('rfqs/{id}/quotes', 'TradeController@store_quote');
             Route::get('agro-prices', 'TradeController@agro_prices');
             Route::get('fx-rates', 'TradeController@fx_rates');
+            Route::post('orders/{id}/esperworks-invoice', 'TradeController@esperworks_invoice');
+            Route::post('orders/{id}/esperworks-contract', 'TradeController@esperworks_contract');
         });
 
         Route::group(['prefix' => 'common-condition'], function () {

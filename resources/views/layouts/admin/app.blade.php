@@ -320,7 +320,7 @@ $countryCode= strtolower($country?$country->value:'auto');
             title: '{{ translate('Do you want to logout?') }}',
             showDenyButton: true,
             showCancelButton: true,
-            confirmButtonColor: '#FC6A57',
+            confirmButtonColor: '#67513A',
             cancelButtonColor: '#363636',
             confirmButtonText: `{{ translate('yes')}}`,
             cancelButtonText: `{{ translate('Do_not_Logout')}}`,
@@ -342,7 +342,7 @@ $countryCode= strtolower($country?$country->value:'auto');
             type: 'warning',
             showCancelButton: true,
             cancelButtonColor: 'default',
-            confirmButtonColor: '#FC6A57',
+            confirmButtonColor: '#67513A',
             cancelButtonText: '{{ translate('messages.no') }}',
             confirmButtonText: '{{ translate('messages.Yes') }}',
             reverseButtons: true
@@ -362,7 +362,7 @@ $countryCode= strtolower($country?$country->value:'auto');
             type: 'warning',
             showCancelButton: true,
             cancelButtonColor: 'default',
-            confirmButtonColor: '#FC6A57',
+            confirmButtonColor: '#67513A',
             cancelButtonText: '{{ translate('messages.no') }}',
             confirmButtonText: '{{ translate('messages.Yes') }}',
             reverseButtons: true
@@ -387,7 +387,7 @@ $countryCode= strtolower($country?$country->value:'auto');
             type: 'warning',
             showCancelButton: true,
             cancelButtonColor: 'default',
-            confirmButtonColor: '#FC6A57',
+            confirmButtonColor: '#67513A',
             cancelButtonText: '<?php echo e(translate('messages.Cancel')); ?>',
             confirmButtonText: '<?php echo e(translate('messages.submit')); ?>',
             inputPlaceholder: "<?php echo e(translate('Enter_a_reason')); ?>",
@@ -408,7 +408,7 @@ $countryCode= strtolower($country?$country->value:'auto');
             type: 'warning',
             showCancelButton: true,
             cancelButtonColor: 'default',
-            confirmButtonColor: '#FC6A57',
+            confirmButtonColor: '#67513A',
             cancelButtonText: '{{ translate('messages.no') }}',
             confirmButtonText: '{{ translate('messages.Yes') }}',
             reverseButtons: true
@@ -696,7 +696,7 @@ $countryCode= strtolower($country?$country->value:'auto');
                 type: 'warning',
                 showCancelButton: true,
                 cancelButtonColor: 'default',
-                confirmButtonColor: '#FC6A57',
+                confirmButtonColor: '#67513A',
                 cancelButtonText: '{{translate('messages.no')}}',
                 confirmButtonText: '{{translate('messages.yes')}}',
                 reverseButtons: true

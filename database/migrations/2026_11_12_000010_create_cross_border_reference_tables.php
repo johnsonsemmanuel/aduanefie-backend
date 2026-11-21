@@ -111,7 +111,7 @@ return new class extends Migration
     }
 
     /**
-     * Static reference data — safe to (re)apply. Business-specific shipping
+     * Static reference data - safe to (re)apply. Business-specific shipping
      * rates are NOT seeded here; they must be configured per lane.
      */
     private function seedCountries(): void

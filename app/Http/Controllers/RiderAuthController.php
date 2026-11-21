@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Session;
 /**
  * Web login for the rider portal on logistics.aduanefie.com.
  *
- * Riders authenticate by phone, not email — that is what the mobile API accepts
+ * Riders authenticate by phone, not email - that is what the mobile API accepts
  * (DeliveryManLoginController@login) and the only credential they were issued.
  *
  * The two account gates below mirror the API exactly. A web session must not be

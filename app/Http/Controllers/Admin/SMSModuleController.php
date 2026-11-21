@@ -26,7 +26,7 @@ class SMSModuleController extends Controller
                 }
             }
         }
-        $data_values=  Setting::where('settings_type','sms_config')->whereIn('key_name', ['twilio','nexmo','2factor','msg91','alphanet_sms'])->get() ?? [];
+        $data_values=  Setting::where('settings_type','sms_config')->whereIn('key_name', ['twilio','nexmo','2factor','msg91','alphanet_sms','intekhost'])->get() ?? [];
         return view('admin-views.business-settings.sms-index',compact('data_values','published_status','payment_url'));
     }
 
@@ -77,10 +77,17 @@ class SMSModuleController extends Controller
             ];
         } elseif ($request['gateway'] == 'alphanet_sms') {
             $additional_data = [
-                'status' => $request['status'],
+                'status' =>$request['status'],
                 'api_key' =>$request['api_key'],
                 'sender_id' =>$request['sender_id'] ?? null,
                 'otp_template' =>$request['otp_template'],
+            ];
+        } elseif ($request['gateway'] == 'intekhost') {
+            $additional_data = [
+                'status' => $request['status'],
+                'api_key' => $request['api_key'],
+                'sender_id' => $request['sender_id'] ?? null,
+                'api_url' => $request['api_url'] ?? 'https://inteksms.top/api/v1/messages/send',
             ];
         }
 
@@ -98,8 +105,8 @@ class SMSModuleController extends Controller
         'is_active' => isset($request['status']) == 1  ?  1: 0 ,
     ]);
 
-    if ($request['status'] == 1) {
-        foreach (['twilio','nexmo','2factor','msg91','alphanet_sms'] as $gateway) {
+        if ($request['status'] == 1) {
+            foreach (['twilio','nexmo','2factor','msg91','alphanet_sms','intekhost'] as $gateway) {
             if ($module != $gateway) {
                 $keep = Setting::where(['key_name' => $gateway, 'settings_type' => 'sms_config'])->first();
                 if (isset($keep)) {

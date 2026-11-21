@@ -56,7 +56,7 @@
                     <tr>
                         <td>#{{ $commission->order_id }}</td>
                         <td>{{ $commission->store?->name }}</td>
-                        <td>{{ $commission->order?->delivered ?? '—' }}</td>
+                        <td>{{ $commission->order?->delivered ?? '-' }}</td>
                         <td>{{ number_format($commission->base_amount, 2) }}</td>
                         <td>{{ rtrim(rtrim(number_format($commission->rate, 3), '0'), '.') }}%</td>
                         <td>{{ number_format($commission->amount, 2) }} {{ $commission->currency }}</td>

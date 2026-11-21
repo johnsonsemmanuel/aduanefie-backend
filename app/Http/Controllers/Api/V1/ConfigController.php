@@ -414,6 +414,14 @@ class ConfigController extends Controller
 
     public function distance_api(Request $request)
     {
+        $rawMode = strtolower((string) $request->input('mode', 'walking'));
+        $normalizedMode = match ($rawMode) {
+            'walk', 'walking' => 'walking',
+            'drive', 'driving' => 'driving',
+            default => $rawMode,
+        };
+        $request->merge(['mode' => $normalizedMode]);
+
         $validator = Validator::make($request->all(), [
             'origin_lat' => 'required',
             'origin_lng' => 'required',
@@ -518,7 +526,16 @@ class ConfigController extends Controller
 
     public function get_vehicles(Request $request)
     {
-        $data = DMVehicle::active()->get(['id', 'type']);
+        $data = DMVehicle::active()->get([
+            'id',
+            'type',
+            'extra_charges',
+            'starting_coverage_area',
+            'maximum_coverage_area',
+            'max_weight_kg',
+            'per_km_rate',
+            'is_cold_chain',
+        ]);
         return response()->json($data, 200);
     }
 
@@ -873,7 +890,7 @@ class ConfigController extends Controller
     /**
      * Analytics script ids consumed by the React `_document.js` server render.
      * Values live in business_settings so they can be changed without a deploy.
-     * These ids are public by design — they are injected into page HTML.
+     * These ids are public by design - they are injected into page HTML.
      */
     public function getAnalyticScripts()
     {

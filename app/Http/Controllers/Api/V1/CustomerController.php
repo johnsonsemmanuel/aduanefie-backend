@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Models\BusinessSetting;
+use App\Models\CustomerProductSubscription;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
@@ -905,6 +906,102 @@ class CustomerController extends Controller
             'total_size' => 0,
             'reels' => [],
             'data' => [],
+        ], 200);
+    }
+
+    /**
+     * Subscribe to farming product SMS updates
+     */
+    public function subscribeToFarmingProduct(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'phone' => 'required|string|max:20',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => Helpers::error_processor($validator)], 403);
+        }
+
+        $item = Item::find($id);
+        if (!$item) {
+            return response()->json([
+                'errors' => [['code' => 'item_not_found', 'message' => translate('messages.item_not_found')]]
+            ], 404);
+        }
+
+        $subscription = CustomerProductSubscription::updateOrCreate(
+            [
+                'user_id' => $request->user ? $request->user()->id : null,
+                'guest_id' => $request->user ? null : $request->header('guest_id'),
+                'product_id' => $id,
+                'product_type' => 'App\Models\Item',
+            ],
+            [
+                'phone' => $request->phone,
+                'subscribed' => true,
+                'unsubscribed_at' => null,
+            ]
+        );
+
+        return response()->json([
+            'message' => translate('messages.subscribed_to_farming_updates'),
+            'subscribed' => true,
+            'product_id' => $id,
+            'phone' => $subscription->phone,
+        ], 200);
+    }
+
+    /**
+     * Unsubscribe from farming product SMS updates
+     */
+    public function unsubscribeFromFarmingProduct(Request $request, $id)
+    {
+        $subscription = CustomerProductSubscription::where('product_id', $id)
+            ->where(function ($q) use ($request) {
+                if ($request->user) {
+                    $q->where('user_id', $request->user()->id);
+                } else {
+                    $q->where('guest_id', $request->header('guest_id'));
+                }
+            })
+            ->first();
+
+        if (!$subscription) {
+            return response()->json([
+                'errors' => [['code' => 'not_subscribed', 'message' => translate('messages.not_subscribed')]]
+            ], 404);
+        }
+
+        $subscription->subscribed = false;
+        $subscription->unsubscribed_at = now();
+        $subscription->save();
+
+        return response()->json([
+            'message' => translate('messages.unsubscribed_from_farming_updates'),
+            'subscribed' => false,
+        ], 200);
+    }
+
+    /**
+     * Get subscribers for a farming product (customer view - own subscription only)
+     */
+    public function getProductSubscribers(Request $request, $id)
+    {
+        $subscription = CustomerProductSubscription::where('product_id', $id)
+            ->where(function ($q) use ($request) {
+                if ($request->user) {
+                    $q->where('user_id', $request->user()->id);
+                } else {
+                    $q->where('guest_id', $request->header('guest_id'));
+                }
+            })
+            ->active()
+            ->first();
+
+        return response()->json([
+            'subscribed' => (bool) $subscription,
+            'phone' => $subscription?->phone,
+            'subscribed_at' => $subscription?->subscribed_at,
         ], 200);
     }
 }

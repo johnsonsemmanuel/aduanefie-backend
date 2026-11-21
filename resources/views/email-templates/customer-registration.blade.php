@@ -25,7 +25,7 @@
     <div style="width:595px;margin:auto; background-color:white;margin-top:100px;
             padding-top:40px;padding-bottom:40px;border-radius: 3px; text-align:center; ">
 
-        <img src="{{ asset('/storage/app/public/business/' . $logo) }}" alt="{{ $company_name }}"
+        <img src="{{ \App\CentralLogics\Helpers::get_business_logo_url() }}" alt="{{ $company_name }}"
             style="height: 80px; width:auto;">
 
         <div class="congrats-box">

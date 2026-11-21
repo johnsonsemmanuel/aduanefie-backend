@@ -35,10 +35,12 @@ class MarketerAuthController extends Controller
 
     public function showLogin()
     {
+        $mfaRequired = (bool) config('marketer.mfa_required', false);
+
         if (Auth::guard('admin')->check()) {
             $admin = Auth::guard('admin')->user();
 
-            if ($admin->isMarketer() && $this->mfa->isVerifiedFor($admin)) {
+            if ($admin->isMarketer() && (!$mfaRequired || $this->mfa->isVerifiedFor($admin))) {
                 return redirect()->route('marketer.dashboard');
             }
 
@@ -85,13 +87,28 @@ class MarketerAuthController extends Controller
                 ->withErrors(['email' => translate('messages.Incorrect_credential,_please_try_again')]);
         }
 
-        $mode = $this->mfa->begin($request, $admin, false);
+        $mfaRequired = (bool) config('marketer.mfa_required', false);
 
-        return redirect()->route(
-            $mode === AdminMfaService::MODE_SETUP
-                ? 'marketer.mfa.setup'
-                : 'marketer.mfa.challenge'
-        );
+        if ($mfaRequired) {
+            $mode = $this->mfa->begin($request, $admin, false);
+
+            return redirect()->route(
+                $mode === AdminMfaService::MODE_SETUP
+                    ? 'marketer.mfa.setup'
+                    : 'marketer.mfa.challenge'
+            );
+        }
+
+        // Direct field login when MFA is not strictly required
+        Auth::guard('admin')->login($admin);
+        $admin->forceFill(['is_logged_in' => 1])->save();
+        $request->session()->regenerate();
+        $request->session()->put(AdminMfaService::SESSION_VERIFIED, [
+            'id' => $admin->id,
+            'at' => now()->getTimestamp(),
+        ]);
+
+        return redirect()->route('marketer.dashboard');
     }
 
     public function logout(Request $request)

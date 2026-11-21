@@ -45,28 +45,28 @@
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Network</span>
-                        <span>{{ $payout->network ?? '—' }}</span>
+                        <span>{{ $payout->network ?? '-' }}</span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Account name</span>
-                        <span>{{ $payout->account_name ?? '—' }}</span>
+                        <span>{{ $payout->account_name ?? '-' }}</span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Account number</span>
-                        <span>{{ $payout->account_number ?? '—' }}</span>
+                        <span>{{ $payout->account_number ?? '-' }}</span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Country</span>
-                        <span>{{ $payout->country ?? '—' }}</span>
+                        <span>{{ $payout->country ?? '-' }}</span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Requested</span>
-                        <span>{{ $payout->requested_at?->format('Y-m-d H:i') ?? '—' }}</span>
+                        <span>{{ $payout->requested_at?->format('Y-m-d H:i') ?? '-' }}</span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Approved</span>
                         <span>
-                            {{ $payout->approved_at?->format('Y-m-d H:i') ?? '—' }}
+                            {{ $payout->approved_at?->format('Y-m-d H:i') ?? '-' }}
                             @if($payout->approver)
                                 <div class="text-muted small">by {{ $payout->approver->f_name }} {{ $payout->approver->l_name }}</div>
                             @endif
@@ -74,11 +74,11 @@
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Paid</span>
-                        <span>{{ $payout->paid_at?->format('Y-m-d H:i') ?? '—' }}</span>
+                        <span>{{ $payout->paid_at?->format('Y-m-d H:i') ?? '-' }}</span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Reference</span>
-                        <span>{{ $payout->reference ?? '—' }}</span>
+                        <span>{{ $payout->reference ?? '-' }}</span>
                     </div>
                     @if($payout->note)
                         <hr>
@@ -189,8 +189,8 @@
                 @forelse($payout->commissions as $c)
                     <tr>
                         <td>#{{ $c->order_id }}</td>
-                        <td>{{ $c->store?->name ?? '—' }}</td>
-                        <td>{{ $c->order?->delivered ?? '—' }}</td>
+                        <td>{{ $c->store?->name ?? '-' }}</td>
+                        <td>{{ $c->order?->delivered ?? '-' }}</td>
                         <td>{{ number_format($c->base_amount, 2) }} {{ $c->currency }}</td>
                         <td>{{ rtrim(rtrim(number_format($c->rate, 3), '0'), '.') }}%</td>
                         <td class="font-weight-600">{{ number_format($c->amount, 2) }} {{ $c->currency }}</td>

@@ -107,7 +107,7 @@
   <div style="width:595px;margin:auto; background-color:white; 
               padding-top:40px;padding-bottom:40px;border-radius: 3px; text-align:center; ">
       <div style="display:block;">
-        <img src="{{asset('/storage/app/public/business/'.$logo)}}" alt="{{$company_name}}" style="height: 15px; width:auto;">
+        <img src="{{ \App\CentralLogics\Helpers::get_business_logo_url() }}" alt="{{$company_name}}" style="height: 15px; width:auto;">
       </div>
       
       <img src="{{asset('public/assets/admin/img/tick.png')}}" style="height: 50px; width:50px; margin-top:40px;">

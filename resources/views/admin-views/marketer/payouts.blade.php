@@ -22,36 +22,76 @@
         </div>
     </div>
 
-    <div class="card mb-3">
-        <div class="card-body py-3">
-            <form method="get" action="{{ route('admin.marketer.payouts') }}" class="row align-items-end">
-                <div class="col-md-4 mb-2">
-                    <label class="small font-weight-600">Marketer</label>
-                    <select name="marketer_id" class="form-control">
-                        <option value="">All marketers</option>
-                        @foreach($marketers as $m)
-                            <option value="{{ $m->id }}" @selected((string) $marketerId === (string) $m->id)>
-                                {{ $m->f_name }} {{ $m->l_name }} ({{ $m->email }})
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-3 mb-2">
-                    <label class="small font-weight-600">Status</label>
-                    <select name="status" class="form-control">
-                        <option value="">All statuses</option>
-                        @foreach(['requested' => 'Awaiting approval', 'approved' => 'Approved, not sent', 'paid' => 'Paid', 'rejected' => 'Rejected'] as $key => $label)
-                            <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-5 mb-2">
-                    <button type="submit" class="btn btn--primary">Apply</button>
-                    <a href="{{ route('admin.marketer.payouts') }}" class="btn btn--secondary ml-2">Reset</a>
-                </div>
-            </form>
+        <div class="card mb-3">
+            <div class="card-body py-3">
+                <form method="get" action="{{ route('admin.marketer.payouts') }}" class="row align-items-end">
+                    <div class="col-md-4 mb-2">
+                        <label class="small font-weight-600">Marketer</label>
+                        <select name="marketer_id" class="form-control">
+                            <option value="">All marketers</option>
+                            @foreach($marketers as $m)
+                                <option value="{{ $m->id }}" @selected((string) $marketerId === (string) $m->id)>
+                                    {{ $m->f_name }} {{ $m->l_name }} ({{ $m->email }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label class="small font-weight-600">Status</label>
+                        <select name="status" class="form-control">
+                            <option value="">All statuses</option>
+                            @foreach(['requested' => 'Awaiting approval', 'approved' => 'Approved, not sent', 'paid' => 'Paid', 'rejected' => 'Rejected'] as $key => $label)
+                                <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-5 mb-2">
+                        <button type="submit" class="btn btn--primary">Apply</button>
+                        <a href="{{ route('admin.marketer.payouts') }}" class="btn btn--secondary ml-2">Reset</a>
+                    </div>
+                </form>
+            </div>
         </div>
-    </div>
+
+        <div class="card mb-3">
+            <div class="card-header py-2 border-0">
+                <h6 class="card-title mb-0">Bulk payout from commission ledger</h6>
+            </div>
+            <div class="card-body py-3">
+                <form method="post" action="{{ route('admin.marketer.payouts.bulk') }}" class="row align-items-end">
+                    @csrf
+                    <div class="col-md-4 mb-2">
+                        <label class="small font-weight-600">Commission IDs</label>
+                        <textarea name="commission_ids" class="form-control" rows="3"
+                            placeholder="e.g. 1001, 1002, 1003" required></textarea>
+                        <div class="form-text">Comma-separated eligible commission IDs from the commission ledger.</div>
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <label class="small font-weight-600">Network</label>
+                        <input type="text" name="network" class="form-control" placeholder="MTN" required maxlength="50">
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label class="small font-weight-600">Account name</label>
+                        <input type="text" name="account_name" class="form-control" placeholder="John Doe" required maxlength="100">
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <label class="small font-weight-600">Account number</label>
+                        <input type="tel" name="account_number" class="form-control" placeholder="024XXXXXXXX" required maxlength="50">
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <label class="small font-weight-600">Country</label>
+                        <input type="text" name="country" class="form-control" placeholder="GH" required maxlength="10">
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <label class="small font-weight-600">Note (optional)</label>
+                        <input type="text" name="note" class="form-control" placeholder="Optional note" maxlength="500">
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <button type="submit" class="btn btn--primary">Create bulk payout</button>
+                    </div>
+                </form>
+            </div>
+        </div>
 
     <div class="card">
         <div class="card-header py-2 border-0">
@@ -96,9 +136,9 @@
                             ][$payout->status] ?? 'secondary')
                             <span class="badge badge-soft-{{ $badge }}">{{ $payout->status }}</span>
                         </td>
-                        <td>{{ $payout->requested_at?->format('Y-m-d H:i') ?? '—' }}</td>
-                        <td>{{ $payout->paid_at?->format('Y-m-d H:i') ?? '—' }}</td>
-                        <td>{{ $payout->reference ?? '—' }}</td>
+                        <td>{{ $payout->requested_at?->format('Y-m-d H:i') ?? '-' }}</td>
+                        <td>{{ $payout->paid_at?->format('Y-m-d H:i') ?? '-' }}</td>
+                        <td>{{ $payout->reference ?? '-' }}</td>
                         <td class="text-right">
                             <a href="{{ route('admin.marketer.payouts.show', $payout->id) }}" class="btn btn-sm btn--secondary">Open</a>
                         </td>

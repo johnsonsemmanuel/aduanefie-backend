@@ -50,6 +50,10 @@ class Admin extends Authenticatable
         'role_id',
         'zone_id',
         'is_logged_in',
+        'marketer_code',
+        'marketer_region',
+        'marketer_commission_rate',
+        'onboarding_bounty_ghs',
     ];
 
     /**
@@ -144,6 +148,15 @@ class Admin extends Authenticatable
         }
 
         return (float) config('marketer.default_rate', 20);
+    }
+
+    public function marketerOnboardingBounty(): float
+    {
+        if ($this->onboarding_bounty_ghs !== null && $this->onboarding_bounty_ghs !== '') {
+            return (float) $this->onboarding_bounty_ghs;
+        }
+
+        return (float) config('marketer.default_onboarding_bounty', 25);
     }
     public function getImageFullUrlAttribute(){
         $value = $this->image;

@@ -381,6 +381,12 @@ class ItemController extends Controller
         $food->harvest_date = $request->harvest_date ?? null;
         $food->expiry_date = $request->expiry_date ?? null;
         $food->minimum_order_qty = $request->minimum_order_qty ?? null;
+        $food->agro_unit = $request->filled('agro_unit') ? $request->input('agro_unit') : null;
+        $food->unit_weight_kg = $request->filled('unit_weight_kg') ? (float) $request->input('unit_weight_kg') : null;
+        $food->crop_grade = $request->filled('crop_grade') ? $request->input('crop_grade') : null;
+        $food->moq = max(1, (int) ($request->input('moq', $request->input('minimum_order_qty', 1))));
+        $food->farming_status = in_array($request->input('farming_status'), ['in_stock', 'farming', 'harvest_ready'], true) ? $request->input('farming_status') : 'in_stock';
+        $food->is_insured = $request->boolean('is_insured');
         $food->save();
         $food->tags()->sync($tag_ids);
         $food->nutritions()->sync($nutrition_ids);
@@ -475,6 +481,21 @@ class ItemController extends Controller
         $product->status = $request->status;
         $product->save();
         Toastr::success('Item status updated!');
+        return back();
+    }
+
+    public function farmingStatus(Request $request)
+    {
+        if (!Helpers::get_store_data()->item_section) {
+            Toastr::warning(translate('messages.permission_denied'));
+            return back();
+        }
+        $product = Item::findOrFail($request->id);
+        if (in_array($request->farming_status, ['in_stock', 'farming', 'harvest_ready'], true)) {
+            $product->farming_status = $request->farming_status;
+            $product->save();
+            Toastr::success(translate('Harvest status updated'));
+        }
         return back();
     }
 
@@ -728,6 +749,18 @@ class ItemController extends Controller
         $p->harvest_date = $request->harvest_date ?? null;
         $p->expiry_date = $request->expiry_date ?? null;
         $p->minimum_order_qty = $request->minimum_order_qty ?? null;
+        $p->agro_unit = $request->filled('agro_unit') ? $request->input('agro_unit') : $p->agro_unit;
+        $p->unit_weight_kg = $request->filled('unit_weight_kg') ? (float) $request->input('unit_weight_kg') : $p->unit_weight_kg;
+        $p->crop_grade = $request->filled('crop_grade') ? $request->input('crop_grade') : $p->crop_grade;
+        if ($request->filled('moq') || $request->filled('minimum_order_qty')) {
+            $p->moq = max(1, (int) ($request->input('moq', $request->input('minimum_order_qty', 1))));
+        }
+        if ($request->filled('farming_status') && in_array($request->input('farming_status'), ['in_stock', 'farming', 'harvest_ready'], true)) {
+            $p->farming_status = $request->input('farming_status');
+        }
+        if ($request->has('is_insured')) {
+            $p->is_insured = $request->boolean('is_insured');
+        }
 
 
 

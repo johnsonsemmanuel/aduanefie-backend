@@ -70,9 +70,9 @@
                 <tbody>
                 @foreach($entries as $entry)
                     <tr>
-                        <td>{{ $entry->created_at ? \Carbon\Carbon::parse($entry->created_at)->format('d M Y, H:i') : '—' }}</td>
-                        <td>{{ $entry->method ? ucfirst(str_replace('_', ' ', $entry->method)) : '—' }}</td>
-                        <td class="small muted">{{ $entry->ref ?: '—' }}</td>
+                        <td>{{ $entry->created_at ? \Carbon\Carbon::parse($entry->created_at)->format('d M Y, H:i') : '-' }}</td>
+                        <td>{{ $entry->method ? ucfirst(str_replace('_', ' ', $entry->method)) : '-' }}</td>
+                        <td class="small muted">{{ $entry->ref ?: '-' }}</td>
                         <td style="text-align:right;">{{ $money($entry->amount) }}</td>
                     </tr>
                 @endforeach

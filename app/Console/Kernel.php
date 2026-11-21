@@ -32,6 +32,10 @@ class Kernel extends ConsoleKernel
         // Group buys that did not fill are released and their members are
         // notified-through their own orders-that no charge was taken.
         $schedule->command('group-buys:expire')->everyTenMinutes()->withoutOverlapping();
+
+        // Payment reminders for locked groups whose members still owe payment.
+        // Rate-limited to once per participant per 24h so no one is spammed.
+        $schedule->command('group-buys:remind')->hourly()->withoutOverlapping();
     }
 
     /**

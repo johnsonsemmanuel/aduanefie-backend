@@ -509,6 +509,37 @@
                                                     @endfor
                                                 </div>
                                             </div>
+                                            <div class="col-sm-6 col-lg-3">
+                                                <label class="input-label mb-1">{{ translate('Agro Unit') }}</label>
+                                                <select name="agro_unit" class="form-control">
+                                                    <option value="" {{ empty($product->agro_unit) ? 'selected' : '' }}>{{ translate('Standard Unit') }}</option>
+                                                    <option value="kg" {{ $product->agro_unit === 'kg' ? 'selected' : '' }}>{{ translate('Kilogram (kg)') }}</option>
+                                                    <option value="bag_50kg" {{ $product->agro_unit === 'bag_50kg' ? 'selected' : '' }}>{{ translate('50kg Bag') }}</option>
+                                                    <option value="bag_100kg" {{ $product->agro_unit === 'bag_100kg' ? 'selected' : '' }}>{{ translate('100kg Bag') }}</option>
+                                                    <option value="crate" {{ $product->agro_unit === 'crate' ? 'selected' : '' }}>{{ translate('Crate') }}</option>
+                                                    <option value="bunch" {{ $product->agro_unit === 'bunch' ? 'selected' : '' }}>{{ translate('Bunch') }}</option>
+                                                    <option value="ton" {{ $product->agro_unit === 'ton' ? 'selected' : '' }}>{{ translate('Metric Ton') }}</option>
+                                                    <option value="box" {{ $product->agro_unit === 'box' ? 'selected' : '' }}>{{ translate('Export Box') }}</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-sm-6 col-lg-3">
+                                                <label class="input-label mb-1">{{ translate('Unit Weight (kg)') }}</label>
+                                                <input type="number" step="0.01" min="0" name="unit_weight_kg" class="form-control" value="{{ $product->unit_weight_kg ?? '' }}" placeholder="e.g. 50.00">
+                                            </div>
+                                            <div class="col-sm-6 col-lg-3">
+                                                <label class="input-label mb-1">{{ translate('Crop Grade') }}</label>
+                                                <select name="crop_grade" class="form-control">
+                                                    <option value="" {{ empty($product->crop_grade) ? 'selected' : '' }}>{{ translate('Select Grade') }}</option>
+                                                    <option value="Grade A (Export)" {{ $product->crop_grade === 'Grade A (Export)' ? 'selected' : '' }}>{{ translate('Grade A (Export)') }}</option>
+                                                    <option value="Grade B (Market)" {{ $product->crop_grade === 'Grade B (Market)' ? 'selected' : '' }}>{{ translate('Grade B (Market)') }}</option>
+                                                    <option value="Grade C (Processing)" {{ $product->crop_grade === 'Grade C (Processing)' ? 'selected' : '' }}>{{ translate('Grade C (Processing)') }}</option>
+                                                    <option value="Organic Certified" {{ $product->crop_grade === 'Organic Certified' ? 'selected' : '' }}>{{ translate('Organic Certified') }}</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-sm-6 col-lg-3">
+                                                <label class="input-label mb-1">{{ translate('Harvest Date') }}</label>
+                                                <input type="date" name="harvest_date" class="form-control" value="{{ $product->harvest_date ? \Carbon\Carbon::parse($product->harvest_date)->format('Y-m-d') : '' }}">
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

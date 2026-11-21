@@ -19,13 +19,20 @@ class Vendor extends Authenticatable
 
     protected $casts = [
         'created_at' => 'datetime',
-        'updated_at' => 'datetime'
+        'updated_at' => 'datetime',
+        'two_factor_secret' => 'encrypted',
+        'two_factor_recovery_codes' => 'encrypted:array',
+        'two_factor_confirmed_at' => 'datetime',
+        'two_factor_last_step' => 'integer',
     ];
 
     protected $hidden = [
         'password',
         'auth_token',
         'remember_token',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
+        'two_factor_last_step',
     ];
     protected $appends = ['image_full_url'];
     public function getImageFullUrlAttribute(){
@@ -142,4 +149,16 @@ class Vendor extends Authenticatable
     }
 
 
+    public function hasConfirmedTwoFactor(): bool
+    {
+        if ($this->two_factor_confirmed_at === null) {
+            return false;
+        }
+
+        try {
+            return !empty($this->two_factor_secret);
+        } catch (\Illuminate\Contracts\Encryption\DecryptException $exception) {
+            return false;
+        }
+    }
 }

@@ -542,6 +542,35 @@ class MarketerCommissionService
             ->whereNotNull('eligible_at')
             ->min('eligible_at');
 
+        $storeIds = Store::withoutGlobalScope(ZoneScope::class)
+            ->where('marketer_id', $marketer->id)
+            ->pluck('id');
+
+        $storeCount = $storeIds->count();
+        $verifiedStoreCount = Store::withoutGlobalScope(ZoneScope::class)
+            ->where('marketer_id', $marketer->id)
+            ->where(function ($q) {
+                $q->where('status', 1);
+                if (\Illuminate\Support\Facades\Schema::hasColumn('stores', 'marketer_verified')) {
+                    $q->orWhere('marketer_verified', true);
+                }
+            })
+            ->count();
+
+        $totalSales = 0.0;
+        $deliveredOrdersCount = 0;
+        if ($storeCount > 0) {
+            $salesQuery = Order::withoutGlobalScope(ZoneScope::class)
+                ->whereIn('store_id', $storeIds)
+                ->where('order_status', 'delivered');
+            $totalSales = (float) (clone $salesQuery)->sum('order_amount');
+            $deliveredOrdersCount = (int) (clone $salesQuery)->count();
+        }
+
+        $bountyRate = method_exists($marketer, 'marketerOnboardingBounty')
+            ? $marketer->marketerOnboardingBounty()
+            : (float) config('marketer.default_onboarding_bounty', 25);
+
         return [
             'pending' => $value(MarketerCommission::STATUS_PENDING),
             'pending_count' => $count(MarketerCommission::STATUS_PENDING),
@@ -554,9 +583,13 @@ class MarketerCommissionService
             'void' => $value(MarketerCommission::STATUS_VOID),
             'void_count' => $count(MarketerCommission::STATUS_VOID),
             'next_eligible_at' => $nextEligible,
-            'stores' => Store::withoutGlobalScope(ZoneScope::class)
-                ->where('marketer_id', $marketer->id)
-                ->count(),
+            'stores' => $storeCount,
+            'verified_stores' => $verifiedStoreCount,
+            'onboarding_bounty_rate' => $bountyRate,
+            'onboarding_bounty_earned' => round($verifiedStoreCount * $bountyRate, 2),
+            'verified_bounty_earned' => round($verifiedStoreCount * $bountyRate, 2),
+            'total_sales' => round($totalSales, 2),
+            'delivered_orders_count' => $deliveredOrdersCount,
             'currency' => $this->currency(),
         ];
     }

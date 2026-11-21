@@ -22,7 +22,7 @@
         $statusLabel = fn ($status) => ucfirst(str_replace('_', ' ', (string) $status));
         // Order::getCreatedAtAttribute() returns a formatted string, not Carbon,
         // while updated_at is a real datetime cast. Parse instead of ->format().
-        $stamp = fn ($value) => $value ? \Carbon\Carbon::parse($value)->format('d M Y, H:i') : '—';
+        $stamp = fn ($value) => $value ? \Carbon\Carbon::parse($value)->format('d M Y, H:i') : '-';
     @endphp
 
     <h2 style="margin-top:0;">Current orders ({{ $currentOrders->count() }})</h2>

@@ -4,11 +4,13 @@ namespace App\Services\GroupBuy;
 
 use App\Models\GroupBuy;
 use App\Models\GroupBuyEvent;
+use App\Models\GroupBuyMessage;
 use App\Models\GroupBuyParticipant;
 use App\Models\Item;
 use App\Models\Order;
 use App\Models\Store;
 use App\Services\CrossBorder\ShippingQuoteService;
+use App\Services\GroupBuy\GroupBuyNotificationService;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -21,11 +23,14 @@ use Illuminate\Support\Facades\DB;
  *  - No payment is captured at join time. A group that fails to fill releases
  *    its members without taking money, so "auto refund" means "never charged".
  *  - Every state transition writes a matching event, including failure paths.
+ *  - Consent is required before joining; notifications fire on every transition.
  */
 class GroupBuyService
 {
-    public function __construct(private ShippingQuoteService $quotes)
-    {
+    public function __construct(
+        private ShippingQuoteService $quotes,
+        private GroupBuyNotificationService $notifications,
+    ) {
     }
 
     /**
@@ -124,6 +129,9 @@ class GroupBuyService
 
     /**
      * Join an open group. Locks the row so the 5th member cannot oversubscribe.
+     *
+     * @param  array  $data  May contain 'consent_accepted' (bool), 'consent_version' (string),
+     *                       'delivery_charge_ghs', 'delivery_address' (array), 'gps_lat', 'gps_lng'
      */
     public function join(GroupBuy $group, ?int $userId, ?string $guestId, array $data = []): GroupBuyParticipant
     {
@@ -145,6 +153,11 @@ class GroupBuyService
                 throw new \InvalidArgumentException('This group is already full.');
             }
 
+            // Consent dialogue: the group may require explicit acceptance.
+            if ($group->consent_text && ! ($data['consent_accepted'] ?? false)) {
+                throw new \InvalidArgumentException('You must accept the group consent terms to join.');
+            }
+
             $exists = GroupBuyParticipant::where('group_buy_id', $group->id)
                 ->where(function ($q) use ($userId, $guestId) {
                     $q->when($userId, fn ($inner) => $inner->orWhere('user_id', $userId))
@@ -164,16 +177,24 @@ class GroupBuyService
                 'item_share_ghs' => round($unitPrice * $group->share_units, 2),
                 'delivery_charge_ghs' => round((float) ($data['delivery_charge_ghs'] ?? 0), 2),
                 'delivery_address' => $data['delivery_address'] ?? null,
+                'gps_lat' => $data['gps_lat'] ?? null,
+                'gps_lng' => $data['gps_lng'] ?? null,
                 'payment_status' => GroupBuyParticipant::PAYMENT_NOT_CHARGED,
                 'fulfillment_status' => GroupBuyParticipant::FULFILLMENT_PENDING,
                 'joined_at' => now(),
+                'consent_accepted_at' => ! empty($data['consent_accepted']) ? now() : null,
+                'consent_version' => $data['consent_version'] ?? $group->consent_version,
             ]);
 
             $group->increment('committed_count');
             $this->log($group, 'joined', $participant->id, $data['actor_type'] ?? 'customer', $userId ?? null, [
                 // increment() already updates the in-memory attribute.
                 'committed_count' => $group->committed_count,
+                'consent_accepted' => $data['consent_accepted'] ?? false,
             ]);
+
+            // Notify before locking so the new member sees the welcome message.
+            $this->notifications->memberJoined($group, $participant);
 
             if ($group->fresh()->committed_count >= $group->member_limit) {
                 $group->update([
@@ -183,6 +204,7 @@ class GroupBuyService
                 $this->log($group, 'locked', null, 'system', null, [
                     'committed_count' => $group->member_limit,
                 ]);
+                $this->notifications->groupLocked($group);
             }
 
             return $participant;
@@ -270,12 +292,16 @@ class GroupBuyService
         $this->log($participant->groupBuy, 'shipped', $participant->id, 'supplier', null, [
             'order_link' => 'supplier ships directly to this member',
         ]);
+
+        $this->notifications->shipped($participant);
     }
 
     public function markDelivered(GroupBuyParticipant $participant): void
     {
         $participant->update(['fulfillment_status' => GroupBuyParticipant::FULFILLMENT_DELIVERED]);
         $this->log($participant->groupBuy, 'delivered', $participant->id, 'system', null);
+
+        $this->notifications->delivered($participant);
 
         $group = $participant->groupBuy;
         $outstanding = $group->participants()
@@ -291,8 +317,49 @@ class GroupBuyService
     }
 
     /**
+     * Record that a member has paid for their share. Called after the member's
+     * order payment is confirmed. When all members pay, the escrow is marked
+     * ready for release to the store.
+     */
+    public function markPaid(GroupBuyParticipant $participant): void
+    {
+        $participant->update(['payment_status' => GroupBuyParticipant::PAYMENT_PAID]);
+        $this->log($participant->groupBuy, 'payment_received', $participant->id, 'customer', $participant->user_id, [
+            'item_share_ghs' => $participant->item_share_ghs,
+        ]);
+
+        $group = $participant->groupBuy->fresh();
+        if ($group->isFullyPaid() && $group->escrow_status !== 'released') {
+            $group->update(['escrow_status' => 'ready']);
+            $this->log($group, 'escrow_ready', null, 'system', null, [
+                'paid_count' => $group->paidCount(),
+                'total_members' => $group->member_limit,
+            ]);
+        }
+    }
+
+    /**
+     * Release escrow funds to the store. Admin-triggered after all deliveries
+     * are confirmed.
+     */
+    public function releaseEscrow(GroupBuy $group): void
+    {
+        if ($group->escrow_status !== 'ready') {
+            throw new \InvalidArgumentException('Escrow is not ready for release. All members must pay first.');
+        }
+
+        $group->update([
+            'escrow_status' => 'released',
+            'escrow_released_at' => now(),
+        ]);
+        $this->log($group, 'escrow_released', null, 'system', null, [
+            'released_at' => now()->toISOString(),
+        ]);
+    }
+
+    /**
      * Checkout guard. Called by OrderController whenever group_buy_id is sent.
-     * Any failure is a hard 403 — there is no retail-price fallback.
+     * Any failure is a hard 403 - there is no retail-price fallback.
      *
      * @return array{group:GroupBuy,participant:GroupBuyParticipant,unit_price:float}
      */
@@ -333,6 +400,146 @@ class GroupBuyService
     }
 
     /**
+     * Edit an open group. Structural fields (target, member limit, destination)
+     * are frozen once members have joined: changing them would silently rewrite
+     * the equal share every member agreed to. Non-structural fields stay
+     * editable for the life of the open group.
+     */
+    public function update(GroupBuy $group, array $data): GroupBuy
+    {
+        if ($group->status !== GroupBuy::STATUS_OPEN) {
+            throw new \InvalidArgumentException('Only an open group can be edited.');
+        }
+
+        $structural = ['target_value_ghs', 'member_limit', 'destination_country'];
+        $hasStructuralChange = array_intersect($structural, array_keys($data)) !== [];
+        if ($hasStructuralChange && $group->committed_count > 0) {
+            throw new \InvalidArgumentException(
+                'The target, member limit and destination cannot change after members join.'
+            );
+        }
+
+        $changes = [];
+
+        if (array_key_exists('target_value_ghs', $data)) {
+            $changes['target_value_ghs'] = round((float) $data['target_value_ghs'], 2);
+            if ($changes['target_value_ghs'] <= 0) {
+                throw new \InvalidArgumentException('The group target value must be greater than zero.');
+            }
+        }
+
+        $memberLimit = $group->member_limit;
+        if (array_key_exists('member_limit', $data)) {
+            $memberLimit = max(2, min(20, (int) $data['member_limit']));
+            $changes['member_limit'] = $memberLimit;
+        }
+
+        // Reuse the snapshotted farmer price so editing the target never
+        // silently picks up a later catalogue price change.
+        if (array_key_exists('target_value_ghs', $data) || array_key_exists('member_limit', $data)) {
+            $target = $changes['target_value_ghs'] ?? (float) $group->target_value_ghs;
+            $price = max(0.01, (float) $group->farmer_price_ghs);
+            $shareUnits = (int) ceil(max((int) ceil($target / $price), $memberLimit) / $memberLimit);
+            $changes['share_units'] = $shareUnits;
+            $changes['target_units'] = $shareUnits * $memberLimit;
+        }
+
+        if (array_key_exists('destination_country', $data)) {
+            $destination = strtoupper((string) $data['destination_country']);
+            $store = $group->store ?: Store::find($group->store_id);
+            $changes['destination_country'] = $destination;
+            $changes['is_cross_border'] = $destination
+                ? strtoupper($this->quotes->originCountry($store)) !== $destination
+                : false;
+            $changes['incoterm'] = $changes['is_cross_border']
+                ? strtoupper($data['incoterm'] ?? $group->incoterm ?? 'DDP')
+                : null;
+        }
+
+        if (array_key_exists('closes_at', $data)) {
+            $closesAt = \Carbon\Carbon::parse($data['closes_at']);
+            if ($closesAt->isPast()) {
+                throw new \InvalidArgumentException('The group closing time must be in the future.');
+            }
+            $changes['closes_at'] = $closesAt;
+        }
+
+        if (array_key_exists('notes', $data)) {
+            $changes['notes'] = $data['notes'] ?: null;
+        }
+
+        if (! $changes) {
+            return $group;
+        }
+
+        $before = [];
+        foreach (array_keys($changes) as $field) {
+            $before[$field] = $group->{$field};
+        }
+
+        DB::transaction(function () use ($group, $changes, $before, $hasStructuralChange) {
+            /** @var GroupBuy $fresh */
+            $fresh = GroupBuy::whereKey($group->id)->lockForUpdate()->firstOrFail();
+            if ($fresh->status !== GroupBuy::STATUS_OPEN
+                || ($hasStructuralChange && $fresh->committed_count > 0)) {
+                throw new \InvalidArgumentException('This group can no longer be edited.');
+            }
+            $fresh->update($changes);
+            $this->log($fresh, 'updated', null, 'customer', $fresh->organizer_id, [
+                'before' => $before,
+                'after' => $changes,
+            ]);
+        });
+
+        return $group->fresh();
+    }
+
+    /**
+     * Chat history for a group. The caller must already have passed the
+     * membership guard in the controller - this method only paginates.
+     *
+     * @return GroupBuyMessage[]
+     */
+    public function messages(GroupBuy $group, int $afterId = 0, int $limit = 50): array
+    {
+        $limit = max(1, min(100, $limit));
+
+        return GroupBuyMessage::where('group_buy_id', $group->id)
+            ->when($afterId > 0, fn ($q) => $q->where('id', '>', $afterId))
+            ->orderBy('id')
+            ->limit($limit)
+            ->get()
+            ->all();
+    }
+
+    public function postMessage(
+        GroupBuy $group,
+        ?int $userId,
+        ?string $guestId,
+        string $senderName,
+        string $body
+    ): GroupBuyMessage {
+        $body = trim($body);
+        if ($body === '') {
+            throw new \InvalidArgumentException('Write a message before sending.');
+        }
+        if (mb_strlen($body) > 1000) {
+            throw new \InvalidArgumentException('Messages must be 1000 characters or fewer.');
+        }
+        if (! $userId && ! $guestId) {
+            throw new \InvalidArgumentException('You must be a member of this group to chat.');
+        }
+
+        return GroupBuyMessage::create([
+            'group_buy_id' => $group->id,
+            'sender_user_id' => $userId,
+            'sender_guest_id' => $userId ? null : $guestId,
+            'sender_name' => mb_substr($senderName, 0, 120) ?: 'Guest',
+            'body' => $body,
+        ]);
+    }
+
+    /**
      * Freight/duty for the WHOLE pooled quantity, quoted from the catalogue.
      * Each member's own delivery is charged on their individual order.
      */
@@ -363,6 +570,21 @@ class GroupBuyService
             'per_member_item_share_ghs' => round($this->resolvedUnitPrice($group) * $group->share_units, 2),
             'quote' => $quoted,
         ];
+    }
+
+    /**
+     * Shareable links for a group buy: web URL + mobile deep link.
+     * Deep links open the group directly in the mobile app (aduanefie://),
+     * falling back to the web URL if the app isn't installed.
+     *
+     * @return array{web:string,deep:string}
+     */
+    public function shareLink(GroupBuy $group): array
+    {
+        $web = url(route('customer.group-buys.show', $group->id));
+        $deep = 'aduanefie://group-buy/' . $group->id;
+
+        return ['web' => $web, 'deep' => $deep];
     }
 
     private function log(

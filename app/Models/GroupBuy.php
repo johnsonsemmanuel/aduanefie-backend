@@ -31,6 +31,7 @@ class GroupBuy extends Model
         'closes_at' => 'datetime',
         'locked_at' => 'datetime',
         'fulfilled_at' => 'datetime',
+        'escrow_released_at' => 'datetime',
     ];
 
     public function item(): BelongsTo
@@ -58,10 +59,51 @@ class GroupBuy extends Model
         return $this->hasMany(GroupBuyEvent::class)->orderBy('id');
     }
 
+    public function messages(): HasMany
+    {
+        return $this->hasMany(GroupBuyMessage::class)->orderBy('id');
+    }
+
     public function isOpen(): bool
     {
         return $this->status === self::STATUS_OPEN
             && (! $this->closes_at || $this->closes_at->isFuture())
             && $this->committed_count < $this->member_limit;
+    }
+
+    /**
+     * How many members have paid (checked out their share).
+     */
+    public function paidCount(): int
+    {
+        return (int) $this->participants()
+            ->whereIn('payment_status', ['paid', 'ordered'])
+            ->count();
+    }
+
+    /**
+     * How many members still owe payment.
+     */
+    public function unpaidCount(): int
+    {
+        return (int) $this->participants()
+            ->where('payment_status', GroupBuyParticipant::PAYMENT_NOT_CHARGED)
+            ->count();
+    }
+
+    /**
+     * Whether every member has paid their share.
+     */
+    public function isFullyPaid(): bool
+    {
+        return $this->unpaidCount() === 0;
+    }
+
+    /**
+     * Whether escrow funds have been released to the store.
+     */
+    public function escrowReleased(): bool
+    {
+        return $this->escrow_status === 'released';
     }
 }

@@ -11,7 +11,7 @@
                     <img src="{{ asset('public/assets/admin/img/trade-insurance-badge.svg') }}" class="w--26" alt="Insurance">
                 </span>
                 <span>
-                    {{ translate('messages.business_setup') }} — {{ translate('Crop & Cross-Border Insurance') }}
+                    {{ translate('messages.business_setup') }} - {{ translate('Crop & Cross-Border Insurance') }}
                 </span>
             </h1>
             @include('admin-views.business-settings.partials.nav-menu')
@@ -31,6 +31,7 @@
             $insurance_quality_escrow = \App\Models\BusinessSetting::where('key', 'insurance_quality_escrow')->first()?->value ?? 1;
             $insurance_provider_name = \App\Models\BusinessSetting::where('key', 'insurance_provider_name')->first()?->value ?? 'Aduanefie Trade & Crop Assurance';
             $insurance_policy_summary = \App\Models\BusinessSetting::where('key', 'insurance_policy_summary')->first()?->value ?? 'Protects crop harvests, cross-border transit, and order quality under Aduanefie Escrow.';
+            $esperworks_api_key = \App\Models\BusinessSetting::where('key', 'esperworks_api_key')->first()?->value ?? '';
         @endphp
 
         <form action="{{ route('admin.business-settings.update-insurance') }}" method="post">
@@ -104,6 +105,11 @@
                                 <div class="col-12">
                                     <label class="form-label">{{ translate('Buyer Policy Summary') }}</label>
                                     <textarea name="insurance_policy_summary" rows="3" class="form-control">{{ $insurance_policy_summary }}</textarea>
+                                </div>
+
+                                <div class="col-12">
+                                    <label class="form-label">{{ translate('EsperWorks API Key (tryesperworks.com - Invoices & Contracts e-Sign)') }}</label>
+                                    <input type="password" name="esperworks_api_key" class="form-control" value="{{ $esperworks_api_key }}" placeholder="ew_live_...">
                                 </div>
                             </div>
                         </div>

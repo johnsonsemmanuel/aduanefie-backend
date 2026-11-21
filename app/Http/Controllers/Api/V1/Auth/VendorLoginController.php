@@ -225,6 +225,8 @@ class VendorLoginController extends Controller
             'is_backyard' => $isBackyard,
             'country' => $request->input('country', 'Ghana'),
             'region' => $request->input('region'),
+            'district' => $request->input('district'),
+            'sub_district' => $request->input('sub_district'),
             'farm_size_acres' => $request->filled('farm_size_acres') ? (float) $request->input('farm_size_acres') : null,
             'primary_crops' => $request->input('primary_crops'),
             'cultivation_status' => in_array($request->input('cultivation_status'), ['active', 'farming', 'harvest_ready'], true)

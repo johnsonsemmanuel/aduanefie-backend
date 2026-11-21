@@ -85,6 +85,7 @@ class DeliveryManLoginController extends Controller
             'password' => ['required', Password::min(8)->mixedCase()->letters()->numbers()->symbols()->uncompromised()],
             'zone_id' => 'required',
             'vehicle_id' => 'required',
+            'delivery_scope' => 'nullable|in:local_farm,cross_border,both',
             'earning' => 'required'
         ], [
             'f_name.required' => translate('messages.first_name_is_required'),
@@ -131,6 +132,12 @@ class DeliveryManLoginController extends Controller
         $dm->identity_type = $request->identity_type;
         $dm->identity_image = $identity_image;
         $dm->vehicle_id = $request->vehicle_id;
+        $dm->delivery_scope = $request->input('delivery_scope', 'local_farm');
+        $dm->region = $request->input('region');
+        $dm->district = $request->input('district');
+        $dm->sub_district = $request->input('sub_district');
+        $dm->payload_capacity_kg = $request->filled('payload_capacity_kg') ? (int) $request->input('payload_capacity_kg') : null;
+        $dm->is_cold_chain = $request->boolean('is_cold_chain') ? 1 : 0;
         $dm->image = $image_name;
         $dm->status = 0;
         $dm->active = 0;

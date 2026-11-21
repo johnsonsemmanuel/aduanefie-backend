@@ -2,12 +2,17 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\AdminMfaService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class VendorMiddleware
 {
+    public function __construct(private AdminMfaService $mfa)
+    {
+    }
+
     /**
      * Handle an incoming request.
      *
@@ -18,12 +23,23 @@ class VendorMiddleware
     public function handle(Request $request, Closure $next)
     {
         if (Auth::guard('vendor')->check()) {
-            if(!auth('vendor')->user()->status)
-            {
+            $vendor = auth('vendor')->user();
+
+            if (!$vendor->status) {
                 auth()->guard('vendor')->logout();
                 return redirect()->route('store.login');
-                // return redirect()->route('vendor.auth.login');
             }
+
+            // If the vendor has enrolled in MFA, require a verified session.
+            if ($vendor->hasConfirmedTwoFactor() && !$this->mfa->isVerifiedFor($vendor, 'vendor')) {
+                auth()->guard('vendor')->logout();
+                $this->mfa->clear($request, 'vendor');
+
+                return redirect()->route('store.login')->withErrors([
+                    'email' => 'Two-factor verification is required. Please sign in again.',
+                ]);
+            }
+
             return $next($request);
         }
         else if (Auth::guard('vendor_employee')->check()) {
@@ -31,17 +47,14 @@ class VendorMiddleware
             {
                 auth()->guard('vendor_employee')->logout();
                 return redirect()->route('store.login');
-                // return redirect()->route('vendor.auth.login');
             }
             if(!auth('vendor_employee')->user()->store->status)
             {
                 auth()->guard('vendor_employee')->logout();
                 return redirect()->route('store.login');
-                // return redirect()->route('vendor.auth.login');
             }
             return $next($request);
         }
         return redirect()->route('store.login');
-        // return redirect()->route('vendor.auth.login');
     }
 }

@@ -25,8 +25,14 @@
                     <p class="mb-1"><strong>Effective unit price:</strong> GH₵ {{ number_format($unitPrice, 2) }}</p>
                     <p class="mb-1"><strong>Pooled units:</strong> {{ $group->target_units }} ({{ $group->share_units }} per member)</p>
                     <p class="mb-1"><strong>Members:</strong> {{ $group->committed_count }} / {{ $group->member_limit }}</p>
+                    <p class="mb-1"><strong>Paid:</strong> {{ $group->paidCount() }} &middot; <strong>Unpaid:</strong> {{ $group->unpaidCount() }}</p>
                     <p class="mb-1"><strong>Destination:</strong> {{ $group->destination_country ?? 'Domestic' }}</p>
                     <p class="mb-0"><strong>Closes:</strong> {{ $group->closes_at?->format('Y-m-d H:i') ?? '-' }}</p>
+                    @if($group->escrow_status === 'ready')
+                        <p class="mb-1"><strong>Escrow:</strong> <span class="badge badge-soft-success">Ready for release</span></p>
+                    @elseif($group->escrow_status === 'released')
+                        <p class="mb-1"><strong>Escrow:</strong> <span class="badge badge-soft-primary">Released</span></p>
+                    @endif
                 </div>
                 @if($group->status === 'open')
                     <div class="card-footer d-flex gap-2">
@@ -38,6 +44,23 @@
                             @csrf
                             <button type="submit" class="btn btn-sm btn-outline-warning" onclick="return confirm('Expire and release all members?')">Expire now</button>
                         </form>
+                    </div>
+                @elseif($group->status === 'locked')
+                    <div class="card-footer d-flex gap-2">
+                        <form action="{{ route('admin.group-buys.remind', $group->id) }}" method="POST">
+                            @csrf
+                            <button type="submit" class="btn btn-sm btn-outline-warning" onclick="return confirm('Send payment reminders to unpaid members?')">
+                                <i class="tio-alarm"></i> Send Reminders
+                            </button>
+                        </form>
+                        @if($group->escrow_status === 'ready')
+                            <form action="{{ route('admin.group-buys.release-escrow', $group->id) }}" method="POST">
+                                @csrf
+                                <button type="submit" class="btn btn-sm btn-outline-success" onclick="return confirm('Release escrow funds to the store?')">
+                                    <i class="tio-check-circle"></i> Release Escrow
+                                </button>
+                            </form>
+                        @endif
                     </div>
                 @endif
             </div>

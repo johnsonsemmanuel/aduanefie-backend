@@ -33,7 +33,7 @@
         }
 
         :root {
-            --base: #006161
+            --base: #67513A
         }
 
         .main-table {

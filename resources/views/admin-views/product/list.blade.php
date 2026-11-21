@@ -169,6 +169,12 @@
                     </div>
                     <!-- End Unfold -->
                     @if (Config::get('module.current_module_type') != 'food')
+                    @php($harvestDueCount = \App\Models\Item::withoutGlobalScopes()->where('farming_status', 'farming')->whereNotNull('expected_harvest_date')->whereDate('expected_harvest_date', '<=', now()->addDays(7))->count())
+                    @if ($harvestDueCount > 0)
+                    <div class="mr-2">
+                        <span class="badge badge-soft-warning py-2 px-3">{{ $harvestDueCount }} {{ translate('Live Farming items due for harvest within 7 days') }}</span>
+                    </div>
+                    @endif
                     <div>
                         <a href="{{ route('admin.report.stock-report') }}" class="btn btn--primary font-regular">{{translate('messages.Low_Stock_List')}}</a>
                     </div>
@@ -213,6 +219,9 @@
                         @endif
                         <th class="border-0">{{translate('messages.store')}}</th>
                         <th class="border-0 text-center">{{translate('messages.price')}}</th>
+                        @if (Config::get('module.current_module_type') != 'food')
+                        <th class="border-0 text-center">{{translate('Harvest Status')}}</th>
+                        @endif
                         <th class="border-0 text-center">{{translate('messages.status')}}</th>
                         <th class="border-0 text-center">{{translate('messages.action')}}</th>
                     </tr>
@@ -258,6 +267,15 @@
                                     {{\App\CentralLogics\Helpers::format_currency($item['price'])}}
                                 </div>
                             </td>
+                            @if (Config::get('module.current_module_type') != 'food')
+                            <td class="text-center">
+                                <select class="form-control form-control-sm redirect-url mx-auto" style="min-width: 130px;" onchange="if(this.value) location.href=this.value">
+                                    <option value="{{ route('admin.item.farming-status', [$item['id'], 'in_stock']) }}" {{ ($item->farming_status ?? 'in_stock') === 'in_stock' ? 'selected' : '' }}>{{ translate('In Stock') }}</option>
+                                    <option value="{{ route('admin.item.farming-status', [$item['id'], 'farming']) }}" {{ $item->farming_status === 'farming' ? 'selected' : '' }}>{{ translate('Live Farming') }}</option>
+                                    <option value="{{ route('admin.item.farming-status', [$item['id'], 'harvest_ready']) }}" {{ $item->farming_status === 'harvest_ready' ? 'selected' : '' }}>{{ translate('Harvest Ready') }}</option>
+                                </select>
+                            </td>
+                            @endif
                             <td>
                                 <label class="toggle-switch toggle-switch-sm" for="stocksCheckbox{{$item->id}}">
                                     <input type="checkbox" class="toggle-switch-input redirect-url" data-url="{{route('admin.item.status',[$item['id'],$item->status?0:1])}}" id="stocksCheckbox{{$item->id}}" {{$item->status?'checked':''}}>

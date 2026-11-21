@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\VerifiesHuman;
 use App\Models\BusinessSetting;
 use App\Models\Vendor;
 use App\Models\VendorEmployee;
+use App\Services\AdminMfaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
@@ -26,6 +27,10 @@ use Illuminate\Support\Facades\Auth;
 class StoreAuthController extends Controller
 {
     use VerifiesHuman;
+
+    public function __construct(private AdminMfaService $mfa)
+    {
+    }
 
     public function showLogin()
     {
@@ -136,6 +141,18 @@ class StoreAuthController extends Controller
         }
 
         $remember = $request->boolean('remember');
+
+        // Vendor owners route through second-factor enrolment/verification.
+        // Vendor employees log in directly (no MFA gate on employee sessions).
+        if ($role === 'vendor') {
+            $mode = $this->mfa->begin($request, $user, $remember, 'vendor');
+
+            return redirect()->route(
+                $mode === AdminMfaService::MODE_SETUP
+                    ? 'vendor.mfa.setup'
+                    : 'vendor.mfa.challenge'
+            );
+        }
 
         if ($remember) {
             $guard->login($user, true);

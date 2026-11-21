@@ -38,9 +38,22 @@ class MarketerPortalController extends Controller
             ->limit(5)
             ->get();
 
-        $stores = \App\Models\Store::where('marketer_id', $marketer->id)
+        $stores = \App\Models\Store::withoutGlobalScope(\App\Scopes\ZoneScope::class)
+            ->where('marketer_id', $marketer->id)
             ->orderBy('name')
-            ->get();
+            ->get()
+            ->map(function ($store) use ($marketer) {
+                $deliveredQuery = \App\Models\Order::withoutGlobalScope(\App\Scopes\ZoneScope::class)
+                    ->where('store_id', $store->id)
+                    ->where('order_status', 'delivered');
+                $store->delivered_orders_count = (int) (clone $deliveredQuery)->count();
+                $store->total_sales = round((float) (clone $deliveredQuery)->sum('order_amount'), 2);
+                $store->commission_earned = round((float) MarketerCommission::where('marketer_id', $marketer->id)
+                    ->where('store_id', $store->id)
+                    ->whereNotIn('status', [MarketerCommission::STATUS_VOID])
+                    ->sum('amount'), 2);
+                return $store;
+            });
 
         return view('marketer.dashboard', compact('marketer', 'summary', 'recent', 'payouts', 'stores'));
     }
@@ -146,6 +159,8 @@ class MarketerPortalController extends Controller
             'note' => 'nullable|string|max:500',
         ]);
 
+        $this->validatePayoutRail($data);
+
         try {
             $payout = $this->commissions->requestPayout($marketer, $data);
         } catch (RuntimeException $e) {
@@ -154,5 +169,53 @@ class MarketerPortalController extends Controller
 
         return redirect()->route('marketer.payouts')
             ->with('status', 'Payout request ' . $payout->id . ' submitted for approval.');
+    }
+
+    /**
+     * Validate that the network is supported for the country and that the
+     * account number matches the network's expected pattern.
+     *
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    private function validatePayoutRail(array $data): void
+    {
+        $country = strtoupper(trim((string) ($data['country'] ?? '')));
+        $network = strtoupper(trim((string) ($data['network'] ?? '')));
+        $account = preg_replace('/\D/', '', (string) ($data['account_number'] ?? ''));
+
+        $rails = config('payout.countries', []);
+        $countryConfig = $rails[$country] ?? null;
+
+        if (!$countryConfig) {
+            $validator = \Illuminate\Support\Facades\Validator::make(
+                ['country' => $data['country'] ?? ''],
+                ['country' => 'required|in:' . implode(',', array_keys($rails))],
+                ['country.in' => 'The selected country is not supported for payouts yet.']
+            );
+            throw new \Illuminate\Validation\ValidationException($validator);
+        }
+
+        $networks = $countryConfig['networks'];
+        if (!array_key_exists($network, $networks)) {
+            $validator = \Illuminate\Support\Facades\Validator::make(
+                ['network' => $network],
+                ['network' => 'required|in:' . implode(',', array_keys($networks))],
+                ['network.in' => 'That network is not supported in ' . $countryConfig['name'] . '.']
+            );
+            throw new \Illuminate\Validation\ValidationException($validator);
+        }
+
+        $pattern = $networks[$network]['pattern'] ?? null;
+        if ($pattern && !preg_match('#' . $pattern . '#', $account)) {
+            $validator = \Illuminate\Support\Facades\Validator::make(
+                ['account_number' => $data['account_number'] ?? ''],
+                ['account_number' => 'required|regex:' . $pattern],
+                [
+                    'account_number.regex' => 'The account number does not look like a valid '
+                        . $networks[$network]['label'] . ' number for ' . $countryConfig['name'] . '.',
+                ]
+            );
+            throw new \Illuminate\Validation\ValidationException($validator);
+        }
     }
 }

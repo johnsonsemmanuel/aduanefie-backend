@@ -53,15 +53,21 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
         Route::group(['prefix' => 'marketer', 'as' => 'marketer.'], function () {
             Route::get('/', 'MarketerController@index')->name('index');
             Route::get('commissions', 'MarketerController@commissions')->name('commissions');
+            Route::get('commissions/export', 'MarketerController@commissionsExport')->name('commissions.export');
             Route::get('payouts', 'MarketerController@payouts')->name('payouts');
             Route::get('payouts/{id}', 'MarketerController@showPayout')->name('payouts.show')->where('id', '[0-9]+');
             Route::post('payouts/{id}/approve', 'MarketerController@approvePayout')->name('payouts.approve');
             Route::post('payouts/{id}/reject', 'MarketerController@rejectPayout')->name('payouts.reject');
             Route::post('payouts/{id}/paid', 'MarketerController@markPayoutPaid')->name('payouts.paid');
+            Route::post('payouts/bulk', 'MarketerController@bulkPayout')->name('payouts.bulk');
             Route::get('stores', 'MarketerController@stores')->name('stores');
             Route::post('stores/{id}/assign', 'MarketerController@assignStore')->name('stores.assign');
             Route::post('rate/{id}', 'MarketerController@updateRate')->name('rate');
             Route::post('accrue', 'MarketerController@accrue')->name('accrue');
+            Route::post('create', 'MarketerController@storeMarketer')->name('store');
+            Route::post('bulk-import', 'MarketerController@bulkImportMarketers')->name('bulk-import');
+            Route::post('notify/{id}', 'MarketerController@notifyMarketer')->name('notify');
+            Route::post('notify-all', 'MarketerController@notifyAllMarketers')->name('notify-all');
         });
 
         Route::post('item/variant-price', 'ItemController@variant_price')->name('item.variant-price');
@@ -75,6 +81,7 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
             Route::get('list', 'ItemController@list')->name('list');
             Route::delete('delete/{id}', 'ItemController@delete')->name('delete');
             Route::get('status/{id}/{status}', 'ItemController@status')->name('status');
+            Route::get('farming-status/{id}/{farming_status}', 'ItemController@farmingStatus')->name('farming-status');
             Route::get('review-status/{id}/{status}', 'ItemController@reviews_status')->name('reviews.status');
             Route::post('search', 'ItemController@search')->name('search');
             Route::post('store/{store_id}/search', 'ItemController@search_store')->name('store-search');
@@ -332,6 +339,15 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
             Route::post('expire/{id}', 'GroupBuyController@expire')->name('expire');
             Route::post('ship/{participant}', 'GroupBuyController@ship')->name('ship');
             Route::post('deliver/{participant}', 'GroupBuyController@deliver')->name('deliver');
+            Route::post('remind/{id}', 'GroupBuyController@sendReminder')->name('remind');
+            Route::post('release-escrow/{id}', 'GroupBuyController@releaseEscrow')->name('release-escrow');
+        });
+
+        Route::group(['prefix' => 'backyard-farmers', 'as' => 'backyard-farmers.', 'middleware' => ['module:settings', 'actch']], function () {
+            Route::get('/', [\App\Http\Controllers\BackyardFarmerController::class, 'adminIndex'])->name('index');
+            Route::get('export', [\App\Http\Controllers\BackyardFarmerController::class, 'adminExport'])->name('export');
+            Route::post('verify/{id}', [\App\Http\Controllers\BackyardFarmerController::class, 'verify'])->name('verify');
+            Route::post('approve/{id}', [\App\Http\Controllers\BackyardFarmerController::class, 'approve'])->name('approve');
         });
 
         Route::group(['prefix' => 'footer-links', 'as' => 'footer-links.', 'middleware' => ['module:settings']], function () {
@@ -355,6 +371,8 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
             Route::post('update-priority', 'BusinessSettingsController@update_priority')->name('update-priority');
             Route::get('app-settings', 'BusinessSettingsController@app_settings')->name('app-settings');
             Route::POST('app-settings', 'BusinessSettingsController@update_app_settings')->name('app-settings');
+            Route::get('farming-settings', 'BusinessSettingsController@farming_settings')->name('farming-settings');
+            Route::post('farming-settings/update', 'BusinessSettingsController@update_farming_settings')->name('update-farming-settings');
             Route::get('pages/admin-landing-page-settings/{tab?}', 'BusinessSettingsController@admin_landing_page_settings')->name('admin-landing-page-settings');
             Route::POST('pages/admin-landing-page-settings/{tab}', 'BusinessSettingsController@update_admin_landing_page_settings')->name('admin-landing-page-settings');
             Route::get('promotional-status/{id}/{status}', 'BusinessSettingsController@promotional_status')->name('promotional-status');
