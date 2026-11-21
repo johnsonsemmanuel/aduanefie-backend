@@ -350,6 +350,14 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
             Route::post('approve/{id}', [\App\Http\Controllers\BackyardFarmerController::class, 'approve'])->name('approve');
         });
 
+        Route::group(['prefix' => 'regional-tours', 'as' => 'regional-tours.', 'middleware' => ['module:settings', 'actch']], function () {
+            Route::get('/', 'RegionalTourController@index')->name('index');
+            Route::post('/', 'RegionalTourController@store')->name('store');
+            Route::post('{id}/status', 'RegionalTourController@updateStatus')->name('status');
+            Route::post('{id}/broadcast', 'RegionalTourController@broadcastReminder')->name('broadcast');
+            Route::get('export', 'RegionalTourController@exportCsv')->name('export');
+        });
+
         Route::group(['prefix' => 'footer-links', 'as' => 'footer-links.', 'middleware' => ['module:settings']], function () {
             Route::get('/', 'FooterLinkController@index')->name('index');
             Route::post('update', 'FooterLinkController@update')->name('update');

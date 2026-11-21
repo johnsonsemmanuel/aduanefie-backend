@@ -36,10 +36,10 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
 
     Route::get('offline_payment_method_list', 'ConfigController@offline_payment_method_list');
     Route::group(['prefix' => 'auth', 'namespace' => 'Auth'], function () {
-        Route::post('sign-up', 'CustomerAuthController@register');
-        Route::post('login', 'CustomerAuthController@login');
-        Route::post('external-login', 'CustomerAuthController@customerLoginFromDrivemond');
-        Route::post('verify-phone', 'CustomerAuthController@verify_phone_or_email');
+        Route::post('sign-up', 'CustomerAuthController@register')->middleware('throttle:api-auth');
+        Route::post('login', 'CustomerAuthController@login')->middleware('throttle:api-auth');
+        Route::post('external-login', 'CustomerAuthController@customerLoginFromDrivemond')->middleware('throttle:api-auth');
+        Route::post('verify-phone', 'CustomerAuthController@verify_phone_or_email')->middleware('throttle:api-otp');
         Route::post('update-info', 'CustomerAuthController@update_info');
         Route::post('firebase-verify-token', 'CustomerAuthController@firebase_auth_verify');
 
@@ -370,18 +370,24 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
     Route::group(['prefix' => 'group-buys'], function () {
         Route::get('/', 'GroupBuyController@index');
         Route::get('my', 'GroupBuyController@my');
-        Route::post('/', 'GroupBuyController@store');
+        Route::post('/', 'GroupBuyController@store')->middleware('throttle:api-public-write');
         Route::get('{id}', 'GroupBuyController@show');
         // Organiser edit + member list + member-only chat. Membership and
         // ownership are checked in the controller, not by a route param.
-        Route::put('{id}', 'GroupBuyController@update');
+        Route::put('{id}', 'GroupBuyController@update')->middleware('throttle:api-public-write');
         Route::get('{id}/members', 'GroupBuyController@members');
         Route::get('{id}/messages', 'GroupBuyController@messages');
-        Route::post('{id}/messages', 'GroupBuyController@sendMessage');
-        Route::post('{id}/join', 'GroupBuyController@join');
-        Route::post('{id}/leave', 'GroupBuyController@leave');
-        Route::post('{id}/cancel', 'GroupBuyController@cancel');
+        Route::post('{id}/messages', 'GroupBuyController@sendMessage')->middleware('throttle:api-public-write');
+        Route::post('{id}/join', 'GroupBuyController@join')->middleware('throttle:api-public-write');
+        Route::post('{id}/leave', 'GroupBuyController@leave')->middleware('throttle:api-public-write');
+        Route::post('{id}/cancel', 'GroupBuyController@cancel')->middleware('throttle:api-public-write');
         Route::post('{id}/quote', 'GroupBuyController@quote');
+    });
+
+    // Regional Tours: farmer/cooperative tour signups & regional visit requests
+    Route::group(['prefix' => 'regional-tours'], function () {
+        Route::get('/', 'RegionalTourController@index');
+        Route::post('register', 'RegionalTourController@register')->middleware('throttle:api-public-write');
     });
 
     Route::group(['prefix' => 'testimonial'], function () {

@@ -242,15 +242,22 @@ class VendorLoginController extends Controller
 
         if (in_array('marketer_id', $storeColumns, true)) {
             $marketer = null;
+            $marketerRoleId = (int) config('marketer.role_id', 5);
             if ($request->filled('marketer_id') && is_numeric($request->marketer_id)) {
-                $marketer = Admin::find((int) $request->marketer_id);
+                $marketer = Admin::where('id', (int) $request->marketer_id)
+                    ->where('role_id', $marketerRoleId)
+                    ->first();
             } elseif ($request->filled('marketer_code')) {
                 $rawCode = trim((string) $request->marketer_code);
                 if (\Illuminate\Support\Facades\Schema::hasColumn('admins', 'marketer_code')) {
-                    $marketer = Admin::whereRaw('LOWER(marketer_code) = ?', [strtolower($rawCode)])->first();
+                    $marketer = Admin::where('role_id', $marketerRoleId)
+                        ->whereRaw('LOWER(marketer_code) = ?', [strtolower($rawCode)])
+                        ->first();
                 }
                 if (! $marketer && preg_match('/^(?:MKT-)?(\d+)$/i', $rawCode, $m)) {
-                    $marketer = Admin::find((int) $m[1]);
+                    $marketer = Admin::where('id', (int) $m[1])
+                        ->where('role_id', $marketerRoleId)
+                        ->first();
                 }
             }
             if ($marketer) {

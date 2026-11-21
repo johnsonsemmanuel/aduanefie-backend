@@ -51,6 +51,12 @@
                 <textarea name="note" id="note" rows="3" maxlength="500">{{ old('note') }}</textarea>
             </div>
 
+            <div class="field">
+                <label for="current_password">Confirm your account password</label>
+                <input type="password" name="current_password" id="current_password" required autocomplete="current-password"
+                       placeholder="Re-enter password to authorize payout request">
+            </div>
+
             <button type="submit">Submit request</button>
             <a class="btn secondary" href="{{ route('marketer.payouts') }}">Cancel</a>
         </form>

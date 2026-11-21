@@ -19,9 +19,25 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    'allowed_origins' => [
+        'https://aduanefie.com',
+        'https://www.aduanefie.com',
+        'https://partners.aduanefie.com',
+        'https://store.aduanefie.com',
+        'https://admin.aduanefie.com',
+        'https://logistics.aduanefie.com',
+        'https://api.aduanefie.com',
+        'http://localhost:3000',
+        'http://localhost:3006',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:3006',
+    ],
 
-    'allowed_origins_patterns' => [],
+    'allowed_origins_patterns' => [
+        '#^https://([a-z0-9-]+\.)?aduanefie\.com$#',
+        '#^https://[a-z0-9-]+\.vercel\.app$#',
+        '#^http://(localhost|127\.0\.0\.1)(:\d+)?$#',
+    ],
 
     'allowed_headers' => ['*'],
 

@@ -92,7 +92,13 @@ class BackyardFarmerController extends Controller
             'status' => BackyardFarmApplication::STATUS_PENDING,
         ]);
 
-        // Email confirmation to the applicant
+        $signedStatusUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+            'backyard-farmer.status',
+            now()->addDays(30),
+            ['id' => $application->id]
+        );
+
+        // Email confirmation to the applicant (uses signed URL, never leaks PII in query params)
         try {
             Mail::to($request->email)->send(new BackyardFarmApplicationMail(
                 'email-templates.backyard.application-submitted',
@@ -101,7 +107,7 @@ class BackyardFarmerController extends Controller
                     'sizeAcres' => $application->farm_size_acres,
                     'primaryCrops' => $application->primary_crops,
                     'submittedAt' => $application->created_at->format('M d, Y H:i'),
-                    'statusUrl' => route('backyard-farmer.status', $application->id) . '?email=' . urlencode($request->email) . '&phone=' . urlencode($request->phone),
+                    'statusUrl' => $signedStatusUrl,
                 ]
             ));
         } catch (\Throwable $e) {
@@ -110,23 +116,34 @@ class BackyardFarmerController extends Controller
 
         Toastr::success('Your backyard farm application has been submitted. A marketer will verify your farm soon.');
 
-        return redirect()->route('backyard-farmer.status', $application->id);
+        return redirect()->to($signedStatusUrl);
     }
 
     public function status(Request $request, $id)
     {
         $application = BackyardFarmApplication::findOrFail($id);
 
-        // Only the applicant (by email/phone) or an admin can view
-        $guestEmail = $request->query('email');
-        $guestPhone = $request->query('phone');
+        // Strict access control: admin/marketer, owning user, valid signed URL,
+        // or matching BOTH email and phone (never allowing any logged-in user
+        // to enumerate other applicants' personal data).
+        $isAdminOrMarketer = Auth::guard('admin')->check();
+        $isOwner = Auth::guard('web')->check()
+            && $application->user_id
+            && (int) $application->user_id === (int) Auth::guard('web')->id();
+        $hasValidSignature = $request->hasValidSignature();
+        $guestEmail = (string) $request->query('email', '');
+        $guestPhone = (string) $request->query('phone', '');
+        $matchesGuestPair = $guestEmail !== '' && $guestPhone !== ''
+            && $application->guest_email && $application->guest_phone
+            && hash_equals(strtolower($application->guest_email), strtolower($guestEmail))
+            && hash_equals((string) $application->guest_phone, $guestPhone);
 
-        if (Auth::guard('web')->check()) {
+        if (! ($isAdminOrMarketer || $isOwner || $hasValidSignature || $matchesGuestPair)) {
+            abort(403, 'You are not authorized to view this application.');
+        }
+
+        if ($isOwner || $isAdminOrMarketer) {
             $application->load('user');
-        } elseif ($guestEmail === $application->guest_email || $guestPhone === $application->guest_phone) {
-            // Allow anonymous status check by email/phone
-        } else {
-            abort(403);
         }
 
         return view('customer.backyard-farmers.status', compact('application'));

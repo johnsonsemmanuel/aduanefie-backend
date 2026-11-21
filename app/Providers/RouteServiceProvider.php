@@ -140,6 +140,22 @@ class RouteServiceProvider extends ServiceProvider
 
             return Limit::perMinute(6)->by('admin-mfa|' . $id . '|' . $request->ip());
         });
+
+        // Public API auth, OTP, and write throttles to prevent credential
+        // stuffing, SMS OTP bombing, and spam submissions.
+        RateLimiter::for('api-auth', function (Request $request) {
+            $key = $request->input('phone') ?: $request->input('email') ?: 'anon';
+            return Limit::perMinute(15)->by('api-auth|' . Str::lower((string) $key) . '|' . $request->ip());
+        });
+
+        RateLimiter::for('api-otp', function (Request $request) {
+            $key = $request->input('phone') ?: $request->input('email') ?: 'anon';
+            return Limit::perMinute(6)->by('api-otp|' . Str::lower((string) $key) . '|' . $request->ip());
+        });
+
+        RateLimiter::for('api-public-write', function (Request $request) {
+            return Limit::perMinute(20)->by('api-write|' . (optional($request->user())->id ?: $request->ip()));
+        });
     }
 
     private function loginThrottleKey(Request $request, string $field = 'email'): string

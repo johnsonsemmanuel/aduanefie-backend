@@ -1,0 +1,114 @@
+@extends('marketer.layout')
+
+@section('title', 'Regional Tours & Farmer Visits')
+
+@section('topbar')
+    {{ $marketer->f_name }} {{ $marketer->l_name }}<br>
+    <span class="small">{{ $marketer->email }}</span>
+@endsection
+
+@section('nav')
+    @include('marketer._nav', ['active' => 'tours'])
+@endsection
+
+@section('content')
+    @php($refCode = $marketer->marketer_code ?: ('MKT-' . $marketer->id))
+    <div class="card">
+        <h1>Regional Tours &amp; Farmer Field Visits</h1>
+        <p class="muted small" style="margin-top:0;">
+            Track upcoming regional tours, check in farmers during field visits, and onboard them directly with your referral code <strong>{{ $refCode }}</strong>.
+        </p>
+
+        <form method="get" action="{{ route('marketer.regional-tours') }}" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">
+            <select name="region" style="padding:8px 10px;border-radius:6px;border:1px solid #d1d5db;">
+                <option value="">All Regions</option>
+                @foreach($regions as $r)
+                    <option value="{{ $r }}" {{ $region === $r ? 'selected' : '' }}>{{ $r }}</option>
+                @endforeach
+            </select>
+            <button type="submit" style="padding:8px 14px;font-size:13px;">Filter</button>
+        </form>
+
+        <h2 style="margin-top:8px;">Scheduled Tour Stops ({{ count($tours) }})</h2>
+        @if(count($tours) === 0)
+            <p class="muted small">No scheduled tours match this region yet.</p>
+        @else
+            <div style="overflow-x:auto;margin-bottom:20px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tour</th>
+                            <th>Region / Venue</th>
+                            <th>Dates</th>
+                            <th>Registered</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($tours as $tour)
+                            <tr>
+                                <td><strong>{{ $tour->title }}</strong></td>
+                                <td>{{ $tour->region }} @if($tour->venue)<br><span class="small muted">{{ $tour->venue }}</span>@endif</td>
+                                <td class="small">{{ optional($tour->start_date)->format('M d, Y') }}</td>
+                                <td>{{ $tour->registrations_count }} / {{ $tour->capacity }}</td>
+                                <td><span class="badge">{{ ucfirst(str_replace('_', ' ', $tour->status)) }}</span></td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+
+        <h2>Farmer Registrations &amp; Region Visit Requests</h2>
+        @if(count($registrations) === 0)
+            <p class="muted small">No farmer registrations yet.</p>
+        @else
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Farmer / Cooperative</th>
+                            <th>Contact</th>
+                            <th>Region / Crops</th>
+                            <th>Tour</th>
+                            <th>Status</th>
+                            <th>Field Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($registrations as $reg)
+                            <tr>
+                                <td>
+                                    <strong>{{ $reg->farmer_name }}</strong>
+                                    @if($reg->is_cooperative)
+                                        <span class="badge">Co-op ({{ $reg->farmer_count }})</span>
+                                    @endif
+                                </td>
+                                <td class="small">{{ $reg->phone }}@if($reg->email)<br>{{ $reg->email }}@endif</td>
+                                <td class="small">{{ $reg->region }}@if($reg->community) · {{ $reg->community }}@endif<br><span class="muted">{{ $reg->primary_crops ?? '-' }}</span></td>
+                                <td class="small">{{ $reg->tour?->title ?? 'Visit Request' }}</td>
+                                <td><span class="badge">{{ ucfirst(str_replace('_', ' ', $reg->status)) }}</span></td>
+                                <td>
+                                    <form method="post" action="{{ route('marketer.regional-tours.status', $reg->id) }}" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                                        @csrf
+                                        <select name="status" style="padding:5px;font-size:12px;">
+                                            @foreach(['registered', 'confirmed', 'visited', 'onboarded', 'no_show'] as $st)
+                                                <option value="{{ $st }}" {{ $reg->status === $st ? 'selected' : '' }}>{{ ucfirst(str_replace('_', ' ', $st)) }}</option>
+                                            @endforeach
+                                        </select>
+                                        <button type="submit" style="padding:5px 10px;font-size:12px;">Save</button>
+                                        <a class="btn secondary" target="_blank" style="padding:5px 10px;font-size:12px;"
+                                           href="https://aduanefie.com/store-registration?ref={{ urlencode($refCode) }}">Onboard</a>
+                                    </form>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            @if(method_exists($registrations, 'links'))
+                <div style="margin-top:16px;">{{ $registrations->links() }}</div>
+            @endif
+        @endif
+    </div>
+@endsection

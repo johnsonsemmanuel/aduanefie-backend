@@ -33,6 +33,10 @@ Route::get('marketer-mfa/recovery-codes', [MarketerMfaController::class, 'recove
 Route::middleware(MarketerAuthenticated::class)->prefix('marketer')->group(function () {
     Route::get('/', [MarketerPortalController::class, 'dashboard'])->name('marketer.dashboard');
     Route::post('stores/{storeId}/verify', [MarketerPortalController::class, 'verifyStore'])->name('marketer.stores.verify');
+    Route::get('backyard-farms', [MarketerPortalController::class, 'backyardFarms'])->name('marketer.backyard-farms');
+    Route::post('backyard-farms/{id}/verify', [MarketerPortalController::class, 'verifyBackyardFarm'])->name('marketer.backyard-farms.verify');
+    Route::get('regional-tours', [MarketerPortalController::class, 'regionalTours'])->name('marketer.regional-tours');
+    Route::post('regional-tours/registrations/{id}/status', [MarketerPortalController::class, 'updateTourRegistrationStatus'])->name('marketer.regional-tours.status');
     Route::get('commissions', [MarketerPortalController::class, 'commissions'])->name('marketer.commissions');
     Route::get('payouts', [MarketerPortalController::class, 'payouts'])->name('marketer.payouts');
     Route::get('payouts/request', [MarketerPortalController::class, 'showPayoutRequest'])->name('marketer.payouts.request');

@@ -1,5 +1,7 @@
 @php($active = $active ?? '')
 <a href="{{ route('marketer.dashboard') }}" class="{{ $active === 'dashboard' ? 'active' : '' }}">Dashboard</a>
+<a href="{{ route('marketer.backyard-farms') }}" class="{{ $active === 'backyard' ? 'active' : '' }}">Backyard Farms</a>
+<a href="{{ route('marketer.regional-tours') }}" class="{{ $active === 'tours' ? 'active' : '' }}">Regional Tours</a>
 <a href="{{ route('marketer.commissions') }}" class="{{ $active === 'commissions' ? 'active' : '' }}">Commissions</a>
 <a href="{{ route('marketer.payouts') }}" class="{{ $active === 'payouts' ? 'active' : '' }}">Payouts</a>
 <form method="post" action="{{ route('marketer.logout') }}" style="margin:0 0 0 auto;">
