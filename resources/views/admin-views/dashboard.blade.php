@@ -37,6 +37,62 @@
         </div>
         <!-- End Page Header -->
 
+        @php
+            $opsPendingMarketers = \Illuminate\Support\Facades\Schema::hasTable('marketer_applications')
+                ? \App\Models\MarketerApplication::where('status', 'pending')->count() : 0;
+            $opsPendingBackyard = \Illuminate\Support\Facades\Schema::hasTable('backyard_farm_applications')
+                ? \App\Models\BackyardFarmApplication::where('status', 'pending')->count() : 0;
+            $opsUpcomingTours = \Illuminate\Support\Facades\Schema::hasTable('regional_tours')
+                ? \App\Models\RegionalTour::whereIn('status', ['upcoming', 'open', 'in_progress'])->count() : 0;
+            $opsSmsBalance = \App\Traits\SmsGateway::intekhostBalance();
+        @endphp
+        <div class="row g-2 mb-3">
+            <div class="col-6 col-md-3">
+                <a href="{{ route('admin.marketer-applications.index') }}" class="card h-100 text-decoration-none border">
+                    <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-muted small">Pending Marketers</div>
+                            <div class="h4 mb-0 font-weight-bold text-dark">{{ $opsPendingMarketers }}</div>
+                        </div>
+                        <span class="badge {{ $opsPendingMarketers > 0 ? 'badge-soft-warning' : 'badge-soft-success' }}">Review →</span>
+                    </div>
+                </a>
+            </div>
+            <div class="col-6 col-md-3">
+                <a href="{{ route('admin.regional-tours.index') }}" class="card h-100 text-decoration-none border">
+                    <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-muted small">Active Regional Tours</div>
+                            <div class="h4 mb-0 font-weight-bold text-dark">{{ $opsUpcomingTours }}</div>
+                        </div>
+                        <span class="badge badge-soft-info">Manage →</span>
+                    </div>
+                </a>
+            </div>
+            <div class="col-6 col-md-3">
+                <a href="{{ route('admin.backyard-farmers.index') }}" class="card h-100 text-decoration-none border">
+                    <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-muted small">Pending Backyard Farms</div>
+                            <div class="h4 mb-0 font-weight-bold text-dark">{{ $opsPendingBackyard }}</div>
+                        </div>
+                        <span class="badge {{ $opsPendingBackyard > 0 ? 'badge-soft-warning' : 'badge-soft-success' }}">Verify →</span>
+                    </div>
+                </a>
+            </div>
+            <div class="col-6 col-md-3">
+                <a href="{{ route('admin.business-settings.farming-settings') }}" class="card h-100 text-decoration-none border">
+                    <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-muted small">IntekHost SMS Credits</div>
+                            <div class="h4 mb-0 font-weight-bold text-dark">{{ isset($opsSmsBalance['units']) ? number_format($opsSmsBalance['units']) : '—' }}</div>
+                        </div>
+                        <span class="badge {{ isset($opsSmsBalance['units']) && $opsSmsBalance['units'] < 100 ? 'badge-soft-danger' : 'badge-soft-success' }}">SMS →</span>
+                    </div>
+                </a>
+            </div>
+        </div>
+
         <!-- Stats -->
         <div class="card mb-3">
             <div class="card-body pt-0">
@@ -373,6 +429,62 @@
             </div>
         </div>
         <!-- End Page Header -->
+
+        @php
+            $opsPendingMarketers = \Illuminate\Support\Facades\Schema::hasTable('marketer_applications')
+                ? \App\Models\MarketerApplication::where('status', 'pending')->count() : 0;
+            $opsPendingBackyard = \Illuminate\Support\Facades\Schema::hasTable('backyard_farm_applications')
+                ? \App\Models\BackyardFarmApplication::where('status', 'pending')->count() : 0;
+            $opsUpcomingTours = \Illuminate\Support\Facades\Schema::hasTable('regional_tours')
+                ? \App\Models\RegionalTour::whereIn('status', ['upcoming', 'open', 'in_progress'])->count() : 0;
+            $opsSmsBalance = \App\Traits\SmsGateway::intekhostBalance();
+        @endphp
+        <div class="row g-2 mb-3">
+            <div class="col-6 col-md-3">
+                <a href="{{ route('admin.marketer-applications.index') }}" class="card h-100 text-decoration-none border">
+                    <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-muted small">Pending Marketers</div>
+                            <div class="h4 mb-0 font-weight-bold text-dark">{{ $opsPendingMarketers }}</div>
+                        </div>
+                        <span class="badge {{ $opsPendingMarketers > 0 ? 'badge-soft-warning' : 'badge-soft-success' }}">Review →</span>
+                    </div>
+                </a>
+            </div>
+            <div class="col-6 col-md-3">
+                <a href="{{ route('admin.regional-tours.index') }}" class="card h-100 text-decoration-none border">
+                    <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-muted small">Active Regional Tours</div>
+                            <div class="h4 mb-0 font-weight-bold text-dark">{{ $opsUpcomingTours }}</div>
+                        </div>
+                        <span class="badge badge-soft-info">Manage →</span>
+                    </div>
+                </a>
+            </div>
+            <div class="col-6 col-md-3">
+                <a href="{{ route('admin.backyard-farmers.index') }}" class="card h-100 text-decoration-none border">
+                    <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-muted small">Pending Backyard Farms</div>
+                            <div class="h4 mb-0 font-weight-bold text-dark">{{ $opsPendingBackyard }}</div>
+                        </div>
+                        <span class="badge {{ $opsPendingBackyard > 0 ? 'badge-soft-warning' : 'badge-soft-success' }}">Verify →</span>
+                    </div>
+                </a>
+            </div>
+            <div class="col-6 col-md-3">
+                <a href="{{ route('admin.business-settings.farming-settings') }}" class="card h-100 text-decoration-none border">
+                    <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-muted small">IntekHost SMS Credits</div>
+                            <div class="h4 mb-0 font-weight-bold text-dark">{{ isset($opsSmsBalance['units']) ? number_format($opsSmsBalance['units']) : '—' }}</div>
+                        </div>
+                        <span class="badge {{ isset($opsSmsBalance['units']) && $opsSmsBalance['units'] < 100 ? 'badge-soft-danger' : 'badge-soft-success' }}">SMS →</span>
+                    </div>
+                </a>
+            </div>
+        </div>
         @endif
     </div>
 @endsection

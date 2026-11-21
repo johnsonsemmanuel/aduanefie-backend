@@ -101,4 +101,45 @@ class MarketerApplicationController extends Controller
         Toastr::info("Rejected application for {$app->full_name}.");
         return back();
     }
+
+    public function exportCsv(Request $request)
+    {
+        abort_unless(Auth::guard('admin')->user()?->role_id == 1, 403);
+
+        $status = $request->query('status', 'all');
+        $apps = MarketerApplication::query()
+            ->when($status !== 'all', fn ($q) => $q->where('status', $status))
+            ->latest('id')
+            ->get();
+
+        $escape = static function ($v): string {
+            $s = (string) ($v ?? '');
+            if ($s !== '' && preg_match('/^[=+\-@]/', $s)) {
+                $s = "'" . $s;
+            }
+            return $s;
+        };
+
+        return response()->streamDownload(function () use ($apps, $escape) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF");
+            fputcsv($out, ['ID', 'Full Name', 'Email', 'Phone', 'Region', 'District', 'MoMo Network', 'Status', 'Applied At']);
+            foreach ($apps as $a) {
+                fputcsv($out, [
+                    $a->id,
+                    $escape($a->full_name),
+                    $escape($a->email),
+                    $escape($a->phone),
+                    $escape($a->region),
+                    $escape($a->district ?? ''),
+                    $escape($a->momo_network ?? ''),
+                    $escape($a->status),
+                    optional($a->created_at)->toDateTimeString(),
+                ]);
+            }
+            fclose($out);
+        }, 'aduanefie-marketer-applications.csv', [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
 }

@@ -9,11 +9,16 @@
             <h1 class="page-header-title mb-1">Remote Marketer Applications</h1>
             <p class="text-muted mb-0">Review regional marketer applications. Approving automatically creates a Role-5 marketer account, assigns a referral code, and SMSs credentials.</p>
         </div>
-        <div class="btn-group">
-            @foreach(['pending' => 'Pending', 'approved' => 'Approved', 'rejected' => 'Rejected', 'all' => 'All'] as $k => $lbl)
-                <a href="{{ route('admin.marketer-applications.index', ['status' => $k]) }}"
-                   class="btn btn-sm {{ $status === $k ? 'btn-primary' : 'btn-outline-secondary' }}">{{ $lbl }}</a>
-            @endforeach
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <div class="btn-group">
+                @foreach(['pending' => 'Pending', 'approved' => 'Approved', 'rejected' => 'Rejected', 'all' => 'All'] as $k => $lbl)
+                    <a href="{{ route('admin.marketer-applications.index', ['status' => $k]) }}"
+                       class="btn btn-sm {{ $status === $k ? 'btn-primary' : 'btn-outline-secondary' }}">{{ $lbl }}</a>
+                @endforeach
+            </div>
+            <a href="{{ route('admin.marketer-applications.export', ['status' => $status]) }}" class="btn btn-sm btn-outline-primary">
+                <i class="tio-download-to mr-1"></i> Export CSV
+            </a>
         </div>
     </div>
 

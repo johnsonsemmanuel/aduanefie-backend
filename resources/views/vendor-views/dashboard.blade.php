@@ -81,6 +81,23 @@
         </div>
         <!-- End Page Header -->
 
+        <!-- Vendor Quick Actions & Low-Stock Alert Strip -->
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            @if(isset($out_of_stock_count) && $out_of_stock_count > 0)
+                <div class="alert alert-soft-warning d-flex align-items-center justify-content-between flex-grow-1 mb-0 py-2 px-3" role="alert">
+                    <div>
+                        <i class="tio-warning-outlined mr-1"></i>
+                        <strong>{{ $out_of_stock_count }} {{ $out_of_stock_count == 1 ? 'item is' : 'items are' }} low or out of stock.</strong>
+                        Restock quickly so shoppers don't miss your fresh produce.
+                    </div>
+                    <a href="{{ route('vendor.item.stock-limit-list') }}" class="btn btn-sm btn-warning ml-3 text-nowrap">Restock Now</a>
+                </div>
+            @endif
+            <button type="button" onclick="window.location.reload()" class="btn btn-outline-primary btn-sm text-nowrap ml-auto">
+                <i class="tio-refresh mr-1"></i> {{ translate('Refresh Orders') }}
+            </button>
+        </div>
+
         <div class="card mb-3">
             <div class="card-body">
                 <div class="row gx-2 gx-lg-3 mb-2">
@@ -247,6 +264,23 @@
             </div>
         </div>
         <!-- End Page Header -->
+
+        <!-- Vendor Quick Actions & Low-Stock Alert Strip -->
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            @if(isset($out_of_stock_count) && $out_of_stock_count > 0)
+                <div class="alert alert-soft-warning d-flex align-items-center justify-content-between flex-grow-1 mb-0 py-2 px-3" role="alert">
+                    <div>
+                        <i class="tio-warning-outlined mr-1"></i>
+                        <strong>{{ $out_of_stock_count }} {{ $out_of_stock_count == 1 ? 'item is' : 'items are' }} low or out of stock.</strong>
+                        Restock quickly so shoppers don't miss your fresh produce.
+                    </div>
+                    <a href="{{ route('vendor.item.stock-limit-list') }}" class="btn btn-sm btn-warning ml-3 text-nowrap">Restock Now</a>
+                </div>
+            @endif
+            <button type="button" onclick="window.location.reload()" class="btn btn-outline-primary btn-sm text-nowrap ml-auto">
+                <i class="tio-refresh mr-1"></i> {{ translate('Refresh Orders') }}
+            </button>
+        </div>
         @endif
     </div>
 

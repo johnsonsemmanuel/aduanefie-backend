@@ -20,13 +20,18 @@
         </p>
 
         <form method="get" action="{{ route('marketer.regional-tours') }}" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">
-            <select name="region" style="padding:8px 10px;border-radius:6px;border:1px solid #d1d5db;">
+            <select name="region" style="padding:8px 10px;border-radius:6px;border:1px solid #d1d5db;max-width:240px;">
                 <option value="">All Regions</option>
                 @foreach($regions as $r)
                     <option value="{{ $r }}" {{ $region === $r ? 'selected' : '' }}>{{ $r }}</option>
                 @endforeach
             </select>
             <button type="submit" style="padding:8px 14px;font-size:13px;">Filter</button>
+            @if(count($registrations) > 0)
+                <button type="button" class="btn secondary" onclick="exportFieldCallSheet()" style="padding:8px 14px;font-size:13px;margin-left:auto;">
+                    Download Field Call Sheet (CSV)
+                </button>
+            @endif
         </form>
 
         <h2 style="margin-top:8px;">Scheduled Tour Stops ({{ count($tours) }})</h2>
@@ -84,7 +89,15 @@
                                         <span class="badge">Co-op ({{ $reg->farmer_count }})</span>
                                     @endif
                                 </td>
-                                <td class="small">{{ $reg->phone }}@if($reg->email)<br>{{ $reg->email }}@endif</td>
+                                <td class="small">
+                                    @php($cleanDigits = preg_replace('/\D+/', '', (string) $reg->phone))
+                                    @php($waPhone = str_starts_with($cleanDigits, '0') && strlen($cleanDigits) === 10 ? '233' . substr($cleanDigits, 1) : $cleanDigits)
+                                    <a href="tel:{{ $reg->phone }}" style="font-weight:600;text-decoration:none;">{{ $reg->phone }}</a>
+                                    @if(!empty($waPhone))
+                                        · <a href="https://wa.me/{{ $waPhone }}?text={{ rawurlencode('Hello ' . $reg->farmer_name . ', this is Aduanefie Regional Tour team regarding your visit request.') }}" target="_blank" rel="noopener" style="color:#128C7E;font-weight:600;text-decoration:none;">WhatsApp</a>
+                                    @endif
+                                    @if($reg->email)<br>{{ $reg->email }}@endif
+                                </td>
                                 <td class="small">{{ $reg->region }}@if($reg->community) · {{ $reg->community }}@endif<br><span class="muted">{{ $reg->primary_crops ?? '-' }}</span></td>
                                 <td class="small">{{ $reg->tour?->title ?? 'Visit Request' }}</td>
                                 <td><span class="badge">{{ ucfirst(str_replace('_', ' ', $reg->status)) }}</span></td>
@@ -111,4 +124,40 @@
             @endif
         @endif
     </div>
+
+    <script>
+        function exportFieldCallSheet() {
+            var rows = [
+                ['Farmer / Cooperative', 'Phone', 'Email', 'Region', 'Community', 'Primary Crops', 'Tour', 'Status']
+            ];
+            @foreach($registrations as $reg)
+                rows.push([
+                    @json($reg->farmer_name ?? ''),
+                    @json($reg->phone ?? ''),
+                    @json($reg->email ?? ''),
+                    @json($reg->region ?? ''),
+                    @json($reg->community ?? ''),
+                    @json($reg->primary_crops ?? ''),
+                    @json($reg->tour?->title ?? 'Visit Request'),
+                    @json($reg->status ?? '')
+                ]);
+            @endforeach
+            var csv = rows.map(function (r) {
+                return r.map(function (cell) {
+                    var s = String(cell || '').replace(/"/g, '""');
+                    if (/^[=+\-@]/.test(s)) s = "'" + s;
+                    return '"' + s + '"';
+                }).join(',');
+            }).join('\n');
+            var blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'aduanefie-field-call-sheet.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
 @endsection

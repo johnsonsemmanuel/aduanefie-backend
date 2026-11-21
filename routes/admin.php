@@ -360,6 +360,7 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
 
         Route::group(['prefix' => 'marketer-applications', 'as' => 'marketer-applications.'], function () {
             Route::get('/', 'MarketerApplicationController@index')->name('index');
+            Route::get('export', 'MarketerApplicationController@exportCsv')->name('export');
             Route::post('{id}/approve', 'MarketerApplicationController@approve')->name('approve');
             Route::post('{id}/reject', 'MarketerApplicationController@reject')->name('reject');
         });

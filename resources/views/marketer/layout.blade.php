@@ -75,6 +75,43 @@
         .captcha-row img { height: 48px; width: auto; display: block; }
         .empty { color: var(--muted); font-size: 14px; padding: 8px 0; }
         .pager { display: flex; gap: 10px; margin-top: 14px; font-size: 14px; }
+        .mobile-bottom-nav { display: none; }
+        @media (max-width: 720px) {
+            .wrap { padding-bottom: 84px; }
+            .mobile-bottom-nav {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 90;
+                background: #fff;
+                border-top: 1px solid var(--line);
+                box-shadow: 0 -4px 14px rgba(0,0,0,0.06);
+                padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+            }
+            .mobile-bottom-nav a {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 2px;
+                text-decoration: none;
+                color: var(--ink);
+                font-size: 11px;
+                font-weight: 600;
+                padding: 4px 2px;
+                border-radius: 8px;
+                opacity: 0.75;
+            }
+            .mobile-bottom-nav a.active {
+                color: var(--brand);
+                background: rgba(103, 81, 58, 0.08);
+                opacity: 1;
+            }
+            .mobile-bottom-nav .nav-ico { font-size: 16px; line-height: 1; }
+        }
     </style>
 </head>
 <body>
@@ -109,5 +146,26 @@
 
     @yield('content')
 </div>
+
+@hasSection('nav')
+    <nav class="mobile-bottom-nav" aria-label="Marketer mobile navigation">
+        <a href="{{ route('marketer.dashboard') }}" class="{{ request()->routeIs('marketer.dashboard') ? 'active' : '' }}">
+            <span class="nav-ico" aria-hidden="true">🏠</span>
+            <span>Home</span>
+        </a>
+        <a href="{{ route('marketer.regional-tours') }}" class="{{ request()->routeIs('marketer.regional-tours*') ? 'active' : '' }}">
+            <span class="nav-ico" aria-hidden="true">🗺️</span>
+            <span>Tours</span>
+        </a>
+        <a href="{{ route('marketer.backyard-farms') }}" class="{{ request()->routeIs('marketer.backyard-farms*') ? 'active' : '' }}">
+            <span class="nav-ico" aria-hidden="true">🌱</span>
+            <span>Farms</span>
+        </a>
+        <a href="{{ route('marketer.payouts') }}" class="{{ request()->routeIs('marketer.payout*') ? 'active' : '' }}">
+            <span class="nav-ico" aria-hidden="true">💳</span>
+            <span>Payouts</span>
+        </a>
+    </nav>
+@endif
 </body>
 </html>
