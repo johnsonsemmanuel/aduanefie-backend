@@ -174,8 +174,20 @@ class SearchController extends Controller
         $limit = $request->query('limit', 10);
         $offset = $request->query('offset', 1);
 
-        $longitude = (float) $request->header('longitude') ?? 0;
-        $latitude = (float) $request->header('latitude') ?? 0;
+        // Nearby requests must carry a real customer location. Generic search
+        // may omit the headers and simply falls back to the existing list
+        // behaviour in the store logic.
+        $coordinates = $this->validatedNearbyCoordinates($request);
+        if ($this->requestAsksForNearby($request)) {
+            if (!$coordinates) {
+                return $this->invalidNearbyCoordinatesResponse();
+            }
+            $longitude = $coordinates['longitude'];
+            $latitude = $coordinates['latitude'];
+        } else {
+            $longitude = $coordinates['longitude'] ?? null;
+            $latitude = $coordinates['latitude'] ?? null;
+        }
         $filter = $request->query('filter', '');
         $filter = $filter ? (is_array($filter) ? $filter : str_getcsv(trim($filter, "[]"), ',')) : '';
         $rating_count = $request->query('rating_count');
