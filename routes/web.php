@@ -98,6 +98,7 @@ Route::post('store-login/employee', 'StoreAuthController@loginEmployee')
     ->middleware('throttle:store-login');
 
 Route::get('login/{tab}', 'LoginController@login')->name('login');
+Route::post('external-login-from-drivemond', 'LoginController@externalLoginFromDrivemond');
 Route::post('login_submit', 'LoginController@submit')->name('login_post')->middleware(['actch', 'throttle:web-login']);
 Route::get('logout', 'LoginController@logout')->name('logout');
 Route::get('/reset-password', 'LoginController@reset_password_request')->name('reset-password');
@@ -107,13 +108,7 @@ Route::post('verify-otp', 'LoginController@verify_token')->name('verify-otp');
 Route::post('reset-password-submit', 'LoginController@reset_password_submit')->name('reset-password-submit');
 Route::get('otp-resent', 'LoginController@otp_resent')->name('otp_resent');
 
-Route::get('authentication-failed', function () {
-    $errors = [];
-    array_push($errors, ['code' => 'auth-001', 'message' => 'Unauthenticated.']);
-    return response()->json([
-        'errors' => $errors,
-    ], 401);
-})->name('authentication-failed');
+Route::get('authentication-failed', 'HomeController@authenticationFailed')->name('authentication-failed');
 
 Route::group(['prefix' => 'payment-mobile'], function () {
     Route::get('/', 'PaymentController@payment')->name('payment-mobile');
@@ -153,8 +148,8 @@ if (!$is_published) {
 
         //SENANG-PAY
         Route::group(['prefix' => 'senang-pay', 'as' => 'senang-pay.'], function () {
-            Route::get('pay', [SenangPayController::class, 'index']);
-            Route::any('callback', [SenangPayController::class, 'return_senang_pay']);
+            Route::get('pay', [SenangPayController::class, 'index'])->name('pay');
+            Route::any('callback', [SenangPayController::class, 'return_senang_pay'])->name('callback');
         });
 
         //FLUTTERWAVE
@@ -186,12 +181,7 @@ if (!$is_published) {
 }
 
 
-Route::get('/test', function () {
-    dd('Hello tester');
-});
-
-Route::get('module-test', function () {
-});
+// Removed unused /test and /module-test closures to enable route:cache
 
 //Restaurant Registration
 Route::group(['prefix' => 'vendor', 'as' => 'restaurant.'], function () {

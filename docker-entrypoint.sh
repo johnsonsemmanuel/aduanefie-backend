@@ -36,7 +36,7 @@ php artisan migrate --force --no-interaction
 # Cache static configuration/views to avoid repeated bootstrap work.
 # Route caching is skipped because legacy admin routes reuse GET/POST route names.
 php artisan config:cache || echo "WARNING: config:cache failed"
-php artisan route:clear || true
+php artisan route:cache || echo "WARNING: route:cache failed"
 php artisan view:cache || echo "WARNING: view:cache failed"
 
 # Re-apply ownership AFTER root artisan commands so laravel.log and compiled

@@ -133,9 +133,9 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             });
 
 
-            Route::post('make-collected-cash-payment', 'DeliverymanController@make_payment')->name('make_payment');
-            Route::post('make-wallet-adjustment', 'DeliverymanController@make_wallet_adjustment')->name('make_wallet_adjustment');
-            Route::get('wallet-payment-list', 'DeliverymanController@wallet_payment_list')->name('wallet_payment_list');
+            Route::post('make-collected-cash-payment', 'DeliverymanController@make_payment')->name('dm.make_payment');
+            Route::post('make-wallet-adjustment', 'DeliverymanController@make_wallet_adjustment')->name('dm.make_wallet_adjustment');
+            Route::get('wallet-payment-list', 'DeliverymanController@wallet_payment_list')->name('dm.wallet_payment_list');
             Route::get('wallet-provided-earning-list', 'DeliverymanController@wallet_provided_earning_list')->name('wallet_provided_earning_list');
 
 
@@ -175,9 +175,9 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
 
         Route::put('send-order-otp', 'VendorController@send_order_otp');
 
-        Route::post('make-collected-cash-payment', 'VendorController@make_payment')->name('make_payment');
-        Route::post('make-wallet-adjustment', 'VendorController@make_wallet_adjustment')->name('make_wallet_adjustment');
-        Route::get('wallet-payment-list', 'VendorController@wallet_payment_list')->name('wallet_payment_list');
+        Route::post('make-collected-cash-payment', 'VendorController@make_payment')->name('vendor.make_payment');
+        Route::post('make-wallet-adjustment', 'VendorController@make_wallet_adjustment')->name('vendor.make_wallet_adjustment');
+        Route::get('wallet-payment-list', 'VendorController@wallet_payment_list')->name('vendor.wallet_payment_list');
 
 
         Route::get('get-withdraw-method-list', 'WithdrawMethodController@withdraw_method_list');
@@ -268,13 +268,13 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
         });
        // advertisement
         Route::group([ 'prefix' => 'advertisement', 'as' => 'advertisement.'], function () {
-            Route::get('/', 'AdvertisementController@index');
-            Route::get('details/{id}', 'AdvertisementController@show');
-            Route::delete('delete/{id}', 'AdvertisementController@destroy');
-            Route::post('store', 'AdvertisementController@store');
-            Route::post('update/{id}', 'AdvertisementController@update');
+            Route::get('/', 'AdvertisementController@index')->name('index');
+            Route::get('details/{id}', 'AdvertisementController@show')->name('show');
+            Route::delete('delete/{id}', 'AdvertisementController@destroy')->name('destroy');
+            Route::post('store', 'AdvertisementController@store')->name('store');
+            Route::post('update/{id}', 'AdvertisementController@update')->name('update');
             Route::put('/status', 'AdvertisementController@status')->name('status');
-            Route::post('copy-add-post', 'AdvertisementController@copyAddPost');
+            Route::post('copy-add-post', 'AdvertisementController@copyAddPost')->name('copy-add-post');
 
         });
 
@@ -363,13 +363,6 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
         // string, so accept the same payload over POST as well.
         Route::post('shipping-options', 'CrossBorderController@shippingOptions');
         Route::post('quote', 'CrossBorderController@quote');
-    });
-
-    // Country-aware terminology, currency, phone, address, ID and payment
-    // rules. Public data only; no account or document information is returned.
-    Route::group(['prefix' => 'market-profiles'], function () {
-        Route::get('/', 'MarketProfileController@index');
-        Route::get('{country}', 'MarketProfileController@show')->where('country', '[A-Za-z]{2}');
     });
 
     // Shared group buying. Deliberately module-agnostic: any module that sells

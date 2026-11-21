@@ -23,6 +23,14 @@ use Illuminate\Support\Facades\Session;
 
 class HomeController extends Controller
 {
+    public function authenticationFailed()
+    {
+        return response()->json([
+            'errors' => [
+                ['code' => 'auth-001', 'message' => 'Unauthenticated.'],
+            ],
+        ], 401);
+    }
 
     /**
      * Show the application dashboard.
