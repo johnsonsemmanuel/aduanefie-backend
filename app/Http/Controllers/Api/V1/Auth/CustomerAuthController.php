@@ -779,7 +779,7 @@ class CustomerAuthController extends Controller
                 }
             }
 
-            return response()->json(['token' => $token, 'is_phone_verified'=> 1, 'is_email_verified'=> 1, 'is_personal_info' => $is_personal_info, 'is_exist_user' => null, 'login_type' => 'manual', 'email' => $user_email], 200);
+            return response()->json(['token' => $token, 'is_phone_verified'=> 1, 'is_email_verified'=> 1, 'is_personal_info' => $is_personal_info, 'is_exist_user' => null, 'login_type' => 'manual', 'email' => $user_email, 'profile_completion_token' => $is_personal_info === 0 ? $this->issueProfileCompletionToken($user) : null], 200);
         } else {
             $errors = [];
             array_push($errors, ['code' => 'auth-001', 'message' => translate('User_credential_does_not_match')]);
@@ -845,7 +845,7 @@ class CustomerAuthController extends Controller
                 $user_email = $user->email;
             }
 
-            return response()->json(['token' => $token, 'is_phone_verified'=>1, 'is_email_verified'=>1, 'is_personal_info' => $is_personal_info, 'is_exist_user' => null, 'login_type' => 'otp', 'email' => $user_email], 200);
+            return response()->json(['token' => $token, 'is_phone_verified'=>1, 'is_email_verified'=>1, 'is_personal_info' => $is_personal_info, 'is_exist_user' => null, 'login_type' => 'otp', 'email' => $user_email, 'profile_completion_token' => $is_personal_info === 0 ? $this->issueProfileCompletionToken($user) : null], 200);
         }
 
         return response()->json([
@@ -927,7 +927,7 @@ class CustomerAuthController extends Controller
             if($user->email){
                 $user_email = $user->email;
             }
-            return response()->json(['token' => $token, 'is_phone_verified'=>1, 'is_email_verified'=>1, 'is_personal_info' => $is_personal_info, 'is_exist_user' =>$is_exist_user, 'login_type' => 'social', 'email' => $user_email], 200);
+            return response()->json(['token' => $token, 'is_phone_verified'=>1, 'is_email_verified'=>1, 'is_personal_info' => $is_personal_info, 'is_exist_user' =>$is_exist_user, 'login_type' => 'social', 'email' => $user_email, 'profile_completion_token' => $is_personal_info === 0 ? $this->issueProfileCompletionToken($user) : null], 200);
         } else {
             $errors = [];
             array_push($errors, ['code' => 'auth-001', 'message' => 'Unauthorized.']);
@@ -1049,6 +1049,7 @@ class CustomerAuthController extends Controller
             'login_type' => 'required|in:otp,social,manual',
             'phone' => 'required|min:9|max:14',
             'email' => 'required|email',
+            'profile_completion_token' => 'required|string',
         ];
 
         if ($request->login_type == 'social') {
@@ -1110,19 +1111,13 @@ class CustomerAuthController extends Controller
         $firstName = $nameParts[0];
         $lastName = $nameParts[1] ?? '';
 
-        if($request->login_type == 'otp' || $request->login_type == 'manual'){
-            $user = User::where(['phone' => $request->phone])->first();
-        }else{
-            $user = User::where(['email' => $request->email])->first();
-        }
+        // The identity is resolved ONLY from the signed proof issued after a
+        // successful OTP / password / OAuth verification. Client-supplied
+        // phone and email can no longer select whose account to complete.
+        $user = $this->resolveProfileCompletionToken($request->profile_completion_token);
         if(!$user){
             return response()->json([
-                'message' => translate('messages.user_not_found')
-            ], 404);
-        }
-        if($user->f_name){
-            return response()->json([
-                'message' => translate('messages.already_exists')
+                'errors' => [['code' => 'profile_completion_token', 'message' => 'Invalid or expired profile completion proof.']]
             ], 403);
         }
         $user->f_name = $firstName;
@@ -1157,6 +1152,65 @@ class CustomerAuthController extends Controller
         }
         $temporaryToken = null;
         return response()->json(['token' => $temporaryToken, 'is_phone_verified'=>0, 'is_email_verified'=>1, 'is_personal_info' => 1, 'is_exist_user' => null, 'login_type' => 'otp', 'email' => null], 200);
+    }
+
+    /**
+     * Short-lived, single-purpose proof that the caller just completed a real
+     * OTP / password / OAuth verification for this exact user. It is signed
+     * with the app key, expires in 30 minutes, and is bound to the user's
+     * current phone/email so it cannot be replayed for a different identity.
+     * No server-side state is needed: the 'f_name still empty' check makes it
+     * single-use, since update_info writes the name on successful completion.
+     */
+    private function issueProfileCompletionToken(User $user): string
+    {
+        $identityHash = hash('sha256', (string) $user->phone . '|' . (string) $user->email);
+        $payload = $user->id . '|' . $identityHash . '|' . (now()->timestamp + 1800);
+        $signature = hash_hmac('sha256', $payload, $this->profileCompletionSigningKey());
+
+        return base64_encode($payload . '|' . $signature);
+    }
+
+    private function resolveProfileCompletionToken($token): ?User
+    {
+        if (!is_string($token) || $token === '') {
+            return null;
+        }
+        $decoded = base64_decode($token, true);
+        if ($decoded === false) {
+            return null;
+        }
+        $parts = explode('|', $decoded);
+        if (count($parts) !== 4) {
+            return null;
+        }
+        [$id, $identityHash, $expiresAt, $signature] = $parts;
+        if (!ctype_digit($id) || !ctype_digit($expiresAt) || (int) $expiresAt < now()->timestamp) {
+            return null;
+        }
+
+        $payload = $id . '|' . $identityHash . '|' . $expiresAt;
+        $expected = hash_hmac('sha256', $payload, $this->profileCompletionSigningKey());
+        if (!hash_equals($expected, $signature)) {
+            return null;
+        }
+
+        $user = User::find((int) $id);
+        if (!$user || $user->f_name) {
+            // Completed profiles reject the proof: single-use.
+            return null;
+        }
+        $currentHash = hash('sha256', (string) $user->phone . '|' . (string) $user->email);
+        if (!hash_equals($identityHash, $currentHash)) {
+            return null;
+        }
+
+        return $user;
+    }
+
+    private function profileCompletionSigningKey(): string
+    {
+        return hash('sha256', (string) config('app.key') . '|profile-completion-v1');
     }
 
 }

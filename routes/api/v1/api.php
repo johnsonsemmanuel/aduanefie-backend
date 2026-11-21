@@ -40,7 +40,7 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
         Route::post('login', 'CustomerAuthController@login')->middleware('throttle:api-auth');
         Route::post('external-login', 'CustomerAuthController@customerLoginFromDrivemond')->middleware('throttle:api-auth');
         Route::post('verify-phone', 'CustomerAuthController@verify_phone_or_email')->middleware('throttle:api-otp');
-        Route::post('update-info', 'CustomerAuthController@update_info');
+        Route::post('update-info', 'CustomerAuthController@update_info')->middleware('throttle:api-auth');
         Route::post('firebase-verify-token', 'CustomerAuthController@firebase_auth_verify');
 
         Route::post('forgot-password', 'PasswordResetController@reset_password_request');
