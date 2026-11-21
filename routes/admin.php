@@ -692,6 +692,8 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
             Route::post('update/{service}', 'BusinessSettingsController@updateAppleLogin')->name('update');
         });
         Route::view('store/report', 'store_report')->name('store.report');
+        Route::get('insurance-claims', 'InsuranceClaimController@index')->name('insurance-claims.index');
+        Route::post('insurance-claims/{id}/status', 'InsuranceClaimController@updateStatus')->name('insurance-claims.status');
 
         Route::group(['prefix' => 'dispatch', 'as' => 'dispatch.'], function () {
             Route::get('/', 'DashboardController@dispatch_dashboard')->name('dashboard');
