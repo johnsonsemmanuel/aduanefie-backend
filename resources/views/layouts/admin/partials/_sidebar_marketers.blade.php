@@ -41,4 +41,30 @@
             <span class="navbar-vertical-aside-mini-mode-hidden-elements text-truncate">Store attribution</span>
         </a>
     </li>
+
+    <li class="nav-item">
+        <small class="nav-subtitle" title="Agro & Field Programs">Agro &amp; Field Programs</small>
+        <small class="tio-more-horizontal nav-subtitle-replacer"></small>
+    </li>
+
+    <li class="navbar-vertical-aside-has-menu {{ Request::is('admin/regional-tours*') ? 'active' : '' }}">
+        <a class="nav-link" href="{{ route('admin.regional-tours.index') }}" title="Regional Tours">
+            <i class="tio-map nav-icon"></i>
+            <span class="navbar-vertical-aside-mini-mode-hidden-elements text-truncate">Regional Tours</span>
+        </a>
+    </li>
+
+    <li class="navbar-vertical-aside-has-menu {{ Request::is('admin/backyard-farmers*') ? 'active' : '' }}">
+        <a class="nav-link" href="{{ route('admin.backyard-farmers.index') }}" title="Backyard Farmers">
+            <i class="tio-home-vs-1-outlined nav-icon"></i>
+            <span class="navbar-vertical-aside-mini-mode-hidden-elements text-truncate">Backyard Farmers</span>
+        </a>
+    </li>
+
+    <li class="navbar-vertical-aside-has-menu {{ Request::is('admin/business-settings/farming-settings*') ? 'active' : '' }}">
+        <a class="nav-link" href="{{ url('/admin/business-settings/farming-settings') }}" title="Farming Settings">
+            <i class="tio-tune nav-icon"></i>
+            <span class="navbar-vertical-aside-mini-mode-hidden-elements text-truncate">Farming Settings</span>
+        </a>
+    </li>
 @endif
