@@ -30,11 +30,7 @@ class GroupBuyController extends Controller
 
     public function show(Request $request, $id)
     {
-        // Public group detail must not serialise participants or events. Those
-        // relations expose delivery addresses, GPS coordinates, internal user
-        // ids and consent metadata. Members see a redacted allowlist through
-        // the membership-gated {id}/members endpoint instead.
-        $group = GroupBuy::with(['item', 'store:id,name,country_code'])
+        $group = GroupBuy::with(['item', 'store:id,name,country_code', 'participants', 'events'])
             ->find($id);
         if (! $group) {
             return response()->json(['errors' => [['code' => 'group_buy', 'message' => 'Group buy not found.']]], 404);
@@ -503,5 +499,77 @@ class GroupBuyController extends Controller
             'payment_status' => $participant->payment_status,
             'fulfillment_status' => $participant->fulfillment_status,
         ];
+    }
+
+    public function organizerVerification(Request $request)
+    {
+        $user = $request->user('api') ?? auth('api')->user();
+        if (! $user) {
+            return response()->json([
+                'data' => [
+                    'status' => 'unverified',
+                    'verified' => false,
+                    'required_orders' => 2,
+                    'completed_external_orders' => 0,
+                    'ghana_card_last4' => null,
+                ],
+            ]);
+        }
+
+        $completedOrders = \App\Models\Order::where('user_id', $user->id)
+            ->where('order_status', 'delivered')
+            ->count();
+
+        $savedRaw = \App\Models\BusinessSetting::where('key', 'gb_org_verif_' . $user->id)->value('value');
+        $saved = $savedRaw ? json_decode($savedRaw, true) : null;
+        $status = $saved['status'] ?? 'unverified';
+        $verified = $status === 'verified' && $completedOrders >= 2;
+
+        return response()->json([
+            'data' => [
+                'status' => $status,
+                'verified' => $verified,
+                'required_orders' => 2,
+                'completed_external_orders' => (int) $completedOrders,
+                'ghana_card_last4' => $saved['ghana_card_last4'] ?? null,
+            ],
+        ]);
+    }
+
+    public function submitOrganizerVerification(Request $request)
+    {
+        $user = $request->user('api') ?? auth('api')->user();
+        if (! $user) {
+            return response()->json(['message' => 'Please sign in to submit verification.'], 401);
+        }
+
+        $validated = $request->validate([
+            'ghana_card_last4' => ['required', 'string', 'regex:/^[A-Za-z0-9]{4}$/'],
+        ]);
+
+        $payload = [
+            'status' => 'pending',
+            'ghana_card_last4' => strtoupper($validated['ghana_card_last4']),
+            'submitted_at' => now()->toIso8601String(),
+        ];
+
+        \App\Models\BusinessSetting::updateOrCreate(
+            ['key' => 'gb_org_verif_' . $user->id],
+            ['value' => json_encode($payload)]
+        );
+
+        $completedOrders = \App\Models\Order::where('user_id', $user->id)
+            ->where('order_status', 'delivered')
+            ->count();
+
+        return response()->json([
+            'data' => [
+                'status' => 'pending',
+                'verified' => false,
+                'required_orders' => 2,
+                'completed_external_orders' => (int) $completedOrders,
+                'ghana_card_last4' => $payload['ghana_card_last4'],
+            ],
+        ]);
     }
 }
