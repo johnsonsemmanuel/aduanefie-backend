@@ -30,7 +30,11 @@ class GroupBuyController extends Controller
 
     public function show(Request $request, $id)
     {
-        $group = GroupBuy::with(['item', 'store:id,name,country_code', 'participants', 'events'])
+        // Public group detail must not serialise participants or events. Those
+        // relations expose delivery addresses, GPS coordinates, internal user
+        // ids and consent metadata. Members see a redacted allowlist through
+        // the membership-gated {id}/members endpoint instead.
+        $group = GroupBuy::with(['item', 'store:id,name,country_code'])
             ->find($id);
         if (! $group) {
             return response()->json(['errors' => [['code' => 'group_buy', 'message' => 'Group buy not found.']]], 404);
