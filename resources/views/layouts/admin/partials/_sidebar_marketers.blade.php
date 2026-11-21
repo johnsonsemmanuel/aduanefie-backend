@@ -14,10 +14,10 @@
         <small class="tio-more-horizontal nav-subtitle-replacer"></small>
     </li>
 
-    <li class="navbar-vertical-aside-has-menu {{ Request::is('admin/marketer') ? 'active' : '' }}">
-        <a class="nav-link" href="{{ route('admin.marketer.index') }}" title="Marketers">
+    <li class="navbar-vertical-aside-has-menu {{ Request::is('admin/marketer') || Request::is('admin/marketer/stores*') || Request::is('admin/marketer-applications*') ? 'active' : '' }}">
+        <a class="nav-link" href="{{ route('admin.marketer.index') }}" title="Remote Marketers">
             <i class="tio-user nav-icon"></i>
-            <span class="navbar-vertical-aside-mini-mode-hidden-elements text-truncate">Marketers</span>
+            <span class="navbar-vertical-aside-mini-mode-hidden-elements text-truncate">Remote Marketers</span>
         </a>
     </li>
 
@@ -32,20 +32,6 @@
         <a class="nav-link" href="{{ route('admin.marketer.payouts') }}" title="Marketer payouts">
             <i class="tio-money nav-icon"></i>
             <span class="navbar-vertical-aside-mini-mode-hidden-elements text-truncate">Marketer payouts</span>
-        </a>
-    </li>
-
-    <li class="navbar-vertical-aside-has-menu {{ Request::is('admin/marketer/stores*') ? 'active' : '' }}">
-        <a class="nav-link" href="{{ route('admin.marketer.stores') }}" title="Store attribution">
-            <i class="tio-shop nav-icon"></i>
-            <span class="navbar-vertical-aside-mini-mode-hidden-elements text-truncate">Store attribution</span>
-        </a>
-    </li>
-
-    <li class="navbar-vertical-aside-has-menu {{ Request::is('admin/marketer-applications*') ? 'active' : '' }}">
-        <a class="nav-link" href="{{ route('admin.marketer-applications.index') }}" title="Marketer Applications">
-            <i class="tio-user-add nav-icon"></i>
-            <span class="navbar-vertical-aside-mini-mode-hidden-elements text-truncate">Marketer Applications</span>
         </a>
     </li>
 

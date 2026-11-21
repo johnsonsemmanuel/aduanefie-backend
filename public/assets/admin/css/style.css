@@ -2522,39 +2522,39 @@ textarea.form-control[readonly] {
 }
 
 .card--bg-1 {
-    background: #eafbff !important;
+    background: #F3EDE4 !important;
     box-shadow: none !important;
 }
 
 .card--bg-1 .title {
-    color: #16abcb;
+    color: #67513A;
 }
 
 .card--bg-2 {
-    background: #fff7e7 !important;
+    background: #EDF2E4 !important;
     box-shadow: none !important;
 }
 
 .card--bg-2 .title {
-    color: #feb019;
+    color: #5E7042;
 }
 
 .card--bg-3 {
-    background: #eafdf6 !important;
+    background: #F6EBDC !important;
     box-shadow: none !important;
 }
 
 .card--bg-3 .title {
-    color: #00aa6d;
+    color: #8A5A00;
 }
 
 .card--bg-4 {
-    background: #fff2f2 !important;
+    background: #EFE7D3 !important;
     box-shadow: none !important;
 }
 
 .card--bg-4 .title {
-    color: #ff6d6d;
+    color: #67513A;
 }
 
 [data-toggle="tooltip"] img {
@@ -13688,6 +13688,34 @@ video#VisaChipCardVideo {
     align-items: center;
     justify-content: center;
 }
+.__nav-module-item-drivemond * {
+    color: #2b4d66;
+}
+.__nav-module-item-drivemond {
+    color: #2b4d66;
+    text-align: center;
+    padding: 10px;
+    background: #ffffff;
+    border: 1px solid rgba(0, 159, 170, 0.2);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-size: 12px;
+    gap: 8px;
+    border-radius: 4px;
+    box-shadow: 0 0 5px rgba(0, 159, 170, 0.2);
+}
+
+.__nav-module-item-drivemond:hover {
+    background: #009faa;
+    color: #ffffff;
+    border: 1px solid #009faa;
+}
+.__nav-module-item-drivemond:hover * {
+    color: #ffffff;
+}
+
 /* Mutiple Select2 */
 
 .multiple-select2

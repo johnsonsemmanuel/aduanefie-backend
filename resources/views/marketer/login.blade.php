@@ -7,6 +7,10 @@
     @php($recaptchaOn = isset($recaptcha) && $recaptcha['status'] == 1)
 
     <div class="card" style="max-width:460px;margin:32px auto 0;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;">
+            <img src="https://aduanefie.com/static/aduanefie_logo.png" alt="Aduanefie" style="height:36px;width:auto;" onerror="this.style.display='none'">
+            <span class="badge" style="background:#EDF2E4;color:#5E7042;border-color:#C8D6AF;">Partners Portal</span>
+        </div>
         <h1>Marketer sign in</h1>
         <p class="muted small" style="margin-top:0;">
             Remote marketers sign in with their registered email address.
@@ -63,6 +67,10 @@
             <div style="margin-top:14px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;" class="small">
                 <a href="{{ route('marketer.forgot') }}">Forgot password? Get SMS &amp; Email login link</a>
                 <a href="https://aduanefie.com/become-a-marketer" target="_blank" rel="noopener">Apply as a marketer ↗</a>
+            </div>
+            <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;" class="small muted">
+                <span>Farm or Store Owner?</span>
+                <a href="https://admin.aduanefie.com/store-login">Sign in to Store Panel →</a>
             </div>
         </form>
     </div>

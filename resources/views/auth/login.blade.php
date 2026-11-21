@@ -247,6 +247,11 @@
                     @else
                         <a href="{{ route('store.login') }}" class="text-muted small">{{ translate('Store owner login') }}</a>
                     @endif
+                    <div class="mt-2">
+                        <a href="https://partners.aduanefie.com/marketer-login" class="small" style="color: #67513A; font-weight: 600;">
+                            Remote Marketer? Sign in at Partners Portal →
+                        </a>
+                    </div>
                 </div>
                 @endif
 

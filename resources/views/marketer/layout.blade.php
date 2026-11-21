@@ -59,7 +59,7 @@
             width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px;
             font-size: 15px; background: #fff; color: var(--ink); font-family: inherit;
         }
-        input:focus, select:focus, textarea:focus { outline: 2px solid rgba(11, 110, 79, .25); border-color: var(--brand); }
+        input:focus, select:focus, textarea:focus { outline: 2px solid rgba(103, 81, 58, .25); border-color: var(--brand); }
         .field { margin-bottom: 14px; }
         button, .btn {
             display: inline-block; padding: 11px 18px; border-radius: 10px; border: 1px solid var(--brand);
