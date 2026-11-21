@@ -3213,47 +3213,6 @@ class Helpers
         return $price_tax;
     }
 
-    public static function apple_client_secret(){
-        // Set up the necessary variables
-        $keyId = 'U7KA7F82UM';
-        $teamId = '7WSYLQ8Y87';
-        $clientId = 'com.sixamtech.sixamMartApp';
-        $privateKey = file_get_contents('AuthKey_U7KA7F82UM.p8'); // Should be a string containing the contents of the private key file.
-
-        // Create the JWT header
-        $header = [
-            'alg' => 'ES256',
-            'kid' => $keyId,
-        ];
-
-        // Create the JWT payload
-        $payload = [
-            'iss' => $teamId,
-            'iat' => time(),
-            'exp' => time() + 86400 * 180, // 180 days in seconds
-            'aud' => 'https://appleid.apple.com',
-            'sub' => $clientId,
-        ];
-
-        // Encode the JWT header and payload
-        $base64Header = base64_encode(json_encode($header));
-        $base64Payload = base64_encode(json_encode($payload));
-
-        // Create the signature using the private key and the SHA-256 algorithm
-        $dataToSign = $base64Header . '.' . $base64Payload;
-        $signature = '';
-        openssl_sign($dataToSign, $signature, $privateKey, 'sha256');
-
-        // Encode the signature
-        $base64Signature = base64_encode($signature);
-
-        // Create the Apple Client Secret key
-        $clientSecret = $base64Header . '.' . $base64Payload . '.' . $base64Signature;
-
-        // Output the key
-        return $clientSecret;
-    }
-
     public static function error_formater($key, $mesage, $errors = [])
     {
         $errors[] = ['code' => $key, 'message' => $mesage];

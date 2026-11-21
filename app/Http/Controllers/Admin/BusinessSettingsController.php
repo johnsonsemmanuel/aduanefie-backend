@@ -2691,14 +2691,8 @@ class BusinessSettingsController extends Controller
             Helpers::insert_business_settings_key('social_login', '[{"login_medium":"google","client_id":"","client_secret":"","status":"0"},{"login_medium":"facebook","client_id":"","client_secret":"","status":""}]');
             $data = BusinessSetting::where('key', 'social_login')->first();
         }
-        $apple = BusinessSetting::where('key', 'apple_login')->first();
-        if (!$apple) {
-            Helpers::insert_business_settings_key('apple_login', '[{"login_medium":"apple","client_id":"","client_secret":"","team_id":"","key_id":"","service_file":"","redirect_url":"","status":""}]');
-            $apple = BusinessSetting::where('key', 'apple_login')->first();
-        }
-        $appleLoginServices = json_decode($apple->value, true);
         $socialLoginServices = json_decode($data->value, true);
-        return view('admin-views.business-settings.social-login.view', compact('socialLoginServices', 'appleLoginServices'));
+        return view('admin-views.business-settings.social-login.view', compact('socialLoginServices'));
     }
 
     public function updateSocialLogin($service, Request $request)
@@ -2732,42 +2726,8 @@ class BusinessSettingsController extends Controller
         return redirect()->back();
     }
 
-    public function updateAppleLogin($service, Request $request)
-    {
-        $appleLogin = BusinessSetting::where('key', 'apple_login')->firstOrNew(['key' => 'apple_login']);
-        $credential_array = [];
-        if ($request->hasfile('service_file')) {
-            $fileName = Helpers::upload('apple-login/', 'p8', $request->file('service_file'));
-        }
-        foreach (json_decode($appleLogin['value'], true) as $key => $data) {
-            if ($data['login_medium'] == $service) {
-                $cred = [
-                    'login_medium' => $service,
-                    'client_id' => $request['client_id'],
-                    'client_id_app' => $request['client_id_app'],
-                    'client_secret' => $request['client_secret'],
-                    'status' => $request['status'],
-                    'team_id' => $request['team_id'],
-                    'key_id' => $request['key_id'],
-                    'service_file' => isset($fileName) ? $fileName : $data['service_file'],
-                    'redirect_url_flutter' => $request['redirect_url_flutter'],
-                    'redirect_url_react' => $request['redirect_url_react'],
-                ];
-                array_push($credential_array, $cred);
-            } else {
-                array_push($credential_array, $data);
-            }
-        }
-        $appleLogin->value = $credential_array;
-
-        $appleLogin->save();
-
-        Toastr::success(translate('messages.credential_updated', ['service' => $service]));
-        return redirect()->back();
-    }
-
     public function login_settings(){
-        $data = array_column(BusinessSetting::whereIn('key',['manual_login_status','otp_login_status','social_login_status','google_login_status','facebook_login_status','apple_login_status','email_verification_status','phone_verification_status'
+        $data = array_column(BusinessSetting::whereIn('key',['manual_login_status','otp_login_status','social_login_status','google_login_status','facebook_login_status','email_verification_status','phone_verification_status'
         ])->get(['key','value'])->toArray(), 'value', 'key');
 
         return view('admin-views.login-setup.login_page',compact('data'));
@@ -2777,10 +2737,6 @@ class BusinessSettingsController extends Controller
     {
         $social_login = [];
         $social_login_data=Helpers::get_business_settings('social_login') ?? [];
-        foreach ($social_login_data as $social) {
-            $social_login[$social['login_medium']] = (boolean)$social['status'];
-        }
-        $social_login_data=Helpers::get_business_settings('apple_login') ?? [];
         foreach ($social_login_data as $social) {
             $social_login[$social['login_medium']] = (boolean)$social['status'];
         }
@@ -2807,7 +2763,7 @@ class BusinessSettingsController extends Controller
                 return back();
             }
         }
-        if( $request['social_login_status'] &&  !$request['google_login_status'] && !$request['facebook_login_status'] && !$request['apple_login_status']){
+        if( $request['social_login_status'] &&  !$request['google_login_status'] && !$request['facebook_login_status']){
             Session::flash('select-one-method-social-login', true);
             return back();
         }
@@ -2819,11 +2775,6 @@ class BusinessSettingsController extends Controller
 
         if(($request['social_login_status'] && $request['facebook_login_status'] && !isset($social_login['facebook'])) || ($request['social_login_status'] && ($request['facebook_login_status'] && isset($social_login['facebook'])) && !$social_login['facebook'])){
             Session::flash('setup-facebook', true);
-            return back();
-        }
-
-        if(($request['social_login_status'] && $request['apple_login_status'] && !isset($social_login['apple'])) || ($request['social_login_status'] && ($request['apple_login_status'] && isset($social_login['apple'])) && !$social_login['apple'])){
-            Session::flash('setup-apple', true);
             return back();
         }
 
@@ -2856,10 +2807,6 @@ class BusinessSettingsController extends Controller
 
         Helpers::businessUpdateOrInsert(['key' => 'facebook_login_status'], [
             'value' => $request['social_login_status']?($request['facebook_login_status'] ? 1 : 0):0
-        ]);
-
-        Helpers::businessUpdateOrInsert(['key' => 'apple_login_status'], [
-            'value' => $request['social_login_status']?($request['apple_login_status'] ? 1 : 0):0
         ]);
 
         Helpers::businessUpdateOrInsert(['key' => 'email_verification_status'], [

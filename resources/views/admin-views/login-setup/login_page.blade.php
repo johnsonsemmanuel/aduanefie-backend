@@ -117,17 +117,6 @@
                                         <input type="checkbox" name="facebook_login_status" id="facebook_login_status" value="1" {{ (isset($data['facebook_login_status']) && $data['facebook_login_status'] == '1')? 'checked':'' }} class="form-check-input social-media-status-checkbox">
                                     </label>
                                 </div>
-                                <div class="col-sm-6 col-md-4">
-                                    <label class="form-check form--check form--check--inline border rounded">
-                                        <span class="user-select-none form-check-label flex-grow-1">
-                                            {{translate('Apple')}}
-                                            <span data-toggle="tooltip" data-placement="top" title="" data-original-title="{{ translate('Enabling Apple Login, customers can log in to the site using their existing Apple login credentials, Only for Apple devices') }}">
-                                                <i class="tio-info-outined"></i>
-                                            </span>
-                                        </span>
-                                        <input type="checkbox" name="apple_login_status" value="1" {{ (isset($data['apple_login_status']) && $data['apple_login_status'] == '1')? 'checked':'' }} class="form-check-input social-media-status-checkbox">
-                                    </label>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -309,50 +298,6 @@
         </div>
     </div>
 
-    <div class="modal fade" id="setup-apple-modal" data-backdrop="static" data-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
-        <div class="modal-dialog status-warning-modal text-center">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body pb-0"><b></b>
-                    <div class="text-center mb-20">
-                        <img src="{{asset('public/assets/admin/img/modal/apple.png')}}" alt="" class="mb-20">
-                        <h5 class="modal-title">{{translate('Set Up Apple Configuration First')}}</h5>
-                    </div>
-                    <p>{{ translate('It looks like your Apple Login configuration is not set up yet. To enable the Apple Login option, please set up the Apple configuration first.') }}</p>
-                </div>
-                <div class="modal-footer justify-content-center border-0">
-                    <a type="button" class="btn btn--primary mw-300px" href="{{route('admin.business-settings.third-party.social-login.view')}}" target="_blank">{{translate('Go to Apple Configuration')}}</a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="sms-config-verification-modal" data-backdrop="static" data-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
-        <div class="modal-dialog status-warning-modal text-center">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body pb-0"><b></b>
-                    <div class="text-center mb-20">
-                        <img src="{{asset('public/assets/admin/img/sms-configuration.svg')}}" alt="" class="mb-20 img--80">
-                        <h5 class="modal-title">{{translate('Set Up SMS Configuration First')}}</h5>
-                    </div>
-                    <p>{{ translate('It looks like your SMS configuration is not set up yet. To enable the phone verification, please set up the SMS configuration first.') }}</p>
-                </div>
-                <div class="modal-footer justify-content-center border-0">
-                    <a type="button" class="btn btn--primary w-100 mw-300px" href="{{ route('admin.business-settings.third-party.sms-module') }}" target="_blank">{{translate('Go to SMS Configuration')}}</a>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <div class="modal fade" id="mail-config-verification-modal" data-backdrop="static" data-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
         <div class="modal-dialog status-warning-modal text-center">
             <div class="modal-content">
@@ -396,9 +341,6 @@
             @endif
             @if (session('setup-facebook'))
             $('#setup-facebook-modal').modal('show');
-            @endif
-            @if (session('setup-apple'))
-            $('#setup-apple-modal').modal('show');
             @endif
             @if (session('sms-config-verification'))
             $('#sms-config-verification-modal').modal('show');

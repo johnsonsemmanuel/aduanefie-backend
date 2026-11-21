@@ -491,7 +491,7 @@ class CustomerAuthController extends Controller
 
         $token = $user->createToken('RestaurantCustomerAuth')->accessToken;
 
-        $login_settings = array_column(BusinessSetting::whereIn('key',['manual_login_status','otp_login_status','social_login_status','google_login_status','facebook_login_status','apple_login_status','email_verification_status','phone_verification_status'
+        $login_settings = array_column(BusinessSetting::whereIn('key',['manual_login_status','otp_login_status','social_login_status','google_login_status','facebook_login_status','email_verification_status','phone_verification_status'
         ])->get(['key','value'])->toArray(), 'value', 'key');
         $firebase_otp_verification = BusinessSetting::where('key', 'firebase_otp_verification')->first()?->value??0;
         $phone = 1;
@@ -613,7 +613,7 @@ class CustomerAuthController extends Controller
             return response()->json(['errors' => Helpers::error_processor($validator)], 403);
         }
 
-        $login_settings = array_column(BusinessSetting::whereIn('key',['manual_login_status','otp_login_status','social_login_status','google_login_status','facebook_login_status','apple_login_status','email_verification_status','phone_verification_status'
+        $login_settings = array_column(BusinessSetting::whereIn('key',['manual_login_status','otp_login_status','social_login_status','google_login_status','facebook_login_status','email_verification_status','phone_verification_status'
         ])->get(['key','value'])->toArray(), 'value', 'key');
 
         if($request->login_type == 'manual'){
@@ -680,7 +680,7 @@ class CustomerAuthController extends Controller
                 'token' => 'required',
                 'unique_id' => 'required',
                 'email' => 'required_if:medium,google,facebook',
-                'medium' => 'required|in:google,facebook,apple',
+                'medium' => 'required|in:google,facebook',
             ]);
 
             if ($validator->fails()) {
@@ -702,67 +702,12 @@ class CustomerAuthController extends Controller
                 } elseif ($request['medium'] == 'facebook') {
                     $res = $client->request('GET', 'https://graph.facebook.com/' . $unique_id . '?access_token=' . $token . '&&fields=name,email');
                     $data = json_decode($res->getBody()->getContents(), true);
-                } elseif ($request['medium'] == 'apple') {
-                    if($request->has('verified')){
-                        $user = EmailVerifications::where('token', $unique_id)->first();
-                        $data = [
-                            'email' => $user->email
-                        ];
-                    }else{
-                        $apple_login=\App\Models\BusinessSetting::where(['key'=>'apple_login'])->first();
-                        if($apple_login){
-                            $apple_login = json_decode($apple_login->value)[0];
-                        }
-                        $teamId = $apple_login->team_id;
-                        $keyId = $apple_login->key_id;
-                        if($request->platform == 'flutter_app'){
-                            $sub = $apple_login->client_id_app;
-                        }else{
-                            $sub = $apple_login->client_id;
-                        }
-                        $aud = 'https://appleid.apple.com';
-                        $iat = strtotime('now');
-                        $exp = strtotime('+60days');
-                        $keyContent = file_get_contents('storage/app/public/apple-login/'.$apple_login->service_file);
-
-                        $token = JWT::encode([
-                            'iss' => $teamId,
-                            'iat' => $iat,
-                            'exp' => $exp,
-                            'aud' => $aud,
-                            'sub' => $sub,
-                        ], $keyContent, 'ES256', $keyId);
-
-                        if($request->platform == 'flutter_web'){
-                            $redirect_uri = $apple_login->redirect_url_flutter??'www.example.com/apple-callback';
-                        }else{
-                            $redirect_uri = $apple_login->redirect_url_react??'www.example.com/apple-callback';
-                        }
-
-                        $res = Http::asForm()->post('https://appleid.apple.com/auth/token', [
-                            'grant_type' => 'authorization_code',
-                            'code' => $unique_id,
-                            'redirect_uri' => $redirect_uri,
-                            'client_id' => $sub,
-                            'client_secret' => $token,
-                        ]);
-
-
-                        $claims = explode('.', $res['id_token'])[1];
-                        $data = json_decode(base64_decode($claims),true);
-                    }
-
                 }
             } catch (\Exception $e) {
                 return response()->json(['error' => 'wrong credential.','message'=>$e->getMessage()],403);
             }
-            if(!isset($claims)){
-
-                if (strcmp($email, $data['email']) != 0 && (!isset($data['id']) && !isset($data['kid']))) {
-                    return response()->json(['error' => translate('messages.email_does_not_match')],403);
-                }
-            }else{
-                $email = $data['email'];
+            if (strcmp($email, $data['email']) != 0 && (!isset($data['id']) && !isset($data['kid']))) {
+                return response()->json(['error' => translate('messages.email_does_not_match')],403);
             }
 
             $request_data = [
@@ -917,14 +862,6 @@ class CustomerAuthController extends Controller
         if($user && $request_data['verified'] == 'default' && $user->is_email_verified == 0 && $user->is_from_pos == 0){
             $is_exist_user = $this->exist_user($user);
             $temporaryToken = null;
-            if($request_data['medium'] == 'apple'){
-                DB::table('email_verifications')->updateOrInsert(['email' => $data['email']],
-                    [
-                        'token' => $request_data['unique_id'],
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-            }
             $user_email = null;
             if($user->email){
                 $user_email = $user->email;
@@ -935,12 +872,10 @@ class CustomerAuthController extends Controller
         if(($user && $request_data['verified'] == 'no') || (!$user && $request_data['verified'] == 'default')){
 
             if(strcmp($request_data['email'], $data['email']) === 0){
-                if($request_data['medium'] != 'apple'){
-                    if(!isset($data['id']) && !isset($data['kid']) &&  !isset($data['sub']) ){
-                        return response()->json(['error' => 'wrong credential.'],403);
-                    }
-                    $pk = isset($data['id'])?$data['id']:(  isset($data['kid']) ?  $data['kid'] : $data['sub'] );
+                if(!isset($data['id']) && !isset($data['kid']) &&  !isset($data['sub']) ){
+                    return response()->json(['error' => 'wrong credential.'],403);
                 }
+                $pk = isset($data['id'])?$data['id']:(  isset($data['kid']) ?  $data['kid'] : $data['sub'] );
                 try {
                     if(($user && $request_data['verified'] == 'no')){
                         $user->email = null;
@@ -951,9 +886,7 @@ class CustomerAuthController extends Controller
                     $user->email = $data['email'];
                     $user->login_medium = $request_data['medium'];
                     $user->temp_token = $request_data['unique_id'];
-                    if($request_data['medium'] != 'apple'){
-                        $user->social_id = $pk;
-                    }
+                    $user->social_id = $pk;
                     $user->save();
                 } catch (\Throwable $e) {
                     return response()->json(['error' => 'wrong credential.','message'=>$e->getMessage()],403);
@@ -961,12 +894,6 @@ class CustomerAuthController extends Controller
             }
         }
 
-        if($request_data['medium'] == 'apple'){
-            DB::table('email_verifications')->where([
-                'email' => $data['email'],
-                'token' => $request_data['unique_id'],
-            ])->delete();
-        }
 
         if (auth()->loginUsingId($user->id)) {
             if(!auth()->user()->status)

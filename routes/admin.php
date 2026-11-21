@@ -680,9 +680,6 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
             Route::get('view', 'BusinessSettingsController@viewSocialLogin')->name('view');
             Route::post('update/{service}', 'BusinessSettingsController@updateSocialLogin')->name('update');
         });
-        Route::group(['prefix' => 'apple-login', 'as' => 'apple-login.'], function () {
-            Route::post('update/{service}', 'BusinessSettingsController@updateAppleLogin')->name('update');
-        });
         Route::get('store/report', function () {
             return view('store_report');
         });
