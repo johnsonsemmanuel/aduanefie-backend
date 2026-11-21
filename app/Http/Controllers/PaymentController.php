@@ -106,9 +106,17 @@ class PaymentController extends Controller
         // configured currency for an NGN/XOF-labelled order. If the market,
         // gateway or currency combination is unsupported, fail closed.
         $gateway = strtolower((string) $request->payment_method);
+        // Cross-border orders carry their destination on the order. Domestic
+        // orders do not, so resolve the market from the fulfilment store. Never
+        // fall back to Ghana for an order whose store is in another market.
         $orderCountry = $this->markets->normalizeCountry(
             $order->destination_country ?: $order->origin_country
-        ) ?: $this->markets->defaultCountry();
+        );
+        if (! $orderCountry && $order->store_id) {
+            $storeCountry = \App\Models\Store::where('id', $order->store_id)->value('country_code');
+            $orderCountry = $this->markets->normalizeCountry($storeCountry);
+        }
+        $orderCountry = $orderCountry ?: $this->markets->defaultCountry();
         $currency = strtoupper((string) (
             $order->currency_code ?: $this->markets->currencyForCountry($orderCountry) ?: ''
         ));
