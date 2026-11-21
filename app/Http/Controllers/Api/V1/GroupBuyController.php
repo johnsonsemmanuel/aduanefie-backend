@@ -5,19 +5,28 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\GroupBuy;
 use App\Models\GroupBuyParticipant;
+use App\Services\GroupBuy\GroupBuyInviteService;
 use App\Services\GroupBuy\GroupBuyService;
+use App\Services\GroupBuy\OrganizerTrustService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class GroupBuyController extends Controller
 {
-    public function __construct(private GroupBuyService $groups)
-    {
+    public function __construct(
+        private GroupBuyService $groups,
+        private OrganizerTrustService $trust,
+        private GroupBuyInviteService $invites,
+    ) {
     }
 
     public function index(Request $request)
     {
-        $query = GroupBuy::with(['item:id,name,price,image,module_id', 'store:id,name'])
+        $query = GroupBuy::with([
+            'item:id,name,price,image,module_id',
+            'store:id,name',
+            'organizer:id,f_name,l_name,image,organizer_verification_status,ghana_card_last4,organizer_verified_at,organizer_verification_note',
+        ])
             ->withCount('participants')
             ->when($request->filled('module_id'), fn ($q) => $q->where('module_id', (int) $request->module_id))
             ->when($request->filled('store_id'), fn ($q) => $q->where('store_id', (int) $request->store_id))
@@ -25,13 +34,26 @@ class GroupBuyController extends Controller
             ->when($request->filled('country'), fn ($q) => $q->where('destination_country', strtoupper($request->country)))
             ->orderByDesc('id');
 
-        return response()->json(['data' => $query->paginate(20)], 200);
+        $groups = $query->paginate(20);
+        $groups->getCollection()->transform(function (GroupBuy $group) {
+            // Public listing: only the badge, never the card reference or note.
+            $group->organizer_trust = $this->trust->publicSummary($group->organizer);
+
+            return $group;
+        });
+
+        return response()->json(['data' => $groups], 200);
     }
 
     public function show(Request $request, $id)
     {
-        $group = GroupBuy::with(['item', 'store:id,name,country_code', 'participants', 'events'])
-            ->find($id);
+        $group = GroupBuy::with([
+            'item',
+            'store:id,name,country_code',
+            'participants',
+            'events',
+            'organizer:id,f_name,l_name,image,organizer_verification_status,ghana_card_last4,organizer_verified_at,organizer_verification_note',
+        ])->find($id);
         if (! $group) {
             return response()->json(['errors' => [['code' => 'group_buy', 'message' => 'Group buy not found.']]], 404);
         }
@@ -42,6 +64,7 @@ class GroupBuyController extends Controller
                 'member_share_ghs' => round($this->groups->resolvedUnitPrice($group) * $group->share_units, 2),
                 'spots_left' => max(0, $group->member_limit - $group->committed_count),
                 'viewer' => $this->viewer($request, $group),
+                'organizer_trust' => $this->trust->publicSummary($group->organizer),
                 // Explicit flags: the UI must never infer editing rights from
                 // being on the "my groups" tab, which also lists joined groups.
                 'is_organizer' => $this->isOrganizer($request, $group),
@@ -84,6 +107,86 @@ class GroupBuyController extends Controller
         }
 
         return response()->json(['data' => $group->fresh()], 201);
+    }
+
+    /**
+     * Own verification state. The full card number is never accepted here and
+     * the stored last four are only returned to the account owner.
+     */
+    public function verification(Request $request)
+    {
+        return response()->json(['data' => $this->trust->summary(auth('api')->user())], 200);
+    }
+
+    public function submitVerification(Request $request)
+    {
+        $user = auth('api')->user();
+        if (! $user) {
+            return response()->json(['errors' => [['code' => 'permission', 'message' => 'Sign in to submit verification.']]], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'ghana_card_last4' => 'required|string|size:4|regex:/^[A-Za-z0-9]{4}$/',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 403);
+        }
+
+        $user->update([
+            'ghana_card_last4' => strtoupper((string) $request->ghana_card_last4),
+            'organizer_verification_status' => OrganizerTrustService::STATUS_PENDING,
+            'organizer_verification_submitted_at' => now(),
+            'organizer_verified_at' => null,
+            'organizer_verification_note' => null,
+        ]);
+
+        return response()->json([
+            'data' => $this->trust->summary($user->fresh()),
+            'message' => 'Ghana Card reference submitted for review.',
+        ], 200);
+    }
+
+    /**
+     * Refer-a-friend invite. Only a signed-in organiser or member may send one,
+     * and the address is supplied explicitly by the sender.
+     */
+    public function invite(Request $request, $id)
+    {
+        $group = GroupBuy::find($id);
+        if (! $group) {
+            return response()->json(['errors' => [['code' => 'group_buy', 'message' => 'Group buy not found.']]], 404);
+        }
+
+        $identity = $this->identity($request);
+        if (! $identity['user_id'] || ! $this->isInsider($request, $group)) {
+            return response()->json(['errors' => [['code' => 'permission', 'message' => 'Only signed-in group members can invite a friend.']]], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email|max:255',
+            'message' => 'nullable|string|max:300',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 403);
+        }
+
+        try {
+            $invite = $this->invites->send(
+                $group,
+                auth('api')->user(),
+                (string) $request->email,
+                $request->message
+            );
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'errors' => [['code' => 'invite', 'message' => $e->getMessage()]],
+            ], (int) ($e->getCode() ?: 500));
+        }
+
+        return response()->json([
+            'data' => $invite,
+            'message' => 'Invite sent to ' . $invite->email . '.',
+        ], 201);
     }
 
     public function update(Request $request, $id)
@@ -281,7 +384,7 @@ class GroupBuyController extends Controller
 
         $identity = $this->identity($request);
         $rows = $group->participants()
-            ->with('user:id,f_name,l_name,image')
+            ->with('user:id,f_name,l_name,image,organizer_verification_status,ghana_card_last4,organizer_verified_at,organizer_verification_note')
             ->orderBy('id')
             ->get()
             ->map(function (GroupBuyParticipant $p) use ($group, $identity) {
@@ -302,6 +405,8 @@ class GroupBuyController extends Controller
                         ? (int) $p->user_id === $identity['user_id']
                         : (bool) ($identity['guest_id'] && $p->guest_id === $identity['guest_id']),
                     'is_organizer' => $isOrganizer,
+                    // Badge only: no card reference is exposed to other members.
+                    'trust_badge' => $this->trust->publicSummary($p->user)['badge'],
                 ];
             });
 
@@ -322,6 +427,7 @@ class GroupBuyController extends Controller
                 'joined_at' => null,
                 'is_self' => (bool) ($identity['user_id'] && (int) $group->organizer_id === $identity['user_id']),
                 'is_organizer' => true,
+                'trust_badge' => $this->trust->publicSummary($organizer)['badge'],
             ]);
         }
 
