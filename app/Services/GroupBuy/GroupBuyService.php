@@ -171,7 +171,8 @@ class GroupBuyService
 
             $group->increment('committed_count');
             $this->log($group, 'joined', $participant->id, $data['actor_type'] ?? 'customer', $userId ?? null, [
-                'committed_count' => $group->committed_count + 1,
+                // increment() already updates the in-memory attribute.
+                'committed_count' => $group->committed_count,
             ]);
 
             if ($group->fresh()->committed_count >= $group->member_limit) {
