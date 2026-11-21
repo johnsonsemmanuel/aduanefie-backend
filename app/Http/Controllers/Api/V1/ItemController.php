@@ -820,6 +820,179 @@ class ItemController extends Controller
         return response()->json($items, 200);
     }
 
+    /**
+     * Smart personalized feed ("Picked for You").
+     * Scores active items in the user's zone/module using saved category interests,
+     * past purchases, wishlist/cart affinity, recent views, group buys, and live farming.
+     */
+    public function for_you_items(Request $request)
+    {
+        if (!$request->hasHeader('zoneId')) {
+            return response()->json([
+                'errors' => [['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]],
+            ], 403);
+        }
+
+        $zoneIds = json_decode($request->header('zoneId'), true);
+        if (!is_array($zoneIds) || empty($zoneIds)) {
+            $zoneIds = [(int) $request->header('zoneId')];
+        }
+
+        $limit = max(1, min(30, (int) $request->query('limit', 12)));
+        $offset = max(1, (int) $request->query('offset', 1));
+        $type = $request->query('type', 'all');
+
+        $interestCatIds = collect(explode(',', (string) $request->query('interest_ids', '')))
+            ->filter(fn ($v) => is_numeric($v))
+            ->map(fn ($v) => (int) $v)
+            ->values();
+
+        $recentIds = collect(explode(',', (string) $request->query('recent_ids', '')))
+            ->filter(fn ($v) => is_numeric($v))
+            ->map(fn ($v) => (int) $v)
+            ->values();
+
+        $boughtItemIds = collect();
+        $affinityCatIds = collect();
+        $affinityStoreIds = collect();
+
+        $user = $request->user('api');
+        if ($user) {
+            if (!empty($user->interest)) {
+                $decoded = is_array($user->interest) ? $user->interest : json_decode($user->interest, true);
+                if (is_array($decoded)) {
+                    $interestCatIds = $interestCatIds->merge(array_map('intval', $decoded))->unique()->values();
+                }
+            }
+
+            $pastDetails = \Illuminate\Support\Facades\DB::table('order_details')
+                ->join('orders', 'orders.id', '=', 'order_details.order_id')
+                ->join('items', 'items.id', '=', 'order_details.item_id')
+                ->where('orders.user_id', $user->id)
+                ->orderByDesc('orders.id')
+                ->limit(40)
+                ->get(['order_details.item_id', 'items.category_id', 'items.store_id']);
+
+            $boughtItemIds = $pastDetails->pluck('item_id')->map(fn ($v) => (int) $v)->unique();
+            $affinityCatIds = $affinityCatIds->merge($pastDetails->pluck('category_id')->filter()->map(fn ($v) => (int) $v));
+            $affinityStoreIds = $affinityStoreIds->merge($pastDetails->pluck('store_id')->filter()->map(fn ($v) => (int) $v));
+
+            $wishlistItems = \Illuminate\Support\Facades\DB::table('wishlists')
+                ->join('items', 'items.id', '=', 'wishlists.item_id')
+                ->where('wishlists.user_id', $user->id)
+                ->limit(25)
+                ->get(['items.category_id', 'items.store_id']);
+            $affinityCatIds = $affinityCatIds->merge($wishlistItems->pluck('category_id')->filter()->map(fn ($v) => (int) $v));
+            $affinityStoreIds = $affinityStoreIds->merge($wishlistItems->pluck('store_id')->filter()->map(fn ($v) => (int) $v));
+        }
+
+        if ($recentIds->isNotEmpty()) {
+            $recentMeta = Item::whereIn('id', $recentIds->take(15))->get(['category_id', 'store_id']);
+            $affinityCatIds = $affinityCatIds->merge($recentMeta->pluck('category_id')->filter()->map(fn ($v) => (int) $v));
+            $affinityStoreIds = $affinityStoreIds->merge($recentMeta->pluck('store_id')->filter()->map(fn ($v) => (int) $v));
+        }
+
+        $affinityCatIds = $affinityCatIds->unique()->values();
+        $affinityStoreIds = $affinityStoreIds->unique()->values();
+        $hasPersonalSignals = $interestCatIds->isNotEmpty() || $boughtItemIds->isNotEmpty() || $affinityCatIds->isNotEmpty();
+
+        $moduleData = config('module.current_module_data');
+        $candidates = Item::with(['store', 'rating'])
+            ->whereHas('store', function ($query) use ($zoneIds, $moduleData) {
+                $query->when($moduleData, function ($q) use ($moduleData) {
+                    $q->where('module_id', $moduleData['id'])
+                        ->whereHas('zone.modules', fn ($zm) => $zm->where('modules.id', $moduleData['id']));
+                })->whereIn('zone_id', $zoneIds);
+            })
+            ->active()
+            ->type($type)
+            ->orderByDesc('order_count')
+            ->orderByDesc('avg_rating')
+            ->limit(150)
+            ->get();
+
+        $scored = $candidates->map(function ($item) use ($boughtItemIds, $interestCatIds, $affinityCatIds, $affinityStoreIds, $recentIds) {
+            $score = 0.0;
+            $reason = 'Popular near you';
+            $catId = (int) ($item->category_id ?? 0);
+
+            if ($boughtItemIds->contains((int) $item->id)) {
+                $score += 35;
+                $reason = 'Buy again';
+            }
+            if ($interestCatIds->contains($catId)) {
+                $score += 30;
+                if ($reason === 'Popular near you') {
+                    $reason = 'Matches your interests';
+                }
+            }
+            if ($affinityCatIds->contains($catId)) {
+                $score += 24;
+                if ($reason === 'Popular near you') {
+                    $reason = 'Based on your activity';
+                }
+            }
+            if ($affinityStoreIds->contains((int) $item->store_id)) {
+                $score += 12;
+                if ($reason === 'Popular near you') {
+                    $reason = 'From farms you like';
+                }
+            }
+            if ($recentIds->contains((int) $item->id)) {
+                $score += 8;
+            }
+            if (!empty($item->is_farming_product) || !empty($item->pre_order_available)) {
+                $score += 9;
+                if ($reason === 'Popular near you') {
+                    $reason = 'Live Farm · Fresh harvest';
+                }
+            }
+            if (!empty($item->group_buy_enabled)) {
+                $score += 8;
+                if ($reason === 'Popular near you') {
+                    $reason = 'Group Buy savings';
+                }
+            }
+            if ((float) ($item->discount ?? 0) > 0) {
+                $score += 6;
+                if ($reason === 'Popular near you') {
+                    $reason = 'Great deal';
+                }
+            }
+            if (!empty($item->recommended)) {
+                $score += 5;
+            }
+            $score += min(15, ((int) ($item->order_count ?? 0)) * 0.4) + ((float) ($item->avg_rating ?? 0));
+
+            $item->setAttribute('_personal_score', $score);
+            $item->setAttribute('_recommendation_reason', $reason);
+            return $item;
+        })->sortByDesc('_personal_score')->values();
+
+        $total = $scored->count();
+        $pageItems = $scored->slice(($offset - 1) * $limit, $limit)->values();
+        $reasons = $pageItems->pluck('_recommendation_reason', 'id');
+
+        $formatted = Helpers::product_data_formatting($pageItems, true, false, app()->getLocale());
+        foreach ($formatted as &$row) {
+            $id = is_array($row) ? ($row['id'] ?? null) : ($row->id ?? null);
+            $reasonText = $id && $reasons->has($id) ? $reasons->get($id) : 'Popular near you';
+            if (is_array($row)) {
+                $row['recommendation_reason'] = $reasonText;
+            } elseif (is_object($row)) {
+                $row->recommendation_reason = $reasonText;
+            }
+        }
+
+        return response()->json([
+            'total_size' => $total,
+            'limit' => $limit,
+            'offset' => $offset,
+            'personalized' => $hasPersonalSignals,
+            'items' => $formatted,
+        ], 200);
+    }
+
     public function get_set_menus()
     {
         try {
