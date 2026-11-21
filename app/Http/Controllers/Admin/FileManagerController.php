@@ -35,15 +35,26 @@ class FileManagerController extends Controller
                 return back();
             }
 
-            $folder_path = $folder_path == "cHVibGlj"? "":$folder_path;
-            $directory = base64_decode($folder_path).'/';
+            // The default token decodes to the bucket root, which is an
+            // intentionally empty relative path.
+            $decoded = $folder_path == "cHVibGlj" ? '' : $this->safePath(base64_decode($folder_path));
+            if ($decoded === null) {
+                Toastr::error('Invalid folder.');
+                return back();
+            }
+            $directory = $decoded === '' ? '' : $decoded.'/';
             $s3 = Storage::disk('s3');
-            $file = $directory == '/'?[]:$s3->allFiles($directory);
+            $file = $directory === '' ? [] : $s3->allFiles($directory);
             $directories = $s3->allDirectories($directory);
         }else{
             $storage = 'local';
-            $file = Storage::files(base64_decode($folder_path));
-            $directories = Storage::directories(base64_decode($folder_path));
+            $decoded = $this->safePath(base64_decode($folder_path));
+            if ($decoded === null) {
+                Toastr::error('Invalid folder.');
+                return back();
+            }
+            $file = Storage::files($decoded);
+            $directories = Storage::directories($decoded);
 
         }
         $folders = FileManagerLogic::format_file_and_folders($directories, 'folder');
@@ -62,63 +73,103 @@ class FileManagerController extends Controller
             'images' => 'required_without:file',
             'file' => 'required_without:images',
             'path' => 'required_if:disk,local',
-          ]);
-        $disk = $request->disk;
-        if($disk == 's3' && !$request->path){
-            Toastr::warning(translate('messages.To_upload_file_on_s3_bucket_go_to_a_specific_folder'));
+        ]);
+
+        $disk = $request->disk === 's3' ? 's3' : 'local';
+        if ($disk === 's3' && Helpers::getDisk() !== 's3') {
+            Toastr::error(translate('messages.something_went_wrong'));
             return back();
         }
+        $path = $this->safePath($request->path);
+        if ($path === null) {
+            Toastr::error('Invalid upload destination.');
+            return back();
+        }
+
         if ($request->hasfile('images')) {
-            $images = $request->file('images');
-
-            foreach($images as $image) {
-                $name = $image->getClientOriginalName();
-                if ($disk === 'local') {
-                    Storage::disk($disk)->put($request->path . '/' . $name, file_get_contents($image));
-                } elseif ($disk === 's3') {
-                    Storage::disk($disk)->putFileAs($request->path, $image, $name);
-                }
+            foreach ($request->file('images') as $image) {
+                // Validate the bytes and derive a fixed, non-executable
+                // extension. Client filenames and declared MIME are ignored.
+                $extension = Helpers::validatedUploadExtension($image);
+                $name = Carbon::now()->toDateString() . '-' . uniqid() . '.' . $extension;
+                Storage::disk($disk)->put($path . '/' . $name, file_get_contents($image->getRealPath()));
             }
         }
+
         if ($request->hasfile('file')) {
-            $file = $request->file('file');
-            $name = $file->getClientOriginalName();
-            if ($disk === 's3') {
-                // Get the contents of the zip file
-                $zipContents = file_get_contents($file->path());
-                // Extract the zip contents
-                $zip = new ZipArchive;
-                if ($zip->open($file->path()) === true) {
-                    // Loop through each file in the zip
-                    for ($i = 0; $i < $zip->numFiles; $i++) {
-                        $stat = $zip->statIndex($i);
-
-                        if (!$stat['name'] || $this->shouldSkip($stat['name'])) {
-                            continue; // Skip directories and unwanted files
-                        }
-
-                        $filename = $stat['name'];
-                        $fileContent = $zip->getFromIndex($i);
-                        $format = pathinfo($filename, PATHINFO_EXTENSION);
-
-                        // Generate image name
-                        $imageName = Carbon::now()->toDateString() . "-" . uniqid() . "." . $format;
-
-                        // Upload each file to S3
-                        $s3 = Storage::disk('s3');
-                        $s3Path = $request->path . '/' . $imageName;
-                        $s3->put($s3Path, $fileContent, 'public');
-                    }
-                    $zip->close();
-                }
-            }else{
-                Madzipper::make($file)->extractTo('storage/app/'.$request->path);
-            }
-
-
+            $this->extractArchiveSafely($request->file('file'), $path, $disk);
         }
+
         Toastr::success(translate('messages.image_uploaded_successfully'));
         return back()->with('success', translate('messages.image_uploaded_successfully'));
+    }
+
+    /**
+     * Extract only safe, non-executable files from an uploaded archive. Archive
+     * entry names are attacker-controlled: path components are canonicalised
+     * and every extracted file is re-detected from its bytes and renamed.
+     */
+    private function extractArchiveSafely($archive, string $path, string $disk): void
+    {
+        $mime = strtolower((string) $archive->getMimeType());
+        if (! in_array($mime, ['application/zip', 'application/x-zip-compressed', 'multipart/x-zip'], true)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'file' => ['Only zip archives are supported.'],
+            ]);
+        }
+
+        $zip = new ZipArchive();
+        if ($zip->open($archive->getRealPath()) !== true) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'file' => ['The archive could not be opened.'],
+            ]);
+        }
+
+        try {
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $stat = $zip->statIndex($i);
+                if (! $stat || empty($stat['name']) || $this->shouldSkip($stat['name'])) {
+                    continue;
+                }
+                $entry = str_replace('\\', '/', $stat['name']);
+                if (str_contains($entry, '..') || str_starts_with($entry, '/') || preg_match('#^[A-Za-z]:#', $entry)) {
+                    continue;
+                }
+                $contents = $zip->getFromIndex($i);
+                if ($contents === false || $contents === '' || strlen($contents) > Helpers::uploadMaxBytes()) {
+                    continue;
+                }
+                $extension = Helpers::safeUploadExtensionForMime(Helpers::mimeFromBytes($contents));
+                if ($extension === null) {
+                    continue;
+                }
+                $name = Carbon::now()->toDateString() . '-' . uniqid() . '.' . $extension;
+                Storage::disk($disk)->put($path . '/' . $name, $contents);
+            }
+        } finally {
+            $zip->close();
+        }
+    }
+
+    /**
+     * Validate a user-supplied relative storage path. Rejects traversal,
+     * absolute paths, NUL bytes and anything outside a simple relative form.
+     */
+    private function safePath($path): ?string
+    {
+        $path = (string) $path;
+        if ($path === '') {
+            return null;
+        }
+        if (str_contains($path, '..') || str_contains($path, "\0") || str_contains($path, '\\') || str_starts_with($path, '/')) {
+            return null;
+        }
+        $segments = array_values(array_filter(explode('/', $path), fn ($p) => $p !== '' && $p !== '.'));
+        if (empty($segments)) {
+            return null;
+        }
+
+        return implode('/', $segments);
     }
 
     private function shouldSkip($filename) {
@@ -142,7 +193,11 @@ class FileManagerController extends Controller
 
     public function download($file_name,$storage='public')
     {
-        $decodedFileName=base64_decode($file_name);
+        $decodedFileName = $this->safePath(base64_decode($file_name));
+        if ($decodedFileName === null) {
+            return false;
+        }
+        $storage = in_array($storage, ['public', 'local', 's3'], true) ? $storage : 'public';
         if (Storage::disk($storage)->exists($decodedFileName)) {
             return Storage::disk($storage)->download($decodedFileName);
         } elseif(Storage::disk('local')->exists($decodedFileName)){
@@ -177,9 +232,14 @@ class FileManagerController extends Controller
 
     public function destroy($file_path)
     {
+        $decoded = $this->safePath(base64_decode($file_path));
+        if ($decoded === null) {
+            Toastr::error('Invalid file path.');
+            return back();
+        }
         try {
-            Storage::disk('local')->delete(base64_decode($file_path));
-            Storage::disk('s3')->delete(base64_decode($file_path));
+            Storage::disk('local')->delete($decoded);
+            Storage::disk('s3')->delete($decoded);
         } catch (\Exception $e){
 
         }

@@ -2151,19 +2151,107 @@ class Helpers
         return isset($config)?($config==0?'s3':'public'):'public';
     }
 
+    /**
+     * Strict content-based upload validation. The client-supplied filename and
+     * declared MIME type are never trusted; the real MIME is sniffed from the
+     * file bytes and mapped to a fixed, non-executable extension.
+     *
+     * @return string safe extension (without dot)
+     *
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    public static function validatedUploadExtension($file): string
+    {
+        if (! $file instanceof \Illuminate\Http\UploadedFile || ! $file->isValid()) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'file' => ['Invalid file upload.'],
+            ]);
+        }
+
+        // finfo-based detection on the actual bytes, not the client's headers.
+        $mime = strtolower((string) $file->getMimeType());
+        $map = self::uploadMimeMap();
+        if (! isset($map[$mime])) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'file' => ['Unsupported file type.'],
+            ]);
+        }
+        if ($file->getSize() > self::uploadMaxBytes()) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'file' => ['File is too large.'],
+            ]);
+        }
+
+        return $map[$mime];
+    }
+
+    /** Detect the MIME of raw bytes (used for files extracted from archives). */
+    public static function mimeFromBytes(string $bytes): ?string
+    {
+        $finfo = @finfo_open(FILEINFO_MIME_TYPE);
+        if ($finfo === false) {
+            return null;
+        }
+        $mime = finfo_buffer($finfo, $bytes);
+        finfo_close($finfo);
+
+        return is_string($mime) ? strtolower($mime) : null;
+    }
+
+    public static function safeUploadExtensionForMime(?string $mime): ?string
+    {
+        return self::uploadMimeMap()[$mime] ?? null;
+    }
+
+    public static function uploadMaxBytes(): int
+    {
+        return (int) (config('uploads.max_bytes') ?: 50 * 1024 * 1024);
+    }
+
+    private static function uploadMimeMap(): array
+    {
+        // Deliberately excludes SVG (stored XSS), archives and every executable
+        // or script MIME. Extensions are fixed here, never taken from input.
+        return [
+            'image/png' => 'png',
+            'image/jpeg' => 'jpg',
+            'image/gif' => 'gif',
+            'image/webp' => 'webp',
+            'image/bmp' => 'bmp',
+            'image/x-icon' => 'ico',
+            'image/vnd.microsoft.icon' => 'ico',
+            'application/pdf' => 'pdf',
+            'video/mp4' => 'mp4',
+            'video/webm' => 'webm',
+            'video/quicktime' => 'mov',
+            'video/x-m4v' => 'm4v',
+        ];
+    }
+
     public static function upload(string $dir, string $format, $image = null)
     {
+        if ($image === null) {
+            return 'def.png';
+        }
+
+        // $format is kept for backwards compatibility but is no longer trusted
+        // to choose the extension; that would allow a .php upload to be stored
+        // as .php and executed through the public/storage symlink.
+        $extension = self::validatedUploadExtension($image);
+
         try {
-            if ($image != null) {
-                $imageName = \Carbon\Carbon::now()->toDateString() . "-" . uniqid() . "." . $format;
-                if (!Storage::disk(self::getDisk())->exists($dir)) {
-                    Storage::disk(self::getDisk())->makeDirectory($dir);
-                }
-                Storage::disk(self::getDisk())->putFileAs($dir, $image, $imageName);
-            } else {
-                $imageName = 'def.png';
+            $imageName = \Carbon\Carbon::now()->toDateString() . "-" . uniqid() . "." . $extension;
+            $disk = Storage::disk(self::getDisk());
+            if (! $disk->exists($dir)) {
+                $disk->makeDirectory($dir);
             }
+            $disk->putFileAs($dir, $image, $imageName);
         } catch (\Exception $e) {
+            // Fail closed: never hand back a filename for a file that was not
+            // written, and never silently swallow an unsafe upload.
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'file' => ['Upload could not be stored.'],
+            ]);
         }
         return $imageName;
     }
