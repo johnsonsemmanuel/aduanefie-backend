@@ -479,19 +479,6 @@ class CustomerController extends Controller
 
         $this->update_user_data($user, $request);
 
-        if (Helpers::checkSelfExternalConfiguration()) {
-            $driveMondBaseUrl = ExternalConfiguration::where('key', 'drivemond_base_url')->first()?->value;
-            $driveMondToken = ExternalConfiguration::where('key', 'drivemond_token')->first()?->value;
-            $systemSelfToken = ExternalConfiguration::where('key', 'system_self_token')->first()?->value;
-            $response = Http::asForm()->post($driveMondBaseUrl . '/api/customer/external-update-data',
-                [
-                    'bearer_token' => $request->bearerToken(),
-                    'token' => $driveMondToken,
-                    'external_base_url' => url('/'),
-                    'external_token' => $systemSelfToken,
-                ]);
-        }
-
         return response()->json(['message' => $message], 200);
     }
 
@@ -719,111 +706,6 @@ class CustomerController extends Controller
         return  ['is_success' => false, 'verification_medium' => 'SMS', 'message' => translate('OTP_does_not_match!!!'), 'code' => 403];
     }
 
-
-    public function getCustomer(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'token' => 'required',
-            'external_base_url' => 'required',
-            'external_token' => 'required',
-        ]);
-        if ($validator->fails()) {
-            $data = [
-                'status' => false,
-                'errors' => Helpers::error_processor($validator),
-            ];
-            return response()->json($data);
-        }
-        if (Helpers::checkExternalConfiguration($request->external_base_url, $request->external_token, $request->token)) {
-            $user = DB::table('users')->where('id', Auth::id())->first();
-            if (!$user) {
-                $data = [
-                    'status' => false,
-                    'data' => ['error_code' => 404, 'message' => "User not found"]
-                ];
-                return response()->json($data);
-            }
-            $data = [
-                'status' => true,
-                'data' => $user
-            ];
-            return response()->json($data);
-        }
-        $data = [
-            'status' => false,
-            'data' => ['error_code' => 402, 'message' => "Invalid token"]
-        ];
-        return response()->json($data);
-
-    }
-
-    public function externalUpdateCustomer(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'bearer_token' => 'required',
-            'token' => 'required',
-            'external_base_url' => 'required',
-            'external_token' => 'required',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => Helpers::error_processor($validator)], 403);
-        }
-        if (Helpers::checkSelfExternalConfiguration() && Helpers::checkExternalConfiguration($request->external_base_url, $request->external_token, $request->token)) {
-            $driveMondBaseUrl = ExternalConfiguration::where('key', 'drivemond_base_url')->first()?->value;
-            $driveMondToken = ExternalConfiguration::where('key', 'drivemond_token')->first()?->value;
-            $systemSelfToken = ExternalConfiguration::where('key', 'system_self_token')->first()?->value;
-            $response = Http::withToken($request->bearer_token)->post($driveMondBaseUrl . '/api/customer/get-data',
-                [
-                    'token' => $driveMondToken,
-                    'external_base_url' => url('/'),
-                    'external_token' => $systemSelfToken,
-                ]);
-            if ($response->successful()) {
-                $drivemondCustomerResponse = $response->json();
-                if ($drivemondCustomerResponse['status']) {
-                    $drivemondCustomer = $drivemondCustomerResponse['data'];
-                    $user = User::where(['phone' => $drivemondCustomer['phone']])->first();
-                    if ($user) {
-                        $user->f_name = $drivemondCustomer['first_name'];
-                        $user->l_name = $drivemondCustomer['last_name'];
-                        $user->email = $drivemondCustomer['email'];
-                        $user->password = $drivemondCustomer['password'];
-                        $user->save();
-
-                        if ($user->userinfo) {
-                            $userinfo = $user->userinfo;
-                            $userinfo->f_name = $drivemondCustomer['first_name'];
-                            $userinfo->l_name = $drivemondCustomer['last_name'];
-                            $userinfo->email = $drivemondCustomer['email'];
-                            $userinfo->save();
-                        }
-                        $data = [
-                            'status' => true,
-                            'data' => $user
-                        ];
-                        return response()->json($data);
-                    }
-                }
-            }
-            $drivemondCustomer = $drivemondCustomerResponse['data'];
-            if ($drivemondCustomer['error_code'] == 402) {
-                $data = [
-                    'status' => false,
-                    'data' => ['error_code' => 402, 'message' => "Drivemond user not found"]
-                ];
-                return response()->json($data);
-            }
-
-        }
-        $data = [
-            'status' => false,
-            'data' => ['error_code' => 402, 'message' => "Invalid token"]
-        ];
-        return response()->json($data);
-
-
-    }
 
     public function orderPaymentFailed(Request $request)
     {

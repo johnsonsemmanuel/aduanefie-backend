@@ -98,7 +98,6 @@ Route::post('store-login/employee', 'StoreAuthController@loginEmployee')
     ->middleware('throttle:store-login');
 
 Route::get('login/{tab}', 'LoginController@login')->name('login');
-Route::post('external-login-from-drivemond', 'LoginController@externalLoginFromDrivemond');
 Route::post('login_submit', 'LoginController@submit')->name('login_post')->middleware(['actch', 'throttle:web-login']);
 Route::get('logout', 'LoginController@logout')->name('logout');
 Route::get('/reset-password', 'LoginController@reset_password_request')->name('reset-password');

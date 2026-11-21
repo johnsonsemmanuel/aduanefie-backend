@@ -1251,19 +1251,6 @@ class Helpers
 
         return $config;
     }
-    public static function get_external_data($name)
-    {
-        $config = null;
-
-        $paymentmethod = ExternalConfiguration::where('key', $name)->first();
-
-        if ($paymentmethod) {
-            $config = $paymentmethod?->value;
-        }
-
-        return $config;
-    }
-
     public static function currency_code()
     {
         if (!config('currency') ){
@@ -4578,24 +4565,6 @@ class Helpers
         }
             return 'closed';
         }
-
-    public static function checkExternalConfiguration($externalBaseUrl, $externalTokem, $martToken)
-    {
-        $activationMode = ExternalConfiguration::where('key', 'activation_mode')->first()?->value;
-        $driveMondBaseUrl = ExternalConfiguration::where('key', 'drivemond_base_url')->first()?->value;
-        $driveMondToken = ExternalConfiguration::where('key', 'drivemond_token')->first()?->value;
-        $systemSelfToken = ExternalConfiguration::where('key', 'system_self_token')->first()?->value;
-        return $activationMode == 1 && $driveMondBaseUrl == $externalBaseUrl && $driveMondToken == $externalTokem && $systemSelfToken == $martToken;
-    }
-
-    public static function checkSelfExternalConfiguration()
-    {
-        $activationMode = ExternalConfiguration::where('key', 'activation_mode')->first()?->value;
-        $driveMondBaseUrl = ExternalConfiguration::where('key', 'drivemond_base_url')->first()?->value;
-        $driveMondToken = ExternalConfiguration::where('key', 'drivemond_token')->first()?->value;
-        $systemSelfToken = ExternalConfiguration::where('key', 'system_self_token')->first()?->value;
-        return $activationMode == 1 && $driveMondBaseUrl != null && $driveMondToken != null && $systemSelfToken != null;
-    }
 
     public static function businessUpdateOrInsert($key, $value)
     {

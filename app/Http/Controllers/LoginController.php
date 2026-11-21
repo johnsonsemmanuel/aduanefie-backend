@@ -138,28 +138,6 @@ class LoginController extends Controller
     }
 
 
-    public function externalLoginFromDrivemond(Request $request)
-    {
-        $drivemondToken = ExternalConfiguration::where(['key' => 'drivemond_token'])->first()->value ?? null;
-        $systemSelfToken = ExternalConfiguration::where(['key' => 'system_self_token'])->first()->value ?? null;
-        $drivemondBaseUrl = ExternalConfiguration::where(['key' => 'drivemond_base_url'])->first()->value ?? null;
-        if ($drivemondBaseUrl != null && $drivemondToken != null && $systemSelfToken != null) {
-            $user = Admin::where('role_id', 1)->first();
-            if (isset($user)) {
-                // DriveMond SSO would create a master-admin session with no
-                // password, and therefore with no second factor. Under the
-                // mandatory-MFA policy that must not grant panel access. The
-                // bridge now stops at the password step; re-enabling it needs a
-                // second-factor handshake in the DriveMond flow itself.
-                return redirect()->route('admin.login')->withErrors([
-                    'email' => 'Single sign-on cannot complete two-factor verification. Sign in with your password.',
-                ]);
-            }
-        }
-        return redirect()->route('admin.login');
-    }
-
-
     /**
      * Check a password without starting a session.
      *

@@ -8,7 +8,6 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
     Route::group(['middleware' => ['admin', 'admin-mfa', 'current-module']], function () {
         Route::get('/test', function () {
         });
-        // Route::get('drivemond-panel', 'DriveMondController@drivemondExternalLogin')->name('drivemond-panel');
         Route::get('get-all-stores', 'VendorController@get_all_stores')->name('get_all_stores');
         Route::get('lang/{locale}', 'LanguageController@lang')->name('lang');
         Route::get('settings', 'SystemController@settings')->name('settings');
@@ -491,10 +490,6 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
                 Route::delete('/delete/{file_path}', 'FileManagerController@destroy')->name('destroy');
             });
 
-            Route::group(['prefix' => 'external-system', 'as' => 'external-system.'], function () {
-                Route::get('drivemond-configuration', 'ExternalConfigurationController@index')->name('drivemond-configuration');
-                Route::post('update-drivemond-configuration', 'ExternalConfigurationController@updateDrivemondConfiguration')->name('update-drivemond-configuration');
-            });
             Route::group(['prefix' => 'third-party', 'as' => 'third-party.'], function () {
                 Route::get('sms-module', 'SMSModuleController@sms_index')->name('sms-module');
                 Route::post('sms-module-update/{sms_module}', 'SMSModuleController@sms_update')->name('sms-module-update');

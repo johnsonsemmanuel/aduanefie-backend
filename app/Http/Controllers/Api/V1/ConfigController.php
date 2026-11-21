@@ -53,23 +53,6 @@ class ConfigController extends Controller
         $vehicle_distance_min=0;
         $vehicle_hourly_min=0;
 
-        $drivemondExternalSetting = false;
-//        if (Helpers::checkSelfExternalConfiguration()) {
-//            $driveMondBaseUrl = ExternalConfiguration::where('key', 'drivemond_base_url')->first()?->value;
-//            $driveMondToken = ExternalConfiguration::where('key', 'drivemond_token')->first()?->value;
-//            $systemSelfToken = ExternalConfiguration::where('key', 'system_self_token')->first()?->value;
-//            $response = Http::get($driveMondBaseUrl . '/api/get-external-configurations',
-//                [
-//                    'drivemond_token' => $driveMondToken,
-//                    'mart_base_url' => url('/'),
-//                    'mart_token' => $systemSelfToken,
-//                ]);
-//            if ($response->successful()) {
-//                $martResponse = $response->json();
-//                $drivemondExternalSetting = $martResponse['status'];
-//            }
-//
-//        }
 
 
 
@@ -329,10 +312,6 @@ class ConfigController extends Controller
                 'provider_name' => (string)(isset($settings['insurance_provider_name']) && $settings['insurance_provider_name'] !== '' ? $settings['insurance_provider_name'] : 'Aduanefie Trade & Crop Assurance'),
                 'policy_summary' => (string)(isset($settings['insurance_policy_summary']) && $settings['insurance_policy_summary'] !== '' ? $settings['insurance_policy_summary'] : 'Protects crop harvests, cross-border transit, and order quality under Aduanefie Escrow.'),
             ],
-            'external_system' => $drivemondExternalSetting,
-
-            'drivemond_app_url_android' => $drivemondExternalSetting ? Helpers::get_external_data('drivemond_app_url_android') : '',
-            'drivemond_app_url_ios' => $drivemondExternalSetting ? Helpers::get_external_data('drivemond_app_url_ios') : '',
             'firebase_otp_verification' => (int)(isset($settings['firebase_otp_verification']) ? $settings['firebase_otp_verification'] : 0),
             'centralize_login' => [
                 'manual_login_status' => (int)(isset($settings['manual_login_status']) ? $settings['manual_login_status'] : 0),

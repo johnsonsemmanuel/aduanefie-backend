@@ -18,8 +18,6 @@ use BeyondCode\LaravelWebSockets\Facades\WebSocketsRouter;
 Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function () {
     Route::group(['prefix' => 'configurations'], function () {
         Route::get('/', 'ExternalConfigurationController@getConfiguration');
-        Route::get('/get-external', 'ExternalConfigurationController@getExternalConfiguration');
-        Route::post('/store', 'ExternalConfigurationController@updateConfiguration');
     });
 
     Route::get('get-page-meta-data', 'ConfigController@getPageMetaData');
@@ -38,7 +36,6 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
     Route::group(['prefix' => 'auth', 'namespace' => 'Auth'], function () {
         Route::post('sign-up', 'CustomerAuthController@register')->middleware('throttle:api-auth');
         Route::post('login', 'CustomerAuthController@login')->middleware('throttle:api-auth');
-        Route::post('external-login', 'CustomerAuthController@customerLoginFromDrivemond')->middleware('throttle:api-auth');
         Route::post('verify-phone', 'CustomerAuthController@verify_phone_or_email')->middleware('throttle:api-otp');
         Route::post('update-info', 'CustomerAuthController@update_info');
         Route::post('firebase-verify-token', 'CustomerAuthController@firebase_auth_verify');
@@ -413,7 +410,6 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
     Route::group(['middleware'=>['module-check']], function(){
         Route::group(['prefix' => 'customer', 'middleware' => 'auth:api'], function () {
             Route::post('get-data', 'CustomerController@getCustomer');
-            Route::post('external-update-data', 'CustomerController@externalUpdateCustomer')->withoutMiddleware(['auth:api','module-check']);
             Route::get('notifications', 'NotificationController@get_notifications');
             Route::get('info', 'CustomerController@info');
             Route::get('update-zone', 'CustomerController@update_zone');
@@ -457,8 +453,6 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
                 Route::get('bonuses', 'WalletController@get_bonus');
                 Route::post('add-fund', 'WalletController@add_fund');
                 #handshake
-                Route::post('transfer-mart-to-drivemond', 'WalletController@transferMartToDrivemondWallet');
-                Route::post('transfer-mart-from-drivemond', 'WalletController@transferMartFromDrivemondWallet')->withoutMiddleware('auth:api');
             });
 
             Route::get('visit-again', 'OrderController@order_again');

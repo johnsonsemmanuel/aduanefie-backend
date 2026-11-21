@@ -767,28 +767,6 @@ class BusinessSettingsController extends Controller
                 'value' => $request['subscription_business_model'] ?? 1
             ]);
         }
-        $activationMode = DB::table('external_configurations')->where('key', 'activation_mode')->first();
-        $driveMondBaseUrl = DB::table('external_configurations')->where('key', 'drivemond_base_url')->first();
-        if ($activationMode && $activationMode->value == 1 && $driveMondBaseUrl && $driveMondBaseUrl->value != null) {
-            $name = \App\Models\BusinessSetting::where('key', 'business_name')->first();
-            $logo = \App\Models\BusinessSetting::where('key', 'logo')->first();
-
-            $app_minimum_version_android=BusinessSetting::where(['key'=>'app_minimum_version_android'])->first()?->value;
-            $app_url_android=BusinessSetting::where(['key'=>'app_url_android'])->first()?->value;
-            $app_minimum_version_ios=BusinessSetting::where(['key'=>'app_minimum_version_ios'])->first()?->value;
-            $app_url_ios=BusinessSetting::where(['key'=>'app_url_ios'])->first()?->value;
-
-            $response = Http::post($driveMondBaseUrl->value . '/api/store-configurations', [
-                'mart_business_name' => $name->value ?? "Aduanefie",
-                'mart_business_logo' => \App\CentralLogics\Helpers::get_full_url('business', $logo?->value ?? '', $logo?->storage[0]?->value ?? 'public', 'favicon') ?? asset('public/assets/admin/img/160x160/img2.jpg'),
-                'mart_app_minimum_version_android' => $app_minimum_version_android,
-                'mart_app_url_android' => $app_url_android,
-                'mart_app_minimum_version_ios' => $app_minimum_version_ios,
-                'mart_app_url_ios' => $app_url_ios,
-
-            ]);
-        }
-
         Toastr::success(translate('messages.successfully_updated_to_changes_restart_app'));
         return back();
     }
@@ -1354,28 +1332,6 @@ class BusinessSettingsController extends Controller
             Helpers::businessUpdateOrInsert(['key' => 'app_url_ios'], [
                 'value' => $request['app_url_ios']
             ]);
-
-            $activationMode = DB::table('external_configurations')->where('key', 'activation_mode')->first();
-            $driveMondBaseUrl = DB::table('external_configurations')->where('key', 'drivemond_base_url')->first();
-            if ($activationMode && $activationMode->value == 1 && $driveMondBaseUrl && $driveMondBaseUrl->value != null) {
-                $name = \App\Models\BusinessSetting::where('key', 'business_name')->first();
-                $logo = \App\Models\BusinessSetting::where('key', 'logo')->first();
-
-                $app_minimum_version_android=BusinessSetting::where(['key'=>'app_minimum_version_android'])->first()?->value;
-                $app_url_android=BusinessSetting::where(['key'=>'app_url_android'])->first()?->value;
-                $app_minimum_version_ios=BusinessSetting::where(['key'=>'app_minimum_version_ios'])->first()?->value;
-                $app_url_ios=BusinessSetting::where(['key'=>'app_url_ios'])->first()?->value;
-
-                $response = Http::post($driveMondBaseUrl->value . '/api/store-configurations', [
-                    'mart_business_name' => $name->value ?? "Aduanefie",
-                    'mart_business_logo' => \App\CentralLogics\Helpers::get_full_url('business', $logo?->value ?? '', $logo?->storage[0]?->value ?? 'public', 'favicon') ?? asset('public/assets/admin/img/160x160/img2.jpg'),
-                    'mart_app_minimum_version_android' => $app_minimum_version_android,
-                    'mart_app_url_android' => $app_url_android,
-                    'mart_app_minimum_version_ios' => $app_minimum_version_ios,
-                    'mart_app_url_ios' => $app_url_ios,
-
-                ]);
-            }
 
             Toastr::success(translate('messages.User_app_settings_updated'));
             return back();

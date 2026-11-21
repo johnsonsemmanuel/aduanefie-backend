@@ -131,15 +131,6 @@
                             </a>
                         </li>
                     @endif
-{{--                    @if (\App\CentralLogics\Helpers::module_permission_check('settings') && (auth('admin')->user()->role_id == 1))--}}
-{{--                        <li class="navbar-vertical-aside-has-menu {{ Request::is('admin/business-settings/external-system*') ? 'active' : '' }}">--}}
-{{--                            <a class="nav-link " href="{{ route('admin.business-settings.external-system.drivemond-configuration') }}"--}}
-{{--                               title="{{ translate('messages.Ride_Share_Setup_&_Integration') }}">--}}
-{{--                                <span class="tio-settings-vs-outlined nav-icon"></span>--}}
-{{--                                <span class="text-truncate">{{ translate('messages.Ride_Share_Setup_&_Integration') }}</span>--}}
-{{--                            </a>--}}
-{{--                        </li>--}}
-{{--                    @endif--}}
 
 {{-- Subscription SaaS management hidden from sidebar (Aduanefie uses commission/escrow trade) --}}
 {{--
