@@ -6,12 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\GroupBuy;
 use App\Models\GroupBuyParticipant;
 use App\Services\GroupBuy\GroupBuyService;
+use App\Services\Markets\MarketProfileService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class GroupBuyController extends Controller
 {
-    public function __construct(private GroupBuyService $groups)
+    public function __construct(private GroupBuyService $groups, private MarketProfileService $markets)
     {
     }
 
@@ -503,36 +504,37 @@ class GroupBuyController extends Controller
 
     public function organizerVerification(Request $request)
     {
+        $profileResult = $this->verificationProfile($request);
+        if (isset($profileResult['error'])) {
+            return $profileResult['error'];
+        }
+        $profile = $profileResult['profile'];
+
         $user = $request->user('api') ?? auth('api')->user();
         if (! $user) {
             return response()->json([
-                'data' => [
+                'data' => $this->verificationData($profile, [
                     'status' => 'unverified',
                     'verified' => false,
-                    'required_orders' => 2,
                     'completed_external_orders' => 0,
-                    'ghana_card_last4' => null,
-                ],
+                    'identity_last4' => null,
+                ]),
             ]);
         }
-
-        $completedOrders = \App\Models\Order::where('user_id', $user->id)
-            ->where('order_status', 'delivered')
-            ->count();
 
         $savedRaw = \App\Models\BusinessSetting::where('key', 'gb_org_verif_' . $user->id)->value('value');
         $saved = $savedRaw ? json_decode($savedRaw, true) : null;
         $status = $saved['status'] ?? 'unverified';
-        $verified = $status === 'verified' && $completedOrders >= 2;
+        $completedOrders = $this->completedExternalOrders((int) $user->id);
+        $last4 = $saved['identity_last4'] ?? $saved['ghana_card_last4'] ?? null;
 
         return response()->json([
-            'data' => [
+            'data' => $this->verificationData($profile, [
                 'status' => $status,
-                'verified' => $verified,
-                'required_orders' => 2,
-                'completed_external_orders' => (int) $completedOrders,
-                'ghana_card_last4' => $saved['ghana_card_last4'] ?? null,
-            ],
+                'verified' => $status === 'verified' && $completedOrders >= 2,
+                'completed_external_orders' => $completedOrders,
+                'identity_last4' => $last4,
+            ]),
         ]);
     }
 
@@ -543,33 +545,104 @@ class GroupBuyController extends Controller
             return response()->json(['message' => 'Please sign in to submit verification.'], 401);
         }
 
-        $validated = $request->validate([
-            'ghana_card_last4' => ['required', 'string', 'regex:/^[A-Za-z0-9]{4}$/'],
-        ]);
+        $profileResult = $this->verificationProfile($request);
+        if (isset($profileResult['error'])) {
+            return $profileResult['error'];
+        }
+        $profile = $profileResult['profile'];
+
+        $last4 = $request->input('identity_last4') ?: $request->input('ghana_card_last4');
+        if (! is_string($last4) || ! preg_match('/^[A-Za-z0-9]{4}$/', $last4)) {
+            return response()->json([
+                'errors' => [[
+                    'code' => 'identity_last4',
+                    'message' => 'Enter the last 4 characters of your '.$profile['identity']['label'].'.',
+                ]],
+            ], 422);
+        }
 
         $payload = [
             'status' => 'pending',
-            'ghana_card_last4' => strtoupper($validated['ghana_card_last4']),
+            'country_code' => $profile['country_code'],
+            'identity_label' => $profile['identity']['label'],
+            'identity_last4' => strtoupper($last4),
             'submitted_at' => now()->toIso8601String(),
         ];
+
+        // Keep the old key readable for Ghana admin screens during rollout,
+        // while new markets use the neutral field name.
+        if ($profile['country_code'] === 'GH') {
+            $payload['ghana_card_last4'] = $payload['identity_last4'];
+        }
 
         \App\Models\BusinessSetting::updateOrCreate(
             ['key' => 'gb_org_verif_' . $user->id],
             ['value' => json_encode($payload)]
         );
 
-        $completedOrders = \App\Models\Order::where('user_id', $user->id)
-            ->where('order_status', 'delivered')
-            ->count();
-
         return response()->json([
-            'data' => [
+            'data' => $this->verificationData($profile, [
                 'status' => 'pending',
                 'verified' => false,
-                'required_orders' => 2,
-                'completed_external_orders' => (int) $completedOrders,
-                'ghana_card_last4' => $payload['ghana_card_last4'],
-            ],
+                'completed_external_orders' => $this->completedExternalOrders((int) $user->id),
+                'identity_last4' => $payload['identity_last4'],
+            ]),
         ]);
+    }
+
+    /**
+     * Resolve the market for verification. An explicit unsupported country is
+     * rejected rather than silently treated as Ghana.
+     */
+    private function verificationProfile(Request $request): array
+    {
+        $requested = $request->input('country_code');
+        if ($requested && ! $this->markets->find($requested)) {
+            return ['error' => response()->json([
+                'errors' => [[
+                    'code' => 'unsupported_country',
+                    'message' => 'Verification is unavailable in your country.',
+                ]],
+            ], 403)];
+        }
+
+        $profile = $this->markets->find($requested) ?: $this->markets->find($this->markets->defaultCountry());
+        if (! $profile || ! $profile['identity']['verification_available']) {
+            return ['error' => response()->json([
+                'errors' => [[
+                    'code' => 'verification_unavailable',
+                    'message' => 'Verification is unavailable in your country.',
+                ]],
+            ], 403)];
+        }
+
+        return ['profile' => $profile];
+    }
+
+    private function verificationData(array $profile, array $data): array
+    {
+        return array_merge([
+            'country_code' => $profile['country_code'],
+            'identity_label' => $profile['identity']['label'],
+            'identity_last4_label' => $profile['identity']['last4_label'],
+            'identity_hint' => $profile['identity']['hint'],
+            'verification_available' => true,
+            'required_orders' => 2,
+        ], $data, [
+            // Backward-compatible alias for the old Ghana-only UI.
+            'ghana_card_last4' => $data['identity_last4'] ?? null,
+        ]);
+    }
+
+    private function completedExternalOrders(int $userId): int
+    {
+        $query = \App\Models\Order::where('user_id', $userId)
+            ->where('order_status', 'delivered');
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('orders', 'group_buy_id')) {
+            $query->whereNull('group_buy_id');
+        }
+
+        return (int) $query->count();
     }
 }

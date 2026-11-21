@@ -39,6 +39,11 @@ class Kernel extends ConsoleKernel
 
         // Sync live Ghana commodity prices from World Bank RTFP & FAO FPMA (MoFA SRID).
         $schedule->command('agro-prices:sync')->dailyAt('06:00')->withoutOverlapping();
+
+        // Cross-border shipping quotes fail closed when FX is stale or absent.
+        // Refresh the canonical currency_rates table daily; manual baselines
+        // remain clearly labelled until this command succeeds.
+        $schedule->command('market:rates:refresh')->dailyAt('05:30')->withoutOverlapping();
     }
 
     /**

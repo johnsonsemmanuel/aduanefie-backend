@@ -365,6 +365,13 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
         Route::post('quote', 'CrossBorderController@quote');
     });
 
+    // Country-aware terminology, currency, phone, address, ID and payment
+    // rules. Public data only; no account or document information is returned.
+    Route::group(['prefix' => 'market-profiles'], function () {
+        Route::get('/', 'MarketProfileController@index');
+        Route::get('{country}', 'MarketProfileController@show')->where('country', '[A-Za-z]{2}');
+    });
+
     // Shared group buying. Deliberately module-agnostic: any module that sells
     // physical goods can create and join a group.
     Route::group(['prefix' => 'group-buys'], function () {

@@ -103,6 +103,16 @@ class ShippingQuoteService
                 continue;
             }
 
+            $fxProvenance = CurrencyRate::provenance((string) $rate->currency_code, $currency);
+            $rateSource = $rate->source ?? null;
+
+            if ($this->isManualProvenance($fxProvenance['source'] ?? null)) {
+                $warnings[] = 'fx_manual_baseline';
+            }
+            if ($this->isManualProvenance($rateSource)) {
+                $warnings[] = 'shipping_manual_baseline';
+            }
+
             $landedTotal = round($taxes['goods_subtotal'] + $converted + $taxes['duty'] + $taxes['vat'] + $taxes['excise'], 3);
 
             $options[] = [
@@ -116,6 +126,11 @@ class ShippingQuoteService
                 'amount' => $converted,
                 'rate_currency' => $rate->currency_code,
                 'currency' => $currency,
+                'rate_provenance' => [
+                    'source' => $rateSource,
+                    'effective_at' => optional($rate->effective_at)->toIso8601String(),
+                ],
+                'fx_provenance' => $fxProvenance,
                 'estimated_days' => [
                     'min' => $rate->min_days,
                     'max' => $rate->max_days,
@@ -242,6 +257,15 @@ class ShippingQuoteService
             'option' => $match,
             'warnings' => $quoted['warnings'],
         ];
+    }
+
+    private function isManualProvenance(?string $source): bool
+    {
+        if (! $source) {
+            return false;
+        }
+
+        return str_contains(strtolower($source), 'manual') || str_contains(strtolower($source), 'baseline');
     }
 
     public function totalWeight(array $lines): float

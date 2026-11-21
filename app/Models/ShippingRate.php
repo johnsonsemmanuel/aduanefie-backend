@@ -20,6 +20,8 @@ class ShippingRate extends Model
         'min_days',
         'max_days',
         'currency_code',
+        'source',
+        'effective_at',
         'cod_allowed',
         'is_active',
     ];
@@ -34,6 +36,7 @@ class ShippingRate extends Model
         'max_days' => 'integer',
         'cod_allowed' => 'boolean',
         'is_active' => 'boolean',
+        'effective_at' => 'datetime',
     ];
 
     public function method()

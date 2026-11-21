@@ -21,6 +21,8 @@ class DatabaseSeeder extends Seeder
             ExchangeRateSeeder::class,
             TradeCorridorSeeder::class,
             CustomsDutySeeder::class,
+            CurrencyRateSeeder::class,
+            ShippingRateSeeder::class,
             TradeBlocSeeder::class,
             SampleAgriDataSeeder::class
         ]);

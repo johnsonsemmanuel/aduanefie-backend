@@ -85,6 +85,112 @@ return [
             ],
         ],
 
+        'TG' => [
+            'name' => 'Togo',
+            'networks' => [
+                'MTN MoMo' => [
+                    'label' => 'MTN MoMo Togo',
+                    'pattern' => '^(228)?[279][0-9]{7}$',
+                    'example' => '90XXXXXX',
+                ],
+                'Moov Money' => [
+                    'label' => 'Moov Money Togo',
+                    'pattern' => '^(228)?[679][0-9]{7}$',
+                    'example' => '96XXXXXX',
+                ],
+            ],
+        ],
+
+        'CI' => [
+            'name' => "Côte d'Ivoire",
+            'networks' => [
+                'MTN MoMo' => [
+                    'label' => "MTN MoMo Côte d'Ivoire",
+                    'pattern' => '^(225)?[0-9]{10}$',
+                    'example' => '01XXXXXXXX',
+                ],
+                'Moov Money' => [
+                    'label' => "Moov Money Côte d'Ivoire",
+                    'pattern' => '^(225)?[0-9]{10}$',
+                    'example' => '05XXXXXXXX',
+                ],
+                'Orange Money' => [
+                    'label' => "Orange Money Côte d'Ivoire",
+                    'pattern' => '^(225)?[0-9]{10}$',
+                    'example' => '07XXXXXXXX',
+                ],
+            ],
+        ],
+
+        'BF' => [
+            'name' => 'Burkina Faso',
+            'networks' => [
+                'MTN MoMo' => [
+                    'label' => 'MTN MoMo Burkina Faso',
+                    'pattern' => '^(226)?[567][0-9]{7}$',
+                    'example' => '70XXXXXX',
+                ],
+                'Moov Money' => [
+                    'label' => 'Moov Money Burkina Faso',
+                    'pattern' => '^(226)?[567][0-9]{7}$',
+                    'example' => '76XXXXXX',
+                ],
+                'Orange Money' => [
+                    'label' => 'Orange Money Burkina Faso',
+                    'pattern' => '^(226)?[567][0-9]{7}$',
+                    'example' => '77XXXXXX',
+                ],
+            ],
+        ],
+
+        'SN' => [
+            'name' => 'Senegal',
+            'networks' => [
+                'Orange Money' => [
+                    'label' => 'Orange Money Senegal',
+                    'pattern' => '^(221)?[367][0-9]{8}$',
+                    'example' => '77XXXXXXX',
+                ],
+                'Wave' => [
+                    'label' => 'Wave Senegal',
+                    'pattern' => '^(221)?[367][0-9]{8}$',
+                    'example' => '76XXXXXXX',
+                ],
+            ],
+        ],
+
+        'BJ' => [
+            'name' => 'Benin',
+            'networks' => [
+                'MTN MoMo' => [
+                    'label' => 'MTN MoMo Benin',
+                    'pattern' => '^(229)?[0-9]{8}$',
+                    'example' => '97XXXXXX',
+                ],
+                'Moov Money' => [
+                    'label' => 'Moov Money Benin',
+                    'pattern' => '^(229)?[0-9]{8}$',
+                    'example' => '96XXXXXX',
+                ],
+            ],
+        ],
+
+        'ML' => [
+            'name' => 'Mali',
+            'networks' => [
+                'Orange Money' => [
+                    'label' => 'Orange Money Mali',
+                    'pattern' => '^(223)?[5679][0-9]{7}$',
+                    'example' => '77XXXXXX',
+                ],
+                'Moov Money' => [
+                    'label' => 'Moov Money Mali',
+                    'pattern' => '^(223)?[5679][0-9]{7}$',
+                    'example' => '76XXXXXX',
+                ],
+            ],
+        ],
+
     ],
 
     /*
