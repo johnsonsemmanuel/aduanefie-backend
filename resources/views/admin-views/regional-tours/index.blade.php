@@ -4,14 +4,24 @@
 
 @section('content')
 <div class="content container-fluid">
-    <div class="page-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <div>
-            <h1 class="page-header-title mb-1">Regional Tours &amp; Farmer Visits</h1>
-            <p class="text-muted mb-0">Schedule regional farmer engagement tours, monitor visit demand by region, and send SMS reminders.</p>
+    <div class="page-header">
+        <div class="row align-items-center">
+            <div class="col-sm mb-2 mb-sm-0">
+                <h1 class="page-header-title">
+                    <span class="page-header-icon">
+                        <i class="tio-map-outlined"></i>
+                    </span>
+                    <span>Regional Tours &amp; Farmer Visits</span>
+                </h1>
+            </div>
+            <div class="col-sm-auto">
+                <div class="btn--container">
+                    <a href="{{ route('admin.regional-tours.export', ['region' => $region]) }}" class="btn btn--primary">
+                        <i class="tio-download-to mr-1"></i> Export Registrations CSV
+                    </a>
+                </div>
+            </div>
         </div>
-        <a href="{{ route('admin.regional-tours.export', ['region' => $region]) }}" class="btn btn-outline-primary">
-            Export Registrations CSV
-        </a>
     </div>
 
     <div class="row g-3 mb-4">

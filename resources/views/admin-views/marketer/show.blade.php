@@ -22,14 +22,14 @@
                 </p>
             </div>
         </div>
-        <div class="d-flex flex-wrap gap-2">
-            <form method="post" action="{{ route('admin.marketer-applications.send-login', $marketer->id) }}" class="d-inline">
+        <div class="btn--container">
+            <form method="post" action="{{ route('admin.marketer-applications.send-login', $marketer->id) }}" class="mb-0">
                 @csrf
-                <button type="submit" class="btn btn--primary btn-sm">
+                <button type="submit" class="btn btn--primary">
                     <i class="tio-send mr-1"></i> Send Login Link (SMS + Email)
                 </button>
             </form>
-            <a href="{{ route('admin.marketer-applications.index') }}" class="btn btn-outline-secondary btn-sm">
+            <a href="{{ route('admin.marketer-applications.index') }}" class="btn btn--secondary">
                 <i class="tio-back-ui mr-1"></i> Back to Marketers
             </a>
         </div>
