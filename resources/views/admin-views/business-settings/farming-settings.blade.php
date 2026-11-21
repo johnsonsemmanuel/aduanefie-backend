@@ -117,7 +117,7 @@
                                 <i class="tio-sms mr-1"></i>
                                 SMS Balance: <strong>{{ number_format($smsBalance['units']) }}</strong> credits
                                 @if($lowCredits)
-                                    — Low Balance
+                                    - Low Balance
                                 @endif
                             </span>
                         @endif

@@ -82,7 +82,7 @@
                 </div>
                 <div class="card-body">
                     <p class="mb-2"><strong>Email:</strong> {{ $marketer->email }}</p>
-                    <p class="mb-2"><strong>Phone:</strong> {{ $marketer->phone ?: '—' }}</p>
+                    <p class="mb-2"><strong>Phone:</strong> {{ $marketer->phone ?: 'N/A' }}</p>
                     <p class="mb-2"><strong>Region:</strong> {{ $marketer->marketer_region ?: 'Unassigned' }}</p>
                     <p class="mb-2"><strong>Commission Rate:</strong> {{ rtrim(rtrim(number_format($marketer->marketerCommissionRate(), 3), '0'), '.') }}%</p>
                     <p class="mb-2"><strong>Joined:</strong> {{ optional($marketer->created_at)->format('M d, Y') }}</p>
@@ -121,7 +121,7 @@
                                         <strong>{{ $store->name }}</strong><br>
                                         <small class="text-muted">{{ $store->phone }}</small>
                                     </td>
-                                    <td>{{ $store->region ?? '—' }}</td>
+                                    <td>{{ $store->region ?? 'N/A' }}</td>
                                     <td>
                                         <span class="badge badge-soft-{{ $store->status ? 'success' : 'warning' }}">
                                             {{ $store->status ? 'Verified' : 'Pending' }}
@@ -164,7 +164,7 @@
                             <td>{{ number_format($p->amount, 2) }} {{ $p->currency }}</td>
                             <td><span class="badge badge-soft-{{ $p->status === 'paid' ? 'success' : ($p->status === 'rejected' ? 'danger' : 'warning') }}">{{ ucfirst($p->status) }}</span></td>
                             <td>{{ $p->requested_at }}</td>
-                            <td>{{ $p->paid_at ?? '—' }}</td>
+                            <td>{{ $p->paid_at ?? 'N/A' }}</td>
                         </tr>
                     @empty
                         <tr><td colspan="5" class="text-center text-muted py-4">No payout requests yet.</td></tr>

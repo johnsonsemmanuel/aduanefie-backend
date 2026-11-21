@@ -55,7 +55,7 @@
                     <span>{{ translate('IntekHost SMS Credits') }}</span>
                 </h6>
                 <span class="card-title {{ isset($opsSmsBalance['units']) && $opsSmsBalance['units'] < 100 ? 'text-danger' : 'text-success' }}">
-                    {{ isset($opsSmsBalance['units']) ? number_format($opsSmsBalance['units']) : '—' }}
+                    {{ isset($opsSmsBalance['units']) ? number_format($opsSmsBalance['units']) : 'N/A' }}
                 </span>
             </div>
         </a>
