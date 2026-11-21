@@ -15,6 +15,7 @@ class MarketerApplication extends Model
         'full_name',
         'email',
         'phone',
+        'country_code',
         'region',
         'district',
         'momo_network',

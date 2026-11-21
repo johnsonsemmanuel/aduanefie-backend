@@ -240,6 +240,17 @@ class VendorLoginController extends Controller
             }
         }
 
+        // Keep a canonical ISO code on the store. Payment and payout rules
+        // resolve the market from this value, so a name or legacy alias must
+        // never cause a silent fallback to Ghana.
+        if (in_array('country_code', $storeColumns, true)) {
+            $market = app(\App\Services\Markets\MarketProfileService::class);
+            $countryCode = $market->normalizeCountry($request->input('country'));
+            if ($countryCode) {
+                $store->country_code = $countryCode;
+            }
+        }
+
         if (in_array('marketer_id', $storeColumns, true)) {
             $marketer = null;
             $marketerRoleId = (int) config('marketer.role_id', 5);

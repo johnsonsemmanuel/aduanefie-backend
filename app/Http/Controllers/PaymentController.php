@@ -113,7 +113,9 @@ class PaymentController extends Controller
             $order->destination_country ?: $order->origin_country
         );
         if (! $orderCountry && $order->store_id) {
-            $storeCountry = \App\Models\Store::where('id', $order->store_id)->value('country_code');
+            $store = \App\Models\Store::where('id', $order->store_id)
+                ->first(['country_code', 'country']);
+            $storeCountry = $store?->country_code ?: $store?->country;
             $orderCountry = $this->markets->normalizeCountry($storeCountry);
         }
         $orderCountry = $orderCountry ?: $this->markets->defaultCountry();
