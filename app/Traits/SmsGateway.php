@@ -82,7 +82,14 @@ trait  SmsGateway
             return self::alphanet_sms($receiver, $otp);
         }
 
-
+        $intekConfig = self::get_settings('intekhost');
+        if (
+            (isset($intekConfig) && ($intekConfig['status'] ?? 0) == 1)
+            || ! empty(env('INTEKHOST_API_KEY'))
+            || ! empty(\App\Models\BusinessSetting::where('key', 'intekhost_api_key')->value('value'))
+        ) {
+            return self::intekhost($receiver, $otp);
+        }
 
         return 'not_found';
     }
@@ -612,35 +619,40 @@ trait  SmsGateway
 
     public static function intekhost($receiver, $message): string
     {
-        $config = self::get_settings('intekhost');
-        $response = 'error';
-        if (isset($config) && $config['status'] == 1) {
-            $api_key = $config['api_key'] ?? '';
-            $sender_id = $config['sender_id'] ?? 12;
-            $url = $config['api_url'] ?? 'https://inteksms.top/api/v1/messages/send';
+        $config = self::get_settings('intekhost') ?? [];
+        $api_key = $config['api_key']
+            ?? \App\Models\BusinessSetting::where('key', 'intekhost_api_key')->value('value')
+            ?? env('INTEKHOST_API_KEY', '');
+        $sender_id = $config['sender_id']
+            ?? \App\Models\BusinessSetting::where('key', 'intekhost_sender_id')->value('value')
+            ?? env('INTEKHOST_SENDER_ID', 12);
+        $url = $config['api_url'] ?? 'https://inteksms.top/api/v1/messages/send';
 
-            try {
-                $res = Http::post($url, [
+        if (empty($api_key)) {
+            return 'error';
+        }
+
+        // Format numeric OTP codes with template so OTP login SMS reads cleanly
+        $body = (string) $message;
+        if (preg_match('/^\d{4,8}$/', trim($body))) {
+            $template = $config['otp_template'] ?? 'Your Aduanefie verification code is #OTP#.';
+            $body = str_replace('#OTP#', trim($body), $template);
+        }
+
+        try {
+            $res = Http::withToken($api_key)
+                ->acceptJson()
+                ->timeout(12)
+                ->post($url, [
                     'sender_id' => $sender_id,
                     'title' => 'Aduanefie',
-                    'message' => $message,
+                    'message' => $body,
                     'recipients' => [$receiver],
-                ], [
-                    'headers' => [
-                        'Authorization' => 'Bearer ' . $api_key,
-                        'Content-Type' => 'application/json',
-                    ],
                 ]);
-                if ($res->successful()) {
-                    $response = 'success';
-                } else {
-                    $response = 'error';
-                }
-            } catch (\Exception $exception) {
-                $response = 'error';
-            }
+            return $res->successful() ? 'success' : 'error';
+        } catch (\Exception $exception) {
+            return 'error';
         }
-        return $response;
     }
 
 

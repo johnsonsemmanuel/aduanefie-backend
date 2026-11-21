@@ -15,8 +15,13 @@ ln -sfn /app/public /app/public/public 2>/dev/null || true
 chown -R www-data:www-data /app/storage /app/bootstrap/cache /app/public 2>/dev/null || true
 chmod -R 775 /app/storage /app/bootstrap/cache 2>/dev/null || true
 
-# Ensure Laravel Passport keys exist with strict 600 permissions for www-data
-if [ ! -f /app/storage/oauth-private.key ] || [ ! -f /app/storage/oauth-public.key ]; then
+# Ensure Laravel Passport keys exist with strict 600 permissions for www-data.
+# If PASSPORT_PRIVATE_KEY and PASSPORT_PUBLIC_KEY env vars are set in Railway,
+# materialize them so active customer/vendor tokens persist across redeploys.
+if [ -n "${PASSPORT_PRIVATE_KEY:-}" ] && [ -n "${PASSPORT_PUBLIC_KEY:-}" ]; then
+    printf '%b\n' "$PASSPORT_PRIVATE_KEY" > /app/storage/oauth-private.key
+    printf '%b\n' "$PASSPORT_PUBLIC_KEY" > /app/storage/oauth-public.key
+elif [ ! -f /app/storage/oauth-private.key ] || [ ! -f /app/storage/oauth-public.key ]; then
     php artisan passport:keys --no-interaction 2>/dev/null || true
 fi
 chown www-data:www-data /app/storage/oauth-*.key 2>/dev/null || true
