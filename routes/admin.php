@@ -326,6 +326,19 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
             Route::post('sync-live', 'AgroPriceController@syncLive')->name('sync-live');
         });
 
+        // Cross-border FX and lane rates. Manual entries are marked with their
+        // source so indicative baselines are never shown as live market data.
+        Route::group(['prefix' => 'market-rates', 'as' => 'market-rates.', 'middleware' => ['module:settings']], function () {
+            Route::get('/', 'MarketRateController@index')->name('index');
+            Route::post('refresh-fx', 'MarketRateController@refreshFx')->name('refresh-fx');
+            Route::post('currency/store', 'MarketRateController@storeCurrency')->name('currency.store');
+            Route::post('currency/update/{id}', 'MarketRateController@updateCurrency')->name('currency.update');
+            Route::delete('currency/destroy/{id}', 'MarketRateController@destroyCurrency')->name('currency.destroy');
+            Route::post('shipping/store', 'MarketRateController@storeShipping')->name('shipping.store');
+            Route::post('shipping/update/{id}', 'MarketRateController@updateShipping')->name('shipping.update');
+            Route::delete('shipping/destroy/{id}', 'MarketRateController@destroyShipping')->name('shipping.destroy');
+        });
+
         Route::group(['prefix' => 'trade-rfqs', 'as' => 'trade-rfqs.', 'middleware' => ['module:settings']], function () {
             Route::get('/', 'TradeRfqController@index')->name('index');
             Route::post('status/{id}', 'TradeRfqController@updateStatus')->name('update-status');
