@@ -6,6 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\MarketerAuthController;
 use App\Models\Admin;
 use App\Models\MarketerApplication;
+use App\Models\MarketerCommission;
+use App\Models\MarketerPayout;
+use App\Models\Order;
+use App\Models\Store;
+use App\Scopes\ZoneScope;
+use App\Services\MarketerCommissionService;
 use App\Traits\SmsGateway;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Http\Request;
@@ -192,6 +198,63 @@ class MarketerApplicationController extends Controller
 
         Toastr::success('Assigned referral codes to ' . $missing->count() . ' marketer(s).');
         return back();
+    }
+
+    public function showMarketer(int $id, MarketerCommissionService $commissionService)
+    {
+        abort_unless(Auth::guard('admin')->user()?->role_id == 1, 403);
+
+        $marketer = Admin::where('id', $id)
+            ->where('role_id', (int) config('marketer.role_id', 5))
+            ->firstOrFail();
+
+        $summary = $commissionService->summaryFor($marketer);
+
+        $stores = Store::withoutGlobalScope(ZoneScope::class)
+            ->where('marketer_id', $marketer->id)
+            ->orderByDesc('id')
+            ->get();
+
+        $storeIds = $stores->pluck('id')->all();
+        $orderStats = ! empty($storeIds)
+            ? Order::withoutGlobalScope(ZoneScope::class)
+                ->select(
+                    'store_id',
+                    \Illuminate\Support\Facades\DB::raw('COUNT(*) as delivered_orders_count'),
+                    \Illuminate\Support\Facades\DB::raw('COALESCE(SUM(order_amount), 0) as total_sales')
+                )
+                ->whereIn('store_id', $storeIds)
+                ->where('order_status', 'delivered')
+                ->groupBy('store_id')
+                ->get()
+                ->keyBy('store_id')
+            : collect();
+
+        $stores = $stores->map(function ($store) use ($orderStats) {
+            $os = $orderStats->get($store->id);
+            $store->delivered_orders_count = (int) ($os->delivered_orders_count ?? 0);
+            $store->total_sales = round((float) ($os->total_sales ?? 0), 2);
+            return $store;
+        });
+
+        $payouts = MarketerPayout::forMarketer($marketer->id)
+            ->latest('id')
+            ->limit(15)
+            ->get();
+
+        $recentCommissions = MarketerCommission::forMarketer($marketer->id)
+            ->with(['store', 'order'])
+            ->latest('id')
+            ->limit(15)
+            ->get();
+
+        return view('admin-views.marketer.show', compact(
+            'marketer',
+            'summary',
+            'stores',
+            'payouts',
+            'recentCommissions'
+        ));
     }
 
     public function sendMarketerLogin(int $id)

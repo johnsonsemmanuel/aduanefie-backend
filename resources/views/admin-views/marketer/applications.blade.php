@@ -116,7 +116,11 @@
                     @forelse($activeMarketers ?? [] as $m)
                         <tr>
                             <td>#{{ $m->id }}</td>
-                            <td><strong>{{ trim($m->f_name . ' ' . $m->l_name) }}</strong></td>
+                            <td>
+                                <a href="{{ route('admin.marketer-applications.show', $m->id) }}" class="font-weight-bold text-dark">
+                                    {{ trim($m->f_name . ' ' . $m->l_name) }}
+                                </a>
+                            </td>
                             <td>
                                 <small>{{ $m->phone ?: '-' }}</small><br>
                                 <small class="text-muted">{{ $m->email }}</small>
@@ -129,7 +133,10 @@
                                     <span class="badge badge-soft-warning">No Code</span>
                                 @endif
                             </td>
-                            <td>
+                            <td class="text-nowrap">
+                                <a href="{{ route('admin.marketer-applications.show', $m->id) }}" class="btn btn-sm btn-outline-info mr-1">
+                                    <i class="tio-visible-outlined"></i> View Profile
+                                </a>
                                 <form method="post" action="{{ route('admin.marketer-applications.send-login', $m->id) }}" class="d-inline">
                                     @csrf
                                     <button type="submit" class="btn btn-sm btn-outline-primary">Send Login Link (SMS + Email)</button>
