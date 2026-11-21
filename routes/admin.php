@@ -323,6 +323,7 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
             Route::post('update/{id}', 'AgroPriceController@update')->name('update');
             Route::delete('destroy/{id}', 'AgroPriceController@destroy')->name('destroy');
             Route::post('send-sms', 'AgroPriceController@sendSmsAlerts')->name('send-sms');
+            Route::post('sync-live', 'AgroPriceController@syncLive')->name('sync-live');
         });
 
         Route::group(['prefix' => 'trade-rfqs', 'as' => 'trade-rfqs.', 'middleware' => ['module:settings']], function () {

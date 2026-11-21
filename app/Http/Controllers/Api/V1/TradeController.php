@@ -309,7 +309,7 @@ class TradeController extends Controller
             'base' => 'GHS',
             'rates' => $rates,
             'symbols' => [
-                'GHS' => 'GH₵',
+                'GHS' => '₵',
                 'USD' => '$',
                 'NGN' => '₦',
                 'XOF' => 'CFA ',
@@ -352,9 +352,10 @@ class TradeController extends Controller
             'prices' => $prices->values(),
             'categories' => $allForFilters->pluck('category')->unique()->values(),
             'hubs' => $allForFilters->pluck('market_hub')->unique()->values(),
+            'sources' => $allForFilters->pluck('source_platform')->filter()->unique()->values(),
             'currency' => 'GHS',
-            'currency_symbol' => 'GH₵',
-            'updated_at' => now()->toIso8601String(),
+            'currency_symbol' => '₵',
+            'updated_at' => $allForFilters->max('recorded_at') ?? now()->toIso8601String(),
         ], 200);
     }
 

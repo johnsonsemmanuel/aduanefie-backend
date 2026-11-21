@@ -6,6 +6,7 @@ use App\CentralLogics\SMS_module;
 use App\Http\Controllers\Controller;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 
 class AgroPriceController extends Controller
@@ -64,6 +65,13 @@ class AgroPriceController extends Controller
         ]);
 
         Toastr::success(translate('messages.added_successfully'));
+        return back();
+    }
+
+    public function syncLive()
+    {
+        Artisan::call('agro-prices:sync');
+        Toastr::success(trim(Artisan::output()) ?: 'Synced live Ghana commodity prices.');
         return back();
     }
 

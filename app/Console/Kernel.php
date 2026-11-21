@@ -36,6 +36,9 @@ class Kernel extends ConsoleKernel
         // Payment reminders for locked groups whose members still owe payment.
         // Rate-limited to once per participant per 24h so no one is spammed.
         $schedule->command('group-buys:remind')->hourly()->withoutOverlapping();
+
+        // Sync live Ghana commodity prices from World Bank RTFP & FAO FPMA (MoFA SRID).
+        $schedule->command('agro-prices:sync')->dailyAt('06:00')->withoutOverlapping();
     }
 
     /**
