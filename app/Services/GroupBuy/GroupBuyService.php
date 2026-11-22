@@ -12,6 +12,7 @@ use App\Models\Order;
 use App\Models\Store;
 use App\Services\CrossBorder\ShippingQuoteService;
 use App\Services\GroupBuy\GroupBuyNotificationService;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -46,24 +47,26 @@ class GroupBuyService
             return false;
         }
 
-        $module = Module::find($moduleId);
-        if (! $module || in_array($module->module_type, self::INCOMPATIBLE_MODULE_TYPES, true)) {
-            return false;
-        }
+        return Cache::remember("group_buy_module_compatible_{$moduleId}", now()->addMinutes(2), function () use ($moduleId) {
+            $module = Module::find($moduleId);
+            if (! $module || in_array($module->module_type, self::INCOMPATIBLE_MODULE_TYPES, true)) {
+                return false;
+            }
 
-        return Item::withoutGlobalScopes()
-            ->where('module_id', $moduleId)
-            ->where('status', 1)
-            ->where(function ($q) {
-                $q->where('moq', '>', 1)
-                    ->orWhere(function ($q2) {
-                        $q2->whereNotNull('bulk_pricing_tiers')
-                            ->where('bulk_pricing_tiers', '!=', '[]')
-                            ->where('bulk_pricing_tiers', '!=', 'null');
-                    })
-                    ->orWhereHas('bulkPricingTiers');
-            })
-            ->exists();
+            return Item::withoutGlobalScopes()
+                ->where('module_id', $moduleId)
+                ->where('status', 1)
+                ->where(function ($q) {
+                    $q->where('moq', '>', 1)
+                        ->orWhere(function ($q2) {
+                            $q2->whereNotNull('bulk_pricing_tiers')
+                                ->where('bulk_pricing_tiers', '!=', '[]')
+                                ->where('bulk_pricing_tiers', '!=', 'null');
+                        })
+                        ->orWhereHas('bulkPricingTiers');
+                })
+                ->exists();
+        });
     }
 
     /**

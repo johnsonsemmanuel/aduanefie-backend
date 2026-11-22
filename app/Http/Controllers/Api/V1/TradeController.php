@@ -325,28 +325,36 @@ class TradeController extends Controller
         $hub = $request->query('market_hub');
         $search = trim((string) $request->query('search', ''));
 
-        $prices = collect();
-        if (Schema::hasTable('agro_market_prices')) {
-            $query = DB::table('agro_market_prices')->where('is_active', true);
-            if ($category && $category !== 'all') {
-                $query->where('category', $category);
+        $allForFilters = \Illuminate\Support\Facades\Cache::remember(
+            'agro_market_prices_active_v1',
+            now()->addMinutes(2),
+            function () {
+                if (! Schema::hasTable('agro_market_prices')) {
+                    return collect();
+                }
+                return DB::table('agro_market_prices')
+                    ->where('is_active', true)
+                    ->orderBy('id')
+                    ->get();
             }
-            if ($hub && $hub !== 'all') {
-                $query->where('market_hub', $hub);
+        );
+
+        $prices = $allForFilters->filter(function ($row) use ($category, $hub, $search) {
+            if ($category && $category !== 'all' && ($row->category ?? '') !== $category) {
+                return false;
+            }
+            if ($hub && $hub !== 'all' && ($row->market_hub ?? '') !== $hub) {
+                return false;
             }
             if ($search !== '') {
-                $query->where(function ($q) use ($search) {
-                    $q->where('commodity', 'like', "%{$search}%")
-                      ->orWhere('market_hub', 'like', "%{$search}%")
-                      ->orWhere('source_platform', 'like', "%{$search}%");
-                });
+                $needle = mb_strtolower($search);
+                $hay = mb_strtolower(($row->commodity ?? '') . ' ' . ($row->market_hub ?? '') . ' ' . ($row->source_platform ?? ''));
+                if (! str_contains($hay, $needle)) {
+                    return false;
+                }
             }
-            $prices = $query->orderBy('id')->get();
-        }
-
-        $allForFilters = Schema::hasTable('agro_market_prices')
-            ? DB::table('agro_market_prices')->where('is_active', true)->get()
-            : collect();
+            return true;
+        });
 
         return response()->json([
             'prices' => $prices->values(),
