@@ -171,10 +171,6 @@
             </div>
         </div>
         <div class="auth-wrapper-right">
-            <label class="badge badge-soft-success __login-badge">
-                {{translate('messages.software_version')}} : {{env('SOFTWARE_VERSION')}}
-            </label>
-
             <div class="auth-wrapper-form">
                 <div class="slide-container {{ $mfaRequired ? 'mfa-active' : '' }} {{ $isAdmin ? '' : 'single-step' }}">
                     @if($isAdmin)

@@ -11,21 +11,21 @@
     <style>
         .portal-login-split {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-            gap: 24px;
-            max-width: 860px;
-            margin: 24px auto 0;
-            align-items: stretch;
-        }
-        .portal-login-left .card {
-            margin: 0;
-            height: 100%;
-        }
-        .portal-login-right {
+            grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+            max-width: 880px;
+            margin: 28px auto 0;
             background: #fff;
             border: 1px solid var(--line);
-            border-radius: 12px;
-            padding: 32px;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .portal-login-left {
+            padding: 36px 34px;
+        }
+        .portal-login-right {
+            background: var(--bg);
+            border-left: 1px solid var(--line);
+            padding: 36px 32px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -41,7 +41,7 @@
         .portal-step-dots {
             display: flex;
             gap: 6px;
-            margin-bottom: 16px;
+            margin-bottom: 20px;
         }
         .portal-step-dot {
             width: 8px;
@@ -58,6 +58,9 @@
             .portal-login-split {
                 grid-template-columns: 1fr;
             }
+            .portal-login-left {
+                padding: 26px 20px;
+            }
             .portal-login-right {
                 display: none;
             }
@@ -66,12 +69,10 @@
 
     <div class="portal-login-split">
         <div class="portal-login-left">
-            <div class="card">
-                @include('partials._portal-login-header', [
-                    'badge' => 'Logistics Portal',
-                    'heading' => 'Rider sign in',
-                    'subtitle' => 'Use the phone number and password you registered with.',
-                ])
+            @include('partials._portal-login-header', [
+                'heading' => 'Rider sign in',
+                'subtitle' => 'Use the phone number and password you registered with.',
+            ])
 
                 <div class="portal-step-dots" aria-hidden="true">
                     <span class="portal-step-dot active" id="rider-dot-1"></span>
@@ -138,7 +139,6 @@
                     Not registered yet? Riders sign up in the Aduanefie rider app.
                     Contact your dispatcher if your application is still pending.
                 </p>
-            </div>
         </div>
 
         <div class="portal-login-right">
