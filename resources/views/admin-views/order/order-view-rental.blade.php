@@ -1165,15 +1165,13 @@
     <script>
         var deliveryMan = <?php echo json_encode($deliveryMen); ?>;
         var map = null;
-        @if ($order->order_type == 'parcel')
-            var myLatlng = new google.maps.LatLng({{ $address['latitude'] }}, {{ $address['longitude'] }});
-        @else
-            @php($default_location = App\CentralLogics\Helpers::get_business_settings('default_location'))
-            var myLatlng = new google.maps.LatLng(
-                {{ isset($order->store) ? $order->store->latitude : (isset($default_location) ? $default_location['lat'] : 0) }},
-                {{ isset($order->store) ? $order->store->longitude : (isset($default_location['lng']) ? $default_location['lng'] : 0) }}
-            );
-        @endif
+        @php($mapCenter = App\CentralLogics\Helpers::validatedCoordinates(
+            $order->order_type == 'parcel'
+                ? ['lat' => data_get($address, 'latitude'), 'lng' => data_get($address, 'longitude')]
+                : ['lat' => $order->store->latitude ?? null, 'lng' => $order->store->longitude ?? null]
+        ))
+        @if($mapCenter)
+            var myLatlng = new google.maps.LatLng({{ $mapCenter['lat'] }}, {{ $mapCenter['lng'] }});
         var dmbounds = new google.maps.LatLngBounds(null);
         var locationbounds = new google.maps.LatLngBounds(null);
         var dmMarkers = [];
@@ -1339,8 +1337,8 @@
             let map = new google.maps.Map(document.getElementById("map"), {
                 zoom: 13,
                 center: {
-                    lat: {{ isset($order->store) ? $order->store->latitude : '23.757989' }},
-                    lng: {{ isset($order->store) ? $order->store->longitude : '90.360587' }}
+                    lat: {{ $mapCenter['lat'] }},
+                    lng: {{ $mapCenter['lng'] }}
                 }
             });
 
@@ -1774,6 +1772,9 @@
                 }, 3);
             });
         })
+        @else
+        document.getElementById("map").innerHTML = '<div class="alert alert-warning">This order has no valid map position.</div>';
+        @endif
     </script>
 
     <script src="{{ asset('public/assets/admin/js/spartan-multi-image-picker.js') }}"></script>

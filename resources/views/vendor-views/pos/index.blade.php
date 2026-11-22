@@ -259,11 +259,16 @@
 
 
         function initMap() {
+            @php($mapCenter = App\CentralLogics\Helpers::validatedCoordinates($store_data ?? null))
+            @if(!$mapCenter)
+            document.getElementById("map").innerHTML = '<div class="alert alert-warning">This store has no valid map position.</div>';
+            return;
+            @endif
             let map = new google.maps.Map(document.getElementById("map"), {
                 zoom: 13,
                 center: {
-                    lat: {{ $store_data ? $store_data['latitude'] : '23.757989' }},
-                    lng: {{ $store_data ? $store_data['longitude'] : '90.360587' }}
+                    lat: {{ $mapCenter['lat'] }},
+                    lng: {{ $mapCenter['lng'] }}
                 }
             });
 
