@@ -6,20 +6,18 @@ use Illuminate\Support\Facades\Route;
 Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
 
     Route::group(['middleware' => ['admin', 'admin-mfa', 'current-module']], function () {
-        Route::get('/test', function () {
-        });
         // Route::get('drivemond-panel', 'DriveMondController@drivemondExternalLogin')->name('drivemond-panel');
         Route::get('get-all-stores', 'VendorController@get_all_stores')->name('get_all_stores');
         Route::get('lang/{locale}', 'LanguageController@lang')->name('lang');
         Route::get('settings', 'SystemController@settings')->name('settings');
-        Route::post('settings', 'SystemController@settings_update');
+        Route::post('settings', 'SystemController@settings_update')->name('settings.update');
         Route::post('settings-password', 'SystemController@settings_password_update')->name('settings-password');
         Route::get('/get-store-data', 'SystemController@store_data')->name('get-store-data');
         Route::post('remove_image', 'BusinessSettingsController@remove_image')->name('remove_image');
         Route::get('system-currency', 'SystemController@system_currency')->name('system_currency');
         //dashboard
         Route::get('/', 'DashboardController@dashboard')->name('dashboard');
-        Route::get('dashboard', fn () => redirect()->route('admin.dashboard'))->name('dashboard.alias');
+        Route::redirect('dashboard', '/admin')->name('dashboard.alias');
 
         Route::get('maintenance-mode', 'SystemController@maintenance_mode')->name('maintenance-mode');
         Route::get('landing-page', 'SystemController@landing_page')->name('landing-page');
@@ -193,7 +191,7 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
         Route::group(['prefix' => 'store', 'as' => 'store.'], function () {
             Route::get('get-stores-data/{store}', 'VendorController@get_store_data')->name('get-stores-data');
             Route::get('store-filter/{id}', 'VendorController@store_filter')->name('store-filter');
-            Route::get('get-account-data/{store}', 'VendorController@get_account_data')->name('store-filter');
+            Route::get('get-account-data/{store}', 'VendorController@get_account_data')->name('get-account-data');
             Route::get('get-stores', 'VendorController@get_stores')->name('get-stores');
             Route::get('get-providers', 'VendorController@get_providers')->name('get-providers');
             Route::get('get-addons', 'VendorController@get_addons')->name('get_addons');
@@ -260,9 +258,7 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
         });
 
 
-        Route::get('addon/system-addons', function (){
-            return to_route('admin.system-addon.index');
-        })->name('addon.index');
+        Route::redirect('addon/system-addons', '/admin/system-addon')->name('addon.index');
 
         Route::get('order/generate-invoice/{id}', 'OrderController@generate_invoice')->name('order.generate-invoice');
         Route::get('order/print-invoice/{id}', 'OrderController@print_invoice')->name('order.print-invoice');
@@ -324,19 +320,6 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
             Route::delete('destroy/{id}', 'AgroPriceController@destroy')->name('destroy');
             Route::post('send-sms', 'AgroPriceController@sendSmsAlerts')->name('send-sms');
             Route::post('sync-live', 'AgroPriceController@syncLive')->name('sync-live');
-        });
-
-        // Cross-border FX and lane rates. Manual entries are marked with their
-        // source so indicative baselines are never shown as live market data.
-        Route::group(['prefix' => 'market-rates', 'as' => 'market-rates.', 'middleware' => ['module:settings']], function () {
-            Route::get('/', 'MarketRateController@index')->name('index');
-            Route::post('refresh-fx', 'MarketRateController@refreshFx')->name('refresh-fx');
-            Route::post('currency/store', 'MarketRateController@storeCurrency')->name('currency.store');
-            Route::post('currency/update/{id}', 'MarketRateController@updateCurrency')->name('currency.update');
-            Route::delete('currency/destroy/{id}', 'MarketRateController@destroyCurrency')->name('currency.destroy');
-            Route::post('shipping/store', 'MarketRateController@storeShipping')->name('shipping.store');
-            Route::post('shipping/update/{id}', 'MarketRateController@updateShipping')->name('shipping.update');
-            Route::delete('shipping/destroy/{id}', 'MarketRateController@destroyShipping')->name('shipping.destroy');
         });
 
         Route::group(['prefix' => 'trade-rfqs', 'as' => 'trade-rfqs.', 'middleware' => ['module:settings']], function () {
@@ -403,12 +386,12 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
             Route::post('update-insurance', 'BusinessSettingsController@update_insurance')->name('update-insurance');
             Route::post('update-priority', 'BusinessSettingsController@update_priority')->name('update-priority');
             Route::get('app-settings', 'BusinessSettingsController@app_settings')->name('app-settings');
-            Route::POST('app-settings', 'BusinessSettingsController@update_app_settings')->name('app-settings');
+            Route::POST('app-settings', 'BusinessSettingsController@update_app_settings')->name('app-settings.update');
             Route::get('farming-settings', 'BusinessSettingsController@farming_settings')->name('farming-settings');
             Route::post('farming-settings/update', 'BusinessSettingsController@update_farming_settings')->name('update-farming-settings');
             Route::post('farming-settings/test-sms', 'BusinessSettingsController@test_intekhost_sms')->name('test-intekhost-sms');
             Route::get('pages/admin-landing-page-settings/{tab?}', 'BusinessSettingsController@admin_landing_page_settings')->name('admin-landing-page-settings');
-            Route::POST('pages/admin-landing-page-settings/{tab}', 'BusinessSettingsController@update_admin_landing_page_settings')->name('admin-landing-page-settings');
+            Route::POST('pages/admin-landing-page-settings/{tab}', 'BusinessSettingsController@update_admin_landing_page_settings')->name('admin-landing-page-settings.update');
             Route::get('promotional-status/{id}/{status}', 'BusinessSettingsController@promotional_status')->name('promotional-status');
             Route::get('pages/admin-landing-page-settings/promotional-section/edit/{id}', 'BusinessSettingsController@promotional_edit')->name('promotional-edit');
             Route::post('promotional-section/update/{id}', 'BusinessSettingsController@promotional_update')->name('promotional-update');
@@ -427,20 +410,20 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
             Route::delete('review/delete/{review}', 'BusinessSettingsController@review_destroy')->name('review-delete');
             Route::get('pages/react-landing-page-settings/{tab?}', 'BusinessSettingsController@react_landing_page_settings')->name('react-landing-page-settings');
             Route::POST('pages/react-landing-page-settings/{tab?}',
-                'BusinessSettingsController@update_react_landing_page_settings')->name('react-landing-page-settings');
+                'BusinessSettingsController@update_react_landing_page_settings')->name('react-landing-page-settings.update');
             Route::DELETE('react-landing-page-settings/{tab}/{key}', 'BusinessSettingsController@delete_react_landing_page_settings')->name('react-landing-page-settings-delete');
             Route::get('review-react-status/{id}/{status}', 'BusinessSettingsController@review_react_status')->name('review-react-status');
             Route::get('pages/react-landing-page-settings/testimonials/review-react-list/edit/{id}', 'BusinessSettingsController@review_react_edit')->name('review-react-edit');
             Route::post('review-react-section/update/{id}', 'BusinessSettingsController@review_react_update')->name('review-react-update');
             Route::delete('review-react/delete/{review}', 'BusinessSettingsController@review_react_destroy')->name('review-react-delete');
             Route::get('pages/flutter-landing-page-settings/{tab?}', 'BusinessSettingsController@flutter_landing_page_settings')->name('flutter-landing-page-settings');
-            Route::POST('pages/flutter-landing-page-settings/{tab}', 'BusinessSettingsController@update_flutter_landing_page_settings')->name('flutter-landing-page-settings');
+            Route::POST('pages/flutter-landing-page-settings/{tab}', 'BusinessSettingsController@update_flutter_landing_page_settings')->name('flutter-landing-page-settings.update');
             Route::get('flutter-criteria-status/{id}/{status}', 'BusinessSettingsController@flutter_criteria_status')->name('flutter-criteria-status');
             Route::get('pages/flutter-landing-page-settings/special-criteria/edit/{id}', 'BusinessSettingsController@flutter_criteria_edit')->name('flutter-criteria-edit');
             Route::post('flutter-criteria-section/update/{id}', 'BusinessSettingsController@flutter_criteria_update')->name('flutter-criteria-update');
             Route::delete('flutter/criteria/delete/{criteria}', 'BusinessSettingsController@flutter_criteria_destroy')->name('flutter-criteria-delete');
             Route::get('landing-page-settings/{tab?}', 'BusinessSettingsController@landing_page_settings')->name('landing-page-settings');
-            Route::POST('landing-page-settings/{tab}', 'BusinessSettingsController@update_landing_page_settings')->name('landing-page-settings');
+            Route::POST('landing-page-settings/{tab}', 'BusinessSettingsController@update_landing_page_settings')->name('landing-page-settings.update');
             Route::DELETE('landing-page-settings/{tab}/{key}', 'BusinessSettingsController@delete_landing_page_settings')->name('landing-page-settings-delete');
 
             // Centerlize login
@@ -453,7 +436,7 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
             Route::post('login-url-setup/update', 'BusinessSettingsController@login_url_page_update')->name('login_url_update');
 
             Route::get('email-setup/{type}/{tab?}', 'BusinessSettingsController@email_index')->name('email-setup');
-            Route::POST('email-setup/{type}/{tab?}', 'BusinessSettingsController@update_email_index')->name('email-setup');
+            Route::POST('email-setup/{type}/{tab?}', 'BusinessSettingsController@update_email_index')->name('email-setup.update');
             Route::get('email-status/{type}/{tab}/{status}', 'BusinessSettingsController@update_email_status')->name('email-status');
 
             Route::get('toggle-settings/{key}/{value}', 'BusinessSettingsController@toggle_settings')->name('toggle-settings');
@@ -468,30 +451,30 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
             Route::post('update-fcm-messages-rental', 'BusinessSettingsController@update_fcm_messages_rental')->name('update-fcm-messages-rental');
 
             Route::get('currency-add', 'BusinessSettingsController@currency_index')->name('currency-add');
-            Route::post('currency-add', 'BusinessSettingsController@currency_store');
+            Route::post('currency-add', 'BusinessSettingsController@currency_store')->name('currency-add.store');
             Route::get('currency-update/{id}', 'BusinessSettingsController@currency_edit')->name('currency-update');
-            Route::put('currency-update/{id}', 'BusinessSettingsController@currency_update');
+            Route::put('currency-update/{id}', 'BusinessSettingsController@currency_update')->name('currency-update.submit');
             Route::delete('currency-delete/{id}', 'BusinessSettingsController@currency_delete')->name('currency-delete');
 
             Route::get('pages/business-page/terms-and-conditions', 'BusinessSettingsController@terms_and_conditions')->name('terms-and-conditions');
-            Route::post('pages/business-page/terms-and-conditions', 'BusinessSettingsController@terms_and_conditions_update');
+            Route::post('pages/business-page/terms-and-conditions', 'BusinessSettingsController@terms_and_conditions_update')->name('terms-and-conditions.update');
 
             Route::get('pages/business-page/privacy-policy', 'BusinessSettingsController@privacy_policy')->name('privacy-policy');
-            Route::post('pages/business-page/privacy-policy', 'BusinessSettingsController@privacy_policy_update');
+            Route::post('pages/business-page/privacy-policy', 'BusinessSettingsController@privacy_policy_update')->name('privacy-policy.update');
 
             Route::get('pages/business-page/about-us', 'BusinessSettingsController@about_us')->name('about-us');
-            Route::post('pages/business-page/about-us', 'BusinessSettingsController@about_us_update');
+            Route::post('pages/business-page/about-us', 'BusinessSettingsController@about_us_update')->name('about-us.update');
 
             Route::get('pages/business-page/refund', 'BusinessSettingsController@refund_policy')->name('refund');
-            Route::post('pages/business-page/refund', 'BusinessSettingsController@refund_update');
+            Route::post('pages/business-page/refund', 'BusinessSettingsController@refund_update')->name('refund.update');
             Route::get('pages/refund-policy/{status}', 'BusinessSettingsController@refund_policy_status')->name('refund-policy-status');
 
             Route::get('pages/business-page/cancelation', 'BusinessSettingsController@cancellation_policy')->name('cancelation');
-            Route::post('pages/business-page/cancelation', 'BusinessSettingsController@cancellation_policy_update');
+            Route::post('pages/business-page/cancelation', 'BusinessSettingsController@cancellation_policy_update')->name('cancelation.update');
             Route::get('pages/cancellation-policy/{status}', 'BusinessSettingsController@cancellation_policy_status')->name('cancellation-policy-status');
 
             Route::get('pages/business-page/shipping-policy', 'BusinessSettingsController@shipping_policy')->name('shipping-policy');
-            Route::post('pages/business-page/shipping-policy', 'BusinessSettingsController@shipping_policy_update');
+            Route::post('pages/business-page/shipping-policy', 'BusinessSettingsController@shipping_policy_update')->name('shipping-policy.update');
             Route::get('pages/shipping-policy/{status}', 'BusinessSettingsController@shipping_policy_status')->name('shipping-policy-status');
             // Social media
             Route::get('social-media/fetch', 'SocialMediaController@fetch')->name('social-media.fetch');
@@ -708,9 +691,12 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
         Route::group(['prefix' => 'apple-login', 'as' => 'apple-login.'], function () {
             Route::post('update/{service}', 'BusinessSettingsController@updateAppleLogin')->name('update');
         });
-        Route::get('store/report', function () {
-            return view('store_report');
-        });
+        Route::view('store/report', 'store_report')->name('store.report');
+        Route::get('insurance-claims', 'InsuranceClaimController@index')->name('insurance-claims.index');
+        Route::post('insurance-claims/{id}/status', 'InsuranceClaimController@updateStatus')->name('insurance-claims.status');
+        Route::get('pro-plans', 'ProPlanController@index')->name('pro-plans.index');
+        Route::post('pro-plans', 'ProPlanController@store')->name('pro-plans.store');
+        Route::post('pro-plans/{id}/update', 'ProPlanController@update')->name('pro-plans.update');
 
         Route::group(['prefix' => 'dispatch', 'as' => 'dispatch.'], function () {
             Route::get('/', 'DashboardController@dispatch_dashboard')->name('dashboard');

@@ -7,11 +7,11 @@
     <title>@yield('title', 'Rider Portal') · Aduanefie</title>
     <style>
         :root {
-            --ink: #0f1c2e;
-            --muted: #5b6b7f;
-            --line: #dde3ea;
-            --bg: #f4f6f9;
-            --brand: #0b6e4f;
+            --ink: #67513A;
+            --muted: #8B9F69;
+            --line: #E0D6BD;
+            --bg: #FAF8F5;
+            --brand: #67513A;
             --brand-ink: #ffffff;
             --danger: #b3261e;
             --warn: #8a5a00;
@@ -61,9 +61,9 @@
         th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); font-size: 14px; vertical-align: top; }
         th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
         tr:last-child td { border-bottom: 0; }
-        .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; background: #eef2f6; color: var(--muted); }
-        .pill.live { background: #e6f4ee; color: var(--brand); }
-        .pill.done { background: #eef2f6; color: var(--muted); }
+        .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; background: #f4efe6; color: var(--muted); border: 1px solid var(--line); }
+        .pill.live { background: #eef3e6; color: #536636; border-color: #d6e2c3; }
+        .pill.done { background: #f4efe6; color: var(--muted); }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
         .stat { border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: #fff; }
         .stat .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
@@ -81,7 +81,7 @@
             background: #fff;
             color: var(--ink);
         }
-        input:focus { outline: 2px solid rgba(11, 110, 79, .25); border-color: var(--brand); }
+        input:focus { outline: 2px solid rgba(103, 81, 58, .25); border-color: var(--brand); }
         .field { margin-bottom: 14px; }
         button, .btn {
             display: inline-block;
@@ -101,6 +101,45 @@
         .captcha-row img { height: 48px; width: auto; display: block; }
         .captcha-row button.reload { background: #fff; color: var(--ink); border: 1px solid var(--line); padding: 8px 12px; font-size: 13px; }
         .empty { color: var(--muted); font-size: 14px; padding: 8px 0; }
+        .mobile-bottom-nav { display: none; }
+        @media (max-width: 767.98px) {
+            body { padding-bottom: 74px; }
+            nav.tabs { display: none; }
+            .mobile-bottom-nav {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 40;
+                background: #ffffff;
+                border-top: 1px solid var(--line);
+                box-shadow: 0 -4px 16px rgba(103, 81, 58, 0.08);
+                padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+                gap: 4px;
+            }
+            .mobile-bottom-nav a {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 2px;
+                text-decoration: none;
+                color: var(--ink);
+                opacity: 0.72;
+                font-size: 11px;
+                font-weight: 600;
+                padding: 6px 4px;
+                border-radius: 8px;
+            }
+            .mobile-bottom-nav a.active {
+                color: var(--brand);
+                background: rgba(103, 81, 58, 0.08);
+                opacity: 1;
+            }
+            .mobile-bottom-nav .nav-ico { font-size: 16px; line-height: 1; }
+        }
     </style>
 </head>
 <body>
@@ -129,5 +168,18 @@
 
     @yield('content')
 </div>
+
+@hasSection('topbar')
+    <nav class="mobile-bottom-nav" aria-label="Rider mobile navigation">
+        <a href="{{ route('rider.dashboard') }}" class="{{ request()->routeIs('rider.dashboard') ? 'active' : '' }}">
+            <span class="nav-ico" aria-hidden="true">📦</span>
+            <span>Orders</span>
+        </a>
+        <a href="{{ route('rider.earnings') }}" class="{{ request()->routeIs('rider.earnings') ? 'active' : '' }}">
+            <span class="nav-ico" aria-hidden="true">💳</span>
+            <span>Earnings</span>
+        </a>
+    </nav>
+@endif
 </body>
 </html>

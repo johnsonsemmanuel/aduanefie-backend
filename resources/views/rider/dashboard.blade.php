@@ -56,8 +56,12 @@
                                 {{ ucfirst($order->order_type ?? 'Order') }}
                             @endif
                             @php($drop = is_array($order->receiver_details) ? ($order->receiver_details['address'] ?? null) : null)
+                            @php($dropPhone = is_array($order->receiver_details) ? ($order->receiver_details['phone'] ?? null) : ($order->delivery_address ? (json_decode($order->delivery_address, true)['contact_person_number'] ?? null) : null))
                             @if($drop)
-                                <br><span class="small muted">{{ $drop }}</span>
+                                <br><a class="small" href="https://www.google.com/maps/search/?api=1&query={{ urlencode($drop) }}" target="_blank" rel="noopener">{{ $drop }} ↗</a>
+                            @endif
+                            @if($dropPhone)
+                                <br><a class="small muted" href="tel:{{ $dropPhone }}">Call {{ $dropPhone }}</a>
                             @endif
                         </td>
                         <td><span class="pill live">{{ $statusLabel($order->order_status) }}</span></td>

@@ -6,11 +6,12 @@
     @php($recaptcha = \App\CentralLogics\Helpers::get_business_settings('recaptcha'))
     @php($recaptchaOn = isset($recaptcha) && $recaptcha['status'] == 1)
 
-    <div class="card" style="max-width:430px;margin:32px auto 0;">
-        <h1>Rider sign in</h1>
-        <p class="muted small" style="margin-top:0;">
-            Use the phone number and password you registered with.
-        </p>
+    <div class="card" style="max-width:460px;margin:32px auto 0;">
+        @include('partials._portal-login-header', [
+            'badge' => 'Logistics Portal',
+            'heading' => 'Rider sign in',
+            'subtitle' => 'Use the phone number and password you registered with.',
+        ])
 
         <form method="post" action="{{ route('rider.login.submit') }}" id="rider-login-form">
             @csrf

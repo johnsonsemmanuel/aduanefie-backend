@@ -24,6 +24,7 @@ return [
         'vendor.aduanefie.com' => 'store',
         'logistics.aduanefie.com' => 'logistics',
         'partners.aduanefie.com' => 'partners',
+        'marketer.aduanefie.com' => 'partners',
         'api.aduanefie.com' => 'api',
     ],
 

@@ -3,8 +3,7 @@
          xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.3/phpunit.xsd"
          bootstrap="vendor/autoload.php"
          colors="true"
-         cacheDirectory="/tmp/kilo/.phpunit-cache"
-         convertDeprecationsToExceptions="true">
+         cacheDirectory="/tmp/kilo/.phpunit-cache">
     <testsuites>
         <testsuite name="Feature">
             <directory suffix="Test.php">./tests/Feature</directory>
@@ -23,8 +22,8 @@
         <env name="APP_DEBUG" value="false"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="CACHE_DRIVER" value="array"/>
-        <env name="DB_CONNECTION" value="sqlite"/>
-        <env name="DB_DATABASE" value="/home/emmanuel-johnson-excellent/Documents/Esper Partner Works/Aduanefie Live/soft/database/database.sqlite"/>
+        <env name="DB_CONNECTION" value="sqlite" force="true"/>
+        <env name="DB_DATABASE" value=":memory:" force="true"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>

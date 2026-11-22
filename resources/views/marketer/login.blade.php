@@ -7,13 +7,11 @@
     @php($recaptchaOn = isset($recaptcha) && $recaptcha['status'] == 1)
 
     <div class="card" style="max-width:460px;margin:32px auto 0;">
-        <h1>Marketer sign in</h1>
-        <p class="muted small" style="margin-top:0;">
-            Remote marketers sign in with their registered email address.
-            @if(config('marketer.mfa_required', false))
-                Two-factor authentication is required.
-            @endif
-        </p>
+        @include('partials._portal-login-header', [
+            'badge' => 'Partners Portal',
+            'heading' => 'Marketer sign in',
+            'subtitle' => 'Remote marketers sign in with their registered email address.' . (config('marketer.mfa_required', false) ? ' Two-factor authentication is required.' : ''),
+        ])
 
         <form method="post" action="{{ route('marketer.login.submit') }}" id="marketer-login-form">
             @csrf
@@ -63,6 +61,10 @@
             <div style="margin-top:14px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;" class="small">
                 <a href="{{ route('marketer.forgot') }}">Forgot password? Get SMS &amp; Email login link</a>
                 <a href="https://aduanefie.com/become-a-marketer" target="_blank" rel="noopener">Apply as a marketer ↗</a>
+            </div>
+            <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;" class="small muted">
+                <span>Farm or Store Owner?</span>
+                <a href="https://admin.aduanefie.com/store-login">Sign in to Store Panel →</a>
             </div>
         </form>
     </div>
