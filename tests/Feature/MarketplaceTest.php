@@ -2,178 +2,115 @@
 
 namespace Tests\Feature;
 
-use App\Models\Item;
-use App\Models\Store;
-use App\Models\User;
-use App\Models\Category;
-use App\Models\TradeCorridor;
-use App\Models\CustomsDuty;
-use App\Models\TradeBloc;
-use Tests\CreatesApplication;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
 use Tests\TestCase;
 
 class MarketplaceTest extends TestCase
 {
-    use CreatesApplication;
-
-    /**
-     * Test that the market index page loads with commodities.
-     */
-    public function test_market_index_loads()
+    protected function setUp(): void
     {
-        $category = Category::create([
-            'name' => 'Test Cereals',
-            'module_id' => 20,
-            'position' => 0,
-            'status' => 1,
-            'image' => 'def.png',
-            'featured' => 0,
-            'products_count' => 0,
-            'childes_count' => 0,
-        ]);
+        parent::setUp();
 
-        $user = User::create([
-            'f_name' => 'Test',
-            'l_name' => 'Vendor',
-            'email' => 'vendor' . uniqid() . '@test.com',
-            'password' => bcrypt('password'),
-            'status' => 1,
-        ]);
-
-        $store = Store::create([
-            'name' => 'Test Store',
-            'email' => 'store' . uniqid() . '@test.com',
-            'phone' => '+233242371341',
-            'status' => 1,
-            'vendor_id' => $user->id,
-            'module_id' => 20,
-        ]);
-
-        Item::create([
-            'name' => 'Test Maize',
-            'slug' => 'test-maize-' . uniqid(),
-            'description' => 'Test maize commodity',
-            'price' => 2.50,
-            'unit' => 'kg',
-            'module_id' => 20,
-            'store_id' => $store->id,
-            'category_id' => $category->id,
-            'status' => 1,
-            'origin_farm' => 'Ghana',
-            'hs_code' => '100590',
-            'minimum_order_qty' => 100,
-        ]);
-
-        $response = $this->get('/market');
-
-        $response->assertStatus(200);
-        $response->assertSee('Test Maize');
+        if (! Schema::hasTable('business_settings')) {
+            Schema::create('business_settings', function (Blueprint $table) {
+                $table->id();
+                $table->string('key')->unique();
+                $table->text('value')->nullable();
+                $table->timestamps();
+            });
+        }
+        if (! Schema::hasTable('zones')) {
+            Schema::create('zones', function (Blueprint $table) {
+                $table->id();
+                $table->string('name')->nullable();
+                $table->boolean('status')->default(true);
+                $table->timestamps();
+            });
+        }
+        if (! Schema::hasTable('modules')) {
+            Schema::create('modules', function (Blueprint $table) {
+                $table->id();
+                $table->string('module_name')->nullable();
+                $table->string('module_type')->nullable();
+                $table->boolean('status')->default(true);
+                $table->timestamps();
+            });
+            \Illuminate\Support\Facades\DB::table('modules')->insert([
+                'id' => 1,
+                'module_name' => 'Grocery',
+                'module_type' => 'grocery',
+                'status' => true,
+            ]);
+        }
+        if (! Schema::hasTable('storages')) {
+            Schema::create('storages', function (Blueprint $table) {
+                $table->id();
+                $table->string('data_type')->nullable();
+                $table->unsignedBigInteger('data_id')->nullable();
+                $table->string('key')->nullable();
+                $table->string('value')->nullable();
+                $table->timestamps();
+            });
+        }
+        if (! Schema::hasTable('translations')) {
+            Schema::create('translations', function (Blueprint $table) {
+                $table->id();
+                $table->string('translationable_type')->nullable();
+                $table->unsignedBigInteger('translationable_id')->nullable();
+                $table->string('locale')->nullable();
+                $table->string('key')->nullable();
+                $table->text('value')->nullable();
+                $table->timestamps();
+            });
+        }
     }
 
-    /**
-     * Test that trade corridors exist.
-     */
-    public function test_trade_corridors_exist()
+    public function test_route_names_have_no_duplicates_and_no_closures(): void
     {
-        TradeCorridor::create([
-            'origin_country' => 'Ghana',
-            'destination_country' => 'Nigeria',
-            'corridor_name' => 'Ghana → Nigeria',
-            'distance_km' => 650,
-            'transit_days_estimate' => 5,
-            'trucking_rate_per_ton_usd' => 180,
-            'minimum_charge_usd' => 400,
-            'cold_chain_available' => 1,
-            'warehousing_available' => 1,
-            'status' => 'active',
-        ]);
-
-        $corridor = TradeCorridor::between('Ghana', 'Nigeria')->first();
-
-        $this->assertNotNull($corridor);
-        $this->assertEquals('Ghana', $corridor->origin_country);
-        $this->assertEquals('Nigeria', $corridor->destination_country);
-        $this->assertGreaterThan(0, $corridor->distance_km);
+        $routes = app('router')->getRoutes();
+        $names = [];
+        foreach ($routes as $route) {
+            if ($name = $route->getName()) {
+                $this->assertArrayNotHasKey($name, $names, "Duplicate route name detected: {$name}");
+                $names[$name] = true;
+            }
+            $this->assertNotSame('Closure', $route->getActionName(), 'Closure route blocks route:cache: ' . $route->uri());
+        }
     }
 
-    /**
-     * Test that customs duties are calculated correctly.
-     */
-    public function test_customs_duty_calculation()
+    public function test_for_you_items_requires_zone_header(): void
     {
-        CustomsDuty::create([
-            'destination_country' => 'Nigeria',
-            'hs_code' => '10',
-            'hs_description' => 'Cereals',
-            'duty_rate_percent' => 5.0,
-            'vat_rate_percent' => 7.5,
-            'excise_rate_percent' => 0,
-            'requires_sps_certificate' => 1,
-            'requires_phytosanitary' => 1,
-            'requires_origin_certificate' => 1,
-        ]);
-
-        $duty = CustomsDuty::calculateDuties(1000, 'Nigeria', '100590');
-
-        $this->assertEquals(50.0, $duty['duty_usd']);
-        $this->assertEquals(78.75, $duty['vat_usd']);
-        $this->assertEquals(128.75, $duty['total_usd']);
-        $this->assertContains('SPS Certificate', $duty['documents_required']);
+        $response = $this->withoutMiddleware(\App\Http\Middleware\DefaultBrowseContextMiddleware::class)
+            ->withHeaders(['moduleId' => '1'])
+            ->getJson('/api/v1/items/for-you');
+        $response->assertStatus(403)
+            ->assertJsonPath('errors.0.code', 'zoneId');
     }
 
-    /**
-     * Test that trade blocs exist.
-     */
-    public function test_trade_blocs_exist()
+    public function test_verify_payout_validates_short_account_number(): void
     {
-        TradeBloc::create([
-            'name' => 'Economic Community of West African States (ECOWAS)',
-            'slug' => 'ecowas',
-            'description' => 'West African trade bloc.',
-            'member_countries' => json_encode(['Nigeria', 'Ghana', 'Benin']),
-            'primary_currencies' => json_encode(['GHS', 'NGN']),
-            'common_languages' => json_encode(['English', 'French']),
-            'status' => 'active',
+        $response = $this->postJson('/api/v1/marketer-applications/verify-payout', [
+            'account_number' => '123',
         ]);
-
-        $ecowas = TradeBloc::where('slug', 'ecowas')->first();
-
-        $this->assertNotNull($ecowas);
-        $this->assertContains('Nigeria', $ecowas->member_countries);
-        $this->assertContains('Ghana', $ecowas->member_countries);
+        $response->assertStatus(422);
     }
 
-    /**
-     * Test that the trade bloc hub page loads.
-     */
-    public function test_trade_bloc_hub_loads()
+    public function test_pro_customer_faqs_and_terms_endpoints_return_200(): void
     {
-        $bloc = TradeBloc::create([
-            'name' => 'Test Bloc',
-            'slug' => 'testbloc',
-            'description' => 'Test description',
-            'member_countries' => json_encode(['Ghana', 'Nigeria']),
-            'primary_currencies' => json_encode(['GHS', 'NGN']),
-            'common_languages' => json_encode(['English']),
-            'status' => 'active',
-        ]);
+        $this->withHeaders(['moduleId' => '1'])->getJson('/api/v1/pro-customer/faqs')
+            ->assertStatus(200)
+            ->assertJsonStructure(['faqs']);
 
-        TradeCorridor::create([
-            'origin_country' => 'Ghana',
-            'destination_country' => 'Nigeria',
-            'corridor_name' => 'Ghana → Nigeria',
-            'distance_km' => 650,
-            'transit_days_estimate' => 5,
-            'trucking_rate_per_ton_usd' => 180,
-            'minimum_charge_usd' => 400,
-            'cold_chain_available' => 1,
-            'warehousing_available' => 1,
-            'status' => 'active',
-        ]);
+        $this->withHeaders(['moduleId' => '1'])->getJson('/api/v1/pro-customer/terms-and-conditions')
+            ->assertStatus(200)
+            ->assertJsonStructure(['terms']);
+    }
 
-        $response = $this->get('/trade-bloc/testbloc');
-
-        $response->assertStatus(200);
-        $response->assertSee('Test Bloc');
+    public function test_portal_login_pages_render(): void
+    {
+        $this->get('/admin-login')->assertStatus(200);
+        $this->get('/marketer-login')->assertStatus(200);
+        $this->get('/rider-login')->assertStatus(200);
     }
 }

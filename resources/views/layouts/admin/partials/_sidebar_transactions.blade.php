@@ -182,6 +182,12 @@
                         <span class="text-truncate text-capitalize">Insurance Claims</span>
                     </a>
                 </li>
+                <li class="navbar-vertical-aside-has-menu {{ Request::is('admin/pro-plans*') ? 'active' : '' }}">
+                    <a class="nav-link " href="{{ route('admin.pro-plans.index') }}" title="Customer Pro Plans">
+                        <span class="tio-crown nav-icon"></span>
+                        <span class="text-truncate text-capitalize">Customer Pro Plans</span>
+                    </a>
+                </li>
                 @endif
                     @if (addon_published_status('Rental'))
                         <!-- Rental Report -->

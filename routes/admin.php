@@ -694,6 +694,9 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
         Route::view('store/report', 'store_report')->name('store.report');
         Route::get('insurance-claims', 'InsuranceClaimController@index')->name('insurance-claims.index');
         Route::post('insurance-claims/{id}/status', 'InsuranceClaimController@updateStatus')->name('insurance-claims.status');
+        Route::get('pro-plans', 'ProPlanController@index')->name('pro-plans.index');
+        Route::post('pro-plans', 'ProPlanController@store')->name('pro-plans.store');
+        Route::post('pro-plans/{id}/update', 'ProPlanController@update')->name('pro-plans.update');
 
         Route::group(['prefix' => 'dispatch', 'as' => 'dispatch.'], function () {
             Route::get('/', 'DashboardController@dispatch_dashboard')->name('dashboard');
