@@ -185,6 +185,70 @@ class PromotionController extends Controller
 
         $user = $request->user();
         $price = (float) $plan->price;
+        $paymentMethod = strtolower((string) ($request->input('payment_method') ?: 'wallet'));
+
+        if ($paymentMethod === 'paystack' && $price > 0) {
+            $subId = \Illuminate\Support\Facades\DB::table('pro_customer_subscriptions')->insertGetId([
+                'user_id' => $user->id,
+                'plan_id' => $plan->id,
+                'status' => 'pending',
+                'payment_method' => 'paystack',
+                'amount_paid' => $price,
+                'start_at' => now(),
+                'end_at' => now()->addDays((int) ($plan->validity_days ?: 30)),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            $currency = \App\Models\BusinessSetting::where(['key' => 'currency'])->first()?->value ?? 'GHS';
+            $storeLogo = \App\Models\BusinessSetting::where(['key' => 'logo'])->first();
+            $additionalData = [
+                'business_name' => \App\Models\BusinessSetting::where(['key' => 'business_name'])->first()?->value ?? 'Aduanefie',
+                'business_logo' => \App\CentralLogics\Helpers::get_full_url(
+                    'business',
+                    $storeLogo?->value,
+                    $storeLogo?->storage[0]?->value ?? 'public'
+                ),
+            ];
+
+            $payer = new \App\Library\Payer(
+                trim(($user->f_name ?? '') . ' ' . ($user->l_name ?? '')) ?: ($user->email ?? 'Customer'),
+                $user->email ?: 'customer@aduanefie.com',
+                $user->phone ?: '',
+                ''
+            );
+
+            $paymentInfo = new \App\Library\PaymentInfo(
+                success_hook: 'pro_membership_activate',
+                failure_hook: 'pro_membership_fail',
+                currency_code: $currency,
+                payment_method: 'paystack',
+                payment_platform: $request->input('payment_platform', 'web'),
+                payer_id: $user->id,
+                receiver_id: '100',
+                additional_data: $additionalData,
+                payment_amount: $price,
+                external_redirect_link: $request->input('callback'),
+                attribute: 'pro_membership',
+                attribute_id: $subId
+            );
+
+            $receiverInfo = new \App\Library\Receiver('Aduanefie', 'example.png');
+            $redirectLink = \App\Library\Payment::generate_link($payer, $paymentInfo, $receiverInfo);
+
+            return response()->json([
+                'message' => 'Redirecting to Paystack checkout.',
+                'payment_method' => 'paystack',
+                'subscription_id' => $subId,
+                'redirect_link' => $redirectLink,
+            ], 200);
+        }
+
+        if ($paymentMethod !== 'wallet') {
+            return response()->json([
+                'message' => 'Unsupported payment method for Pro membership. Choose Wallet or Paystack.',
+            ], 422);
+        }
 
         return \Illuminate\Support\Facades\DB::transaction(function () use ($user, $plan, $price) {
             $lockedUser = \App\Models\User::whereKey($user->id)->lockForUpdate()->firstOrFail();

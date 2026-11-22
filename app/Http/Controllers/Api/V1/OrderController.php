@@ -1198,7 +1198,14 @@ class OrderController extends Controller
             }
             $order->recurring_frequency = $freq;
         }
-        if ($request->payment_method == 'wallet' && $request->user->wallet_balance < $order->order_amount) {
+        $preOrderDepositAmount = null;
+        if ($request->boolean('pre_order_deposit') && ! empty($order->is_pre_order_flag)) {
+            $depositPercent = max(10, min(90, (int) (BusinessSetting::where('key', 'pre_order_deposit_percent')->value('value') ?? 30)));
+            $preOrderDepositAmount = round($order->order_amount * ($depositPercent / 100), 2);
+        }
+        $requiredWalletAmount = $preOrderDepositAmount ?? $order->order_amount;
+
+        if ($request->payment_method == 'wallet' && $request->user->wallet_balance < $requiredWalletAmount) {
             return response()->json([
                 'errors' => [
                     ['code' => 'order_amount', 'message' => translate('messages.insufficient_balance')]
@@ -1285,7 +1292,19 @@ class OrderController extends Controller
                 $customer = $request->user;
                 $customer->zone_id = $order->zone_id;
                 $customer->save();
-                if ($request->payment_method == 'wallet') CustomerLogic::create_wallet_transaction($order->user_id, $order->order_amount, 'order_place', $order->id);
+                if ($request->payment_method == 'wallet') {
+                    if ($preOrderDepositAmount !== null && $preOrderDepositAmount < $order->order_amount) {
+                        $balanceDue = round($order->order_amount - $preOrderDepositAmount, 2);
+                        $order->partially_paid_amount = $preOrderDepositAmount;
+                        $order->payment_status = 'partially_paid';
+                        $order->save();
+                        CustomerLogic::create_wallet_transaction($order->user_id, $preOrderDepositAmount, 'order_place', $order->id);
+                        OrderLogic::create_order_payment(order_id: $order->id, amount: $preOrderDepositAmount, payment_status: 'paid', payment_method: 'wallet');
+                        OrderLogic::create_order_payment(order_id: $order->id, amount: $balanceDue, payment_status: 'unpaid', payment_method: 'cash_on_delivery');
+                    } else {
+                        CustomerLogic::create_wallet_transaction($order->user_id, $order->order_amount, 'order_place', $order->id);
+                    }
+                }
 
                 if ($request->partial_payment) {
                     if ($request->user->wallet_balance<=0) {
@@ -1348,6 +1367,8 @@ class OrderController extends Controller
                 'message' => translate('messages.order_placed_successfully'),
                 'order_id' => $order->id,
                 'total_ammount' => $order->order_amount,
+                'deposit_amount' => $preOrderDepositAmount,
+                'balance_due' => $preOrderDepositAmount !== null ? round($order->order_amount - $preOrderDepositAmount, 2) : 0,
                 'status' => $order->order_status,
                 'created_at' => $order->created_at,
                 'user_id' => (int) $order->user_id,

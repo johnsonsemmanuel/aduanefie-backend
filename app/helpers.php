@@ -307,6 +307,70 @@ if (!function_exists('config_settings')) {
         }
     }
 
+    if (! function_exists('pro_membership_activate')) {
+        function pro_membership_activate($data)
+        {
+            if (! \Illuminate\Support\Facades\Schema::hasTable('pro_customer_subscriptions')) {
+                return false;
+            }
+
+            return \Illuminate\Support\Facades\DB::transaction(function () use ($data) {
+                $sub = \Illuminate\Support\Facades\DB::table('pro_customer_subscriptions')
+                    ->where('id', (int) $data->attribute_id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $sub) {
+                    return false;
+                }
+
+                if ($sub->status === 'active') {
+                    return true;
+                }
+
+                $plan = \Illuminate\Support\Facades\DB::table('pro_customer_plans')
+                    ->where('id', $sub->plan_id)
+                    ->first();
+                $validityDays = (int) ($plan?->validity_days ?: 30);
+
+                \Illuminate\Support\Facades\DB::table('pro_customer_subscriptions')
+                    ->where('user_id', $sub->user_id)
+                    ->where('status', 'active')
+                    ->where('id', '!=', $sub->id)
+                    ->update(['status' => 'expired', 'updated_at' => now()]);
+
+                \Illuminate\Support\Facades\DB::table('pro_customer_subscriptions')
+                    ->where('id', $sub->id)
+                    ->update([
+                        'status' => 'active',
+                        'payment_method' => $data->payment_method ?? $sub->payment_method,
+                        'start_at' => now(),
+                        'end_at' => now()->addDays($validityDays),
+                        'updated_at' => now(),
+                    ]);
+
+                return true;
+            });
+        }
+    }
+
+    if (! function_exists('pro_membership_fail')) {
+        function pro_membership_fail($data)
+        {
+            if (\Illuminate\Support\Facades\Schema::hasTable('pro_customer_subscriptions')) {
+                \Illuminate\Support\Facades\DB::table('pro_customer_subscriptions')
+                    ->where('id', (int) $data->attribute_id)
+                    ->where('status', 'pending')
+                    ->update([
+                        'status' => 'failed',
+                        'updated_at' => now(),
+                    ]);
+            }
+
+            return true;
+        }
+    }
+
     if (! function_exists('getPaginationConfig')) {
         function getPaginationConfig()
         {

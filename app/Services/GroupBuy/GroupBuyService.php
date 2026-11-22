@@ -7,6 +7,7 @@ use App\Models\GroupBuyEvent;
 use App\Models\GroupBuyMessage;
 use App\Models\GroupBuyParticipant;
 use App\Models\Item;
+use App\Models\Module;
 use App\Models\Order;
 use App\Models\Store;
 use App\Services\CrossBorder\ShippingQuoteService;
@@ -27,10 +28,58 @@ use Illuminate\Support\Facades\DB;
  */
 class GroupBuyService
 {
+    public const INCOMPATIBLE_MODULE_TYPES = ['parcel', 'rental', 'service', 'food', 'pharmacy'];
+
     public function __construct(
         private ShippingQuoteService $quotes,
         private GroupBuyNotificationService $notifications,
     ) {
+    }
+
+    /**
+     * A module supports group buying only when its type supports physical goods
+     * and at least one active supplier item offers bulk/larger quantities.
+     */
+    public function isModuleCompatible(?int $moduleId): bool
+    {
+        if (! $moduleId) {
+            return false;
+        }
+
+        $module = Module::find($moduleId);
+        if (! $module || in_array($module->module_type, self::INCOMPATIBLE_MODULE_TYPES, true)) {
+            return false;
+        }
+
+        return Item::withoutGlobalScopes()
+            ->where('module_id', $moduleId)
+            ->where('status', 1)
+            ->where(function ($q) {
+                $q->where('moq', '>', 1)
+                    ->orWhere(function ($q2) {
+                        $q2->whereNotNull('bulk_pricing_tiers')
+                            ->where('bulk_pricing_tiers', '!=', '[]')
+                            ->where('bulk_pricing_tiers', '!=', 'null');
+                    })
+                    ->orWhereHas('bulkPricingTiers');
+            })
+            ->exists();
+    }
+
+    /**
+     * Whether a specific item offers bulk/group-buy quantities.
+     */
+    public function isItemBulkEligible(Item $item): bool
+    {
+        if ((int) ($item->moq ?? 1) > 1) {
+            return true;
+        }
+
+        if (is_array($item->bulk_pricing_tiers) && count($item->bulk_pricing_tiers) > 0) {
+            return true;
+        }
+
+        return $item->bulkPricingTiers()->exists();
     }
 
     /**
@@ -44,6 +93,19 @@ class GroupBuyService
             throw new \InvalidArgumentException('This item is not available for group buying.');
         }
 
+        if (! empty($data['module_id']) && (int) $data['module_id'] !== (int) $item->module_id) {
+            throw new \InvalidArgumentException('This item does not belong to the selected module.');
+        }
+
+        $module = Module::find($item->module_id);
+        if (! $module || in_array($module->module_type, self::INCOMPATIBLE_MODULE_TYPES, true)) {
+            throw new \InvalidArgumentException('Group buying is not supported in this module.');
+        }
+
+        if (! $this->isItemBulkEligible($item)) {
+            throw new \InvalidArgumentException('This item does not offer bulk quantities for group buying.');
+        }
+
         $farmerPrice = round((float) $item->price, 2);
         $targetValue = round((float) ($data['target_value_ghs'] ?? 2000), 2);
         if ($targetValue <= 0) {
@@ -53,9 +115,10 @@ class GroupBuyService
         $memberLimit = max(2, min(20, (int) ($data['member_limit'] ?? 5)));
 
         // Round the pooled unit count up to a whole multiple of the member
-        // limit so every member receives the exact same integer number of units.
+        // limit so every member receives the exact same integer number of units,
+        // and never below the supplier's minimum order quantity (MOQ).
         $rawUnits = (int) ceil($targetValue / $farmerPrice);
-        $rawUnits = max($rawUnits, $memberLimit);
+        $rawUnits = max($rawUnits, $memberLimit, (int) ($item->moq ?? 1));
         $shareUnits = (int) ceil($rawUnits / $memberLimit);
         $targetUnits = $shareUnits * $memberLimit;
 
