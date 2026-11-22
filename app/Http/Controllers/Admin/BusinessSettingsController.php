@@ -561,6 +561,15 @@ class BusinessSettingsController extends Controller
             return back();
         }
 
+        $defaultLocation = Helpers::validatedCoordinates([
+            'lat' => $request->input('latitude'),
+            'lng' => $request->input('longitude'),
+        ]);
+        if (!$defaultLocation) {
+            Toastr::error('Enter a valid default location on the map.');
+            return back()->withInput();
+        }
+
         Helpers::businessUpdateOrInsert(['key' => 'country_picker_status'], [
             'value' => $request['country_picker_status'] ? $request['country_picker_status'] : 0
         ]);
@@ -659,7 +668,7 @@ class BusinessSettingsController extends Controller
         ]);
 
         Helpers::businessUpdateOrInsert(['key' => 'default_location'], [
-            'value' => json_encode(['lat' => $request['latitude'], 'lng' => $request['longitude']])
+            'value' => json_encode($defaultLocation)
         ]);
 
         Helpers::businessUpdateOrInsert(['key' => 'admin_order_notification'], [

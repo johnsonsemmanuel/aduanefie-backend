@@ -914,8 +914,7 @@
                                             </div>
                                         </div>
                                         <div class="col-sm-6">
-                                            @php($default_location = \App\Models\BusinessSetting::where('key', 'default_location')->first())
-                                            @php($default_location = $default_location->value ? json_decode($default_location->value, true) : 0)
+                                            @php($default_location = App\CentralLogics\Helpers::validatedCoordinates(App\CentralLogics\Helpers::get_business_settings('default_location')))
                                             <div class="form-group mb-0">
                                                 <label class="form-label text-capitalize"
                                                     for="latitude">{{ translate('messages.latitude') }}<span
@@ -925,7 +924,7 @@
                                                             alt="{{ translate('messages.click_on_the_map_select_your_defaul_location') }}"></span></label>
                                                 <input type="text" id="latitude" name="latitude" class="form-control"
                                                     placeholder="{{ translate('messages.Ex:') }} -94.22213"
-                                                    value="{{ $default_location ? $default_location['lat'] : 0 }}" required
+                                                    value="{{ $default_location['lat'] ?? '' }}" required
                                                     readonly>
                                             </div>
                                         </div>
@@ -939,7 +938,7 @@
                                                             alt="{{ translate('messages.click_on_the_map_select_your_defaul_location') }}"></span></label>
                                                 <input type="text" name="longitude" class="form-control"
                                                     placeholder="{{ translate('messages.Ex:') }} 103.344322" id="longitude"
-                                                    value="{{ $default_location ? $default_location['lng'] : 0 }}" required
+                                                    value="{{ $default_location['lng'] ?? '' }}" required
                                                     readonly>
                                             </div>
                                         </div>
@@ -1556,15 +1555,14 @@
     </script>
     <script>
         function initAutocomplete() {
-            var myLatLng = {
-                lat: {{ $default_location ? $default_location['lat'] : '-33.8688' }},
-                lng: {{ $default_location ? $default_location['lng'] : '151.2195' }}
-            };
+            const defaultLocation = @json($default_location);
+            if (!defaultLocation) {
+                document.getElementById("location_map_canvas").innerHTML = '<div class="alert alert-warning">Set a valid default location before using this map.</div>';
+                return;
+            }
+            var myLatLng = defaultLocation;
             const map = new google.maps.Map(document.getElementById("location_map_canvas"), {
-                center: {
-                    lat: {{ $default_location ? $default_location['lat'] : '-33.8688' }},
-                    lng: {{ $default_location ? $default_location['lng'] : '151.2195' }}
-                },
+                center: defaultLocation,
                 zoom: 13,
                 mapTypeId: "roadmap",
             });

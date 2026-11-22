@@ -112,9 +112,13 @@
                                 <ul>
                                     <li>
 
-                                        @php($default_location = \App\CentralLogics\Helpers::get_settings('default_location'))
+                                        @php($default_location = App\CentralLogics\Helpers::validatedCoordinates(App\CentralLogics\Helpers::get_business_settings('default_location')))
 
-                                        <a href="https://www.google.com/maps/search/?api=1&query={{ data_get($default_location,'lat',0)}},{{ data_get($default_location,'lng',0)}}" target="_blank">{{ \App\CentralLogics\Helpers::get_settings('address') }}</a>
+                                        @if($default_location)
+                                            <a href="https://www.google.com/maps/search/?api=1&query={{ $default_location['lat'] }},{{ $default_location['lng'] }}" target="_blank">{{ \App\CentralLogics\Helpers::get_settings('address') }}</a>
+                                        @else
+                                            <span>{{ \App\CentralLogics\Helpers::get_settings('address') }}</span>
+                                        @endif
 
                                     </li>
                                 </ul>
