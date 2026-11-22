@@ -283,8 +283,9 @@ class CategoryLogic
             ->when($filter && in_array('popular',$filter),function ($qurey){
                 return $qurey->withCount('orders')->orderBy('orders_count', 'desc');
             })
-            ->when(($filter && in_array('nearby',$filter)) ,function ($qurey){
-                return $qurey->orderBy('distance');
+            ->when(($filter && in_array('nearby',$filter)), function ($nearbyQuery) use ($longitude, $latitude) {
+                return StoreLogic::applyNearbyRadius($nearbyQuery, $longitude, $latitude)
+                    ->orderBy('distance');
             })
             ->when($filter && in_array('fast_delivery',$filter),function ($qurey){
                 return $qurey->orderBy('min_delivery_time');
