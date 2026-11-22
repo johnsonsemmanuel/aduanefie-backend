@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\CentralLogics\SMS_module;
+use App\Services\Markets\ZoneAccessService;
 use App\Mail\EmailVerification;
 use App\Models\EmailVerifications;
 use App\Models\ExternalConfiguration;
@@ -334,16 +335,29 @@ class CustomerController extends Controller
 
     public function update_zone(Request $request)
     {
-        if (!$request->hasHeader('zoneId') && is_numeric($request->header('zoneId'))) {
-            $errors = [];
-            array_push($errors, ['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]);
+        /** @var ZoneAccessService $zoneAccess */
+        $zoneAccess = app(ZoneAccessService::class);
+        $zoneIds = $zoneAccess->resolveZoneIds(
+            $request->header('zoneId') ?? $request->header('zoneid'),
+            $zoneAccess->resolveCountry(
+                $request->header('X-Market-Country'),
+                $request->query('country_code')
+            )
+        );
+        // A customer has exactly one zone. The old condition used && with
+        // is_numeric and cast a JSON array header to 0/1, silently writing a
+        // wrong zone. Fail closed unless one valid market zone was supplied.
+        if (count($zoneIds) !== 1) {
             return response()->json([
-                'errors' => $errors
+                'errors' => [[
+                    'code' => 'zoneId',
+                    'message' => translate('messages.zone_id_required'),
+                ]]
             ], 403);
         }
 
         $customer = $request->user();
-        $customer->zone_id = (integer)$request->header('zoneId');
+        $customer->zone_id = $zoneIds[0];
         $customer->save();
         return response()->json([], 200);
     }
