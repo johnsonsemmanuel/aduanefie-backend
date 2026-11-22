@@ -46,7 +46,7 @@ class VendorSelfRegistration extends Mailable
             $data=EmailTemplate::where('type','store')->where('email_type', 'registration')->first();
         }
         $template=$data?$data->email_template:5;
-        $url = '';
+        $url = $status === 'approved' ? 'https://admin.aduanefie.com/store-login' : '';
         $store_name = $this->name;
         $title = Helpers::text_variable_data_format( value:$data['title']??'',store_name:$store_name??'');
         $body = Helpers::text_variable_data_format( value:$data['body']??'',store_name:$store_name??'');
