@@ -263,7 +263,7 @@ class MarketerAuthController extends Controller
                     . "Referral Code: {$code}\n"
                     . "Portal URL: https://admin.aduanefie.com/marketer-login\n\n"
                     . "Once signed in, you can set a new password at the bottom of your dashboard.\n\n"
-                    . "— Aduanefie Partner Operations";
+                    . "- Aduanefie Partner Operations";
 
                 Mail::raw($body, function ($message) use ($admin) {
                     $message->to($admin->email, trim($admin->f_name . ' ' . $admin->l_name))
