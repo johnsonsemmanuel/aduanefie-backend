@@ -763,18 +763,30 @@ class Store extends Model
     }
 
     /**
+     * SQL for the distance between a store row and the given point, in metres.
+     * The table prefix lets product queries reuse this expression in a scalar
+     * subquery without colliding with item columns.
+     */
+    public static function distanceExpression($longitude, $latitude, ?string $table = null): string
+    {
+        $longitude = (float) $longitude;
+        $latitude = (float) $latitude;
+        $longitudeColumn = $table ? $table . '.longitude' : 'longitude';
+        $latitudeColumn = $table ? $table . '.latitude' : 'latitude';
+
+        if (static::isPostgres()) {
+            return "ST_DistanceSphere(ST_MakePoint({$longitudeColumn}::double precision, {$latitudeColumn}::double precision), ST_MakePoint({$longitude}, {$latitude}))";
+        }
+
+        return 'ST_Distance_Sphere(point(' . $longitudeColumn . ', ' . $latitudeColumn . '),point(' . $longitude . ', ' . $latitude . '))';
+    }
+
+    /**
      * SQL for the distance between the store and the given point, in metres.
      */
     public static function distanceSqlExpression($longitude, $latitude): string
     {
-        $longitude = (float) $longitude;
-        $latitude = (float) $latitude;
-
-        if (static::isPostgres()) {
-            return "ST_DistanceSphere(ST_MakePoint(longitude::double precision, latitude::double precision), ST_MakePoint({$longitude}, {$latitude})) as distance";
-        }
-
-        return 'ST_Distance_Sphere(point(longitude, latitude),point(' . $longitude . ', ' . $latitude . ')) as distance';
+        return static::distanceExpression($longitude, $latitude) . ' as distance';
     }
 
     /**
