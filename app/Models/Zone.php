@@ -20,6 +20,7 @@ use App\Scopes\ZoneScope;
  * @property int $id
  * @property string $name
  * @property string $display_name
+ * @property string|null $country_code
  * @property mixed $coordinates
  * @property int $status
  * @property Carbon|null $created_at
@@ -47,6 +48,7 @@ class Zone extends Model
     protected $fillable = [
         'name',
         'display_name',
+        'country_code',
         'coordinates',
         'status',
         'store_wise_topic',

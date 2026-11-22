@@ -5,11 +5,12 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\AggregationHub;
 use App\Services\Markets\MarketProfileService;
+use App\Services\Markets\ZoneAccessService;
 use Illuminate\Http\Request;
 
 class AggregationHubController extends Controller
 {
-    public function __construct(private MarketProfileService $markets)
+    public function __construct(private MarketProfileService $markets, private ZoneAccessService $zoneAccess)
     {
     }
 
@@ -32,11 +33,14 @@ class AggregationHubController extends Controller
             ], 403);
         }
 
-        $zoneIds = $this->zoneIds($request);
+        $zoneIds = $this->zoneAccess->resolveZoneIds(
+            $request->header('zoneId') ?? $request->header('zoneid'),
+            $profile['country_code']
+        );
         if (!$zoneIds) {
             return response()->json([
                 'errors' => [[
-                    'code' => 'zoneId',
+                    'code' => 'zone_mismatch',
                     'message' => translate('messages.zone_id_required'),
                 ]],
             ], 403);
@@ -102,21 +106,4 @@ class AggregationHubController extends Controller
         ], 200);
     }
 
-    private function zoneIds(Request $request): array
-    {
-        if (!$request->hasHeader('zoneId')) {
-            return [];
-        }
-
-        $decoded = json_decode($request->header('zoneId'), true);
-        if (!is_array($decoded)) {
-            return [];
-        }
-
-        $zoneIds = array_values(array_filter(array_map('intval', $decoded), static function ($id) {
-            return $id > 0;
-        }));
-
-        return array_values(array_unique($zoneIds));
-    }
 }
