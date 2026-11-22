@@ -45,7 +45,7 @@ class ConfigController extends Controller
     {
         $payload = Cache::remember('api_v1_config_payload_v1_' . app()->getLocale(), now()->addMinutes(3), function () {
             $key = ['currency_code', 'cash_on_delivery', 'digital_payment', 'default_location', 'free_delivery_over', 'business_name', 'logo', 'address', 'phone', 'email_address', 'country', 'currency_symbol_position', 'app_minimum_version_android', 'app_url_android', 'app_minimum_version_ios', 'app_url_ios', 'app_url_android_store', 'app_minimum_version_ios_store', 'app_url_ios_store', 'app_minimum_version_ios_deliveryman', 'app_url_ios_deliveryman', 'app_minimum_version_android_deliveryman', 'app_minimum_version_android_store', 'app_url_android_deliveryman', 'customer_verification', 'schedule_order', 'order_delivery_verification', 'per_km_shipping_charge', 'minimum_shipping_charge', 'show_dm_earning', 'canceled_by_deliveryman', 'canceled_by_store', 'timeformat', 'toggle_veg_non_veg', 'toggle_dm_registration', 'toggle_store_registration', 'schedule_order_slot_duration', 'parcel_per_km_shipping_charge', 'parcel_minimum_shipping_charge', 'web_app_landing_page_settings', 'footer_text', 'landing_page_links', 'loyalty_point_exchange_rate', 'loyalty_point_item_purchase_point', 'loyalty_point_status', 'loyalty_point_minimum_point', 'wallet_status', 'dm_tips_status', 'ref_earning_status', 'ref_earning_exchange_rate', 'refund_active_status', 'refund', 'cancelation', 'shipping_policy', 'prescription_order_status', 'tax_included', 'icon', 'cookies_text', 'home_delivery_status', 'takeaway_status', 'additional_charge', 'additional_charge_status', 'additional_charge_name', 'dm_picture_upload_status', 'partial_payment_status', 'partial_payment_method', 'add_fund_status', 'offline_payment_status', 'websocket_url', 'websocket_port', 'websocket_status', 'guest_checkout_status', 'disbursement_type', 'restaurant_disbursement_waiting_time', 'dm_disbursement_waiting_time', 'min_amount_to_pay_store', 'min_amount_to_pay_dm', 'admin_commission',
-            'new_customer_discount_status', 'new_customer_discount_amount', 'new_customer_discount_amount_type', 'new_customer_discount_amount_validity', 'new_customer_discount_validity_type', 'store_review_reply', 'subscription_business_model', 'commission_business_model', 'subscription_deadline_warning_days', 'subscription_deadline_warning_message', 'subscription_free_trial_days', 'subscription_free_trial_type', 'subscription_free_trial_status', 'country_picker_status', 'firebase_otp_verification', 'manual_login_status','otp_login_status','social_login_status','google_login_status','facebook_login_status','email_verification_status','phone_verification_status',
+            'new_customer_discount_status', 'new_customer_discount_amount', 'new_customer_discount_amount_type', 'new_customer_discount_amount_validity', 'new_customer_discount_validity_type', 'store_review_reply', 'subscription_business_model', 'commission_business_model', 'subscription_deadline_warning_days', 'subscription_deadline_warning_message', 'subscription_free_trial_days', 'subscription_free_trial_type', 'subscription_free_trial_status', 'country_picker_status', 'firebase_otp_verification', 'manual_login_status','otp_login_status','social_login_status','google_login_status','facebook_login_status','apple_login_status','email_verification_status','phone_verification_status',
             'insurance_status', 'insurance_rate_percent', 'insurance_min_fee', 'insurance_max_fee', 'insurance_cross_border_auto', 'insurance_allow_opt_in', 'insurance_show_badge', 'insurance_crop_spoilage', 'insurance_cross_border_transit', 'insurance_quality_escrow', 'insurance_provider_name', 'insurance_policy_summary',
             'footer_links'
         ];
@@ -53,6 +53,23 @@ class ConfigController extends Controller
         $vehicle_distance_min=0;
         $vehicle_hourly_min=0;
 
+        $drivemondExternalSetting = false;
+//        if (Helpers::checkSelfExternalConfiguration()) {
+//            $driveMondBaseUrl = ExternalConfiguration::where('key', 'drivemond_base_url')->first()?->value;
+//            $driveMondToken = ExternalConfiguration::where('key', 'drivemond_token')->first()?->value;
+//            $systemSelfToken = ExternalConfiguration::where('key', 'system_self_token')->first()?->value;
+//            $response = Http::get($driveMondBaseUrl . '/api/get-external-configurations',
+//                [
+//                    'drivemond_token' => $driveMondToken,
+//                    'mart_base_url' => url('/'),
+//                    'mart_token' => $systemSelfToken,
+//                ]);
+//            if ($response->successful()) {
+//                $martResponse = $response->json();
+//                $drivemondExternalSetting = $martResponse['status'];
+//            }
+//
+//        }
 
 
 
@@ -118,6 +135,22 @@ class ConfigController extends Controller
             ];
             array_push($social_login, $config);
         }
+        $apple_login = [];
+        $apples = Helpers::get_business_settings('apple_login');
+        if (isset($apples)) {
+            foreach (Helpers::get_business_settings('apple_login') as $apple) {
+                $config = [
+                    'login_medium' => $apple['login_medium'],
+                    'status' => (boolean)$apple['status'],
+                    'client_id' => $apple['client_id'],
+                    'client_id_app' => $apple['client_id_app']??'',
+                    'redirect_url_flutter' => $apple['redirect_url_flutter']??'',
+                    'redirect_url_react' => $apple['redirect_url_react']??'',
+                ];
+                array_push($apple_login, $config);
+            }
+        }
+
         //addon settings publish status
         $published_status = 0; // Set a default value
         $payment_published_status = config('get_payment_publish_status');
@@ -198,6 +231,7 @@ class ConfigController extends Controller
             'language' => $lang_array,
             'sys_language' => $sys_lang_array,
             'social_login' => $social_login,
+            'apple_login' => $apple_login,
             'toggle_veg_non_veg' => (boolean)$settings['toggle_veg_non_veg'],
             'toggle_dm_registration' => (boolean)$settings['toggle_dm_registration'],
             'toggle_store_registration' => (boolean)$settings['toggle_store_registration'],
@@ -239,6 +273,7 @@ class ConfigController extends Controller
             'loyalty_point_status' => (int)(isset($settings['loyalty_point_status']) ? $settings['loyalty_point_status'] : 0),
             'customer_wallet_status' => (int)(isset($settings['wallet_status']) ? $settings['wallet_status'] : 0),
             'ref_earning_status' => (int)(isset($settings['ref_earning_status']) ? $settings['ref_earning_status'] : 0),
+            'pro_member_status' => 1,
             'ref_earning_exchange_rate' => (double)(isset($settings['ref_earning_exchange_rate']) ? $settings['ref_earning_exchange_rate'] : 0),
             'refund_policy' => (int)(self::get_settings_status('refund_policy_status')),
             'cancelation_policy' => (int)(self::get_settings_status('cancellation_policy_status')),
@@ -295,6 +330,10 @@ class ConfigController extends Controller
                 'provider_name' => (string)(isset($settings['insurance_provider_name']) && $settings['insurance_provider_name'] !== '' ? $settings['insurance_provider_name'] : 'Aduanefie Trade & Crop Assurance'),
                 'policy_summary' => (string)(isset($settings['insurance_policy_summary']) && $settings['insurance_policy_summary'] !== '' ? $settings['insurance_policy_summary'] : 'Protects crop harvests, cross-border transit, and order quality under Aduanefie Escrow.'),
             ],
+            'external_system' => $drivemondExternalSetting,
+
+            'drivemond_app_url_android' => $drivemondExternalSetting ? Helpers::get_external_data('drivemond_app_url_android') : '',
+            'drivemond_app_url_ios' => $drivemondExternalSetting ? Helpers::get_external_data('drivemond_app_url_ios') : '',
             'firebase_otp_verification' => (int)(isset($settings['firebase_otp_verification']) ? $settings['firebase_otp_verification'] : 0),
             'centralize_login' => [
                 'manual_login_status' => (int)(isset($settings['manual_login_status']) ? $settings['manual_login_status'] : 0),
@@ -302,6 +341,7 @@ class ConfigController extends Controller
                 'social_login_status' => (int)(isset($settings['social_login_status']) ? $settings['social_login_status'] : 0),
                 'google_login_status' => (int)(isset($settings['google_login_status']) ? $settings['google_login_status'] : 0),
                 'facebook_login_status' => (int)(isset($settings['facebook_login_status']) ? $settings['facebook_login_status'] : 0),
+                'apple_login_status' => (int)(isset($settings['apple_login_status']) ? $settings['apple_login_status'] : 0),
                 'email_verification_status' => (int)(isset($settings['email_verification_status']) ? $settings['email_verification_status'] : 0),
                 'phone_verification_status' => (int)(isset($settings['phone_verification_status']) ? $settings['phone_verification_status'] : 0),
             ],

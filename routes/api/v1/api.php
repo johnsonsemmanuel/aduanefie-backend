@@ -509,6 +509,8 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             });
             Route::post('order-again/reorder', 'OrderController@reorder');
             Route::get('pro-customer/active-offer', 'PromotionController@pro_customer_active_offer');
+            Route::post('pro-customer/subscribe', 'PromotionController@pro_customer_subscribe');
+            Route::post('pro-customer/cancel', 'PromotionController@pro_customer_cancel');
             Route::get('reels/list', 'CustomerController@reels_list');
 
             Route::group(['prefix'=>'cart'], function() {
