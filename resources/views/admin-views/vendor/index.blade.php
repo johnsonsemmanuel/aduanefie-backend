@@ -450,20 +450,27 @@
         });
     });
 
-        @php($default_location=\App\Models\BusinessSetting::where('key','default_location')->first())
-        @php($default_location=$default_location->value?json_decode($default_location->value, true):0)
-        let myLatlng = { lat: {{$default_location?$default_location['lat']:'23.757989'}}, lng: {{$default_location?$default_location['lng']:'90.360587'}} };
-        let map = new google.maps.Map(document.getElementById("map"), {
+        @php($default_location = App\CentralLogics\Helpers::validatedCoordinates(App\CentralLogics\Helpers::get_business_settings('default_location')))
+        const defaultLocation = @json($default_location);
+        let myLatlng = defaultLocation;
+        let map = null;
+        let zonePolygon = null;
+        let infoWindow = null;
+        let bounds = new google.maps.LatLngBounds();
+        if (defaultLocation) {
+            map = new google.maps.Map(document.getElementById("map"), {
                 zoom: 13,
                 center: myLatlng,
             });
-        let zonePolygon = null;
-        let infoWindow = new google.maps.InfoWindow({
+            infoWindow = new google.maps.InfoWindow({
                 content: "Click the map to get Lat/Lng!",
                 position: myLatlng,
             });
-        let bounds = new google.maps.LatLngBounds();
+        } else {
+            document.getElementById("map").innerHTML = '<div class="alert alert-warning">Set a valid default location before using this map.</div>';
+        }
         function initMap() {
+            if (!map) return;
             // Create the initial InfoWindow.
             infoWindow.open(map);
              //get current location block
@@ -552,6 +559,7 @@
             infoWindow.open(map);
         }
         $('#choice_zones').on('change', function(){
+            if (!map) return;
             let id = $(this).val();
             $.get({
                 url: '{{url('/')}}/admin/zone/get-coordinates/'+id,

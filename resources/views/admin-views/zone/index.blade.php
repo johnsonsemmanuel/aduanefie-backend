@@ -503,10 +503,13 @@
         }
 
         function initialize() {
-            @php($default_location=\App\Models\BusinessSetting::where('key','default_location')->first())
-            @php($default_location=$default_location->value?json_decode($default_location->value, true):0)
-            let myLatlng = { lat: {{$default_location?$default_location['lat']:'23.757989'}}, lng: {{$default_location?$default_location['lng']:'90.360587'}} };
-
+            @php($default_location = App\CentralLogics\Helpers::validatedCoordinates(App\CentralLogics\Helpers::get_business_settings('default_location')))
+            let myLatlng = @json($default_location);
+            if (!myLatlng) {
+                document.getElementById("map-canvas").innerHTML = '<div class="alert alert-warning">Set a valid default location before using the zone map.</div>';
+                map = null;
+                return;
+            }
 
             let myOptions = {
                 zoom: 13,
