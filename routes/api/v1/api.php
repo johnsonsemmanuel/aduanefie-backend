@@ -571,6 +571,7 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             Route::get('quick-delivery', 'StoreController@get_quick_delivery_stores');
         });
         Route::get('get-combined-data', 'SearchController@get_combined_data');
+        Route::get('aggregation-hubs/nearby', 'AggregationHubController@nearby');
 
         Route::group(['prefix' => 'banners'], function () {
             Route::get('/', 'BannerController@get_banners');
