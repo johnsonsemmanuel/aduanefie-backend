@@ -36,6 +36,16 @@
     <link rel="stylesheet" href="{{asset('public/assets/admin/css/custom.css')}}">
 
     <style>
+        .auth-wrapper {
+            flex-direction: row-reverse;
+        }
+
+        @media (max-width: 991px) {
+            .auth-wrapper {
+                flex-direction: column;
+            }
+        }
+
         /* Sliding 2FA panel inside .auth-wrapper-form */
         .slide-container {
             width: 100%;
