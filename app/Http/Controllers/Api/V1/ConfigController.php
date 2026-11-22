@@ -85,7 +85,9 @@ class ConfigController extends Controller
         });
         $cod = json_decode($settings['cash_on_delivery'], true);
         $digital_payment = json_decode($settings['digital_payment'], true);
-        $default_location = isset($settings['default_location']) ? json_decode($settings['default_location'], true) : 0;
+        $default_location = Helpers::validatedCoordinates(
+            isset($settings['default_location']) ? json_decode($settings['default_location'], true) : null
+        );
         $free_delivery_over = $settings['free_delivery_over'];
         $free_delivery_over = isset($free_delivery_over) ? (float)$free_delivery_over : $free_delivery_over;
         $additional_charge = isset($settings['additional_charge']) ? (float)$settings['additional_charge'] : 0;
@@ -163,7 +165,7 @@ class ConfigController extends Controller
             // 'store_location_coverage' => Branch::where(['id'=>1])->first(['longitude','latitude','coverage']),
             // 'minimum_order_value' => (float)$settings['minimum_order_value'],
             'country' => $settings['country'],
-            'default_location' => ['lat' => $default_location ? $default_location['lat'] : '23.757989', 'lng' => $default_location ? $default_location['lng'] : '90.360587'],
+            'default_location' => $default_location,
             'currency_symbol' => $currency_symbol,
             'currency_symbol_direction' => $settings['currency_symbol_position'],
             'app_minimum_version_android' => (float)$settings['app_minimum_version_android'],

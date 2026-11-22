@@ -86,6 +86,45 @@ class Helpers
         });
     }
 
+    /**
+     * Return a safe map point or null. Callers must show an explicit empty
+     * state instead of substituting a hardcoded city or placeholder 0,0.
+     */
+    public static function validatedCoordinates($location, bool $allowZero = false): ?array
+    {
+        if (is_object($location)) {
+            $location = (array) $location;
+        }
+
+        if (!is_array($location)) {
+            return null;
+        }
+
+        $lat = $location['lat'] ?? $location['latitude'] ?? null;
+        $lng = $location['lng'] ?? $location['longitude'] ?? null;
+
+        if (!is_numeric($lat) || !is_numeric($lng)) {
+            return null;
+        }
+
+        $lat = (float) $lat;
+        $lng = (float) $lng;
+
+        if (!is_finite($lat) || !is_finite($lng)) {
+            return null;
+        }
+
+        if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {
+            return null;
+        }
+
+        if (!$allowZero && $lat === 0.0 && $lng === 0.0) {
+            return null;
+        }
+
+        return ['lat' => $lat, 'lng' => $lng];
+    }
+
     public static function cached_priority_list(string $name, string $type, $default = '')
     {
         return Cache::remember("pl_val_{$name}_{$type}_v1", now()->addMinutes(3), function () use ($name, $type, $default) {
