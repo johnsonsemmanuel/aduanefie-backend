@@ -573,7 +573,6 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             Route::get('quick-delivery', 'StoreController@get_quick_delivery_stores');
         });
         Route::get('get-combined-data', 'SearchController@get_combined_data');
-        Route::get('aggregation-hubs/nearby', 'AggregationHubController@nearby');
 
         Route::group(['prefix' => 'banners'], function () {
             Route::get('/', 'BannerController@get_banners');
@@ -632,6 +631,7 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             Route::get('requests', 'TradeController@requests');
             Route::post('rfqs', 'TradeController@store_rfq');
             Route::post('rfqs/{id}/quotes', 'TradeController@store_quote');
+            Route::post('rfqs/{id}/quotes/{quoteId}/accept', 'TradeController@accept_quote');
             Route::get('agro-prices', 'TradeController@agro_prices');
             Route::get('fx-rates', 'TradeController@fx_rates');
             Route::post('orders/{id}/esperworks-invoice', 'TradeController@esperworks_invoice');

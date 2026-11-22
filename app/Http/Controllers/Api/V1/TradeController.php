@@ -271,6 +271,70 @@ class TradeController extends Controller
         ], 201);
     }
 
+    public function accept_quote(Request $request, $id, $quoteId)
+    {
+        if (! Schema::hasTable('trade_rfqs') || ! Schema::hasTable('trade_rfq_quotes')) {
+            return response()->json(['message' => 'RFQ tables not initialized yet.'], 503);
+        }
+
+        $rfq = DB::table('trade_rfqs')->where('id', (int) $id)->first();
+        if (! $rfq) {
+            return response()->json(['message' => 'RFQ not found.'], 404);
+        }
+
+        if (($rfq->status ?? 'open') === 'awarded') {
+            return response()->json(['message' => 'This RFQ has already been awarded.'], 422);
+        }
+
+        $quote = DB::table('trade_rfq_quotes')
+            ->where('id', (int) $quoteId)
+            ->where('trade_rfq_id', $rfq->id)
+            ->first();
+
+        if (! $quote) {
+            return response()->json(['message' => 'Quote not found for this RFQ.'], 404);
+        }
+
+        DB::transaction(function () use ($rfq, $quote) {
+            $rfqUpdate = [
+                'status' => 'awarded',
+                'updated_at' => now(),
+            ];
+            if (Schema::hasColumn('trade_rfqs', 'accepted_quote_id')) {
+                $rfqUpdate['accepted_quote_id'] = $quote->id;
+            }
+            if (Schema::hasColumn('trade_rfqs', 'awarded_at')) {
+                $rfqUpdate['awarded_at'] = now();
+            }
+
+            DB::table('trade_rfqs')->where('id', $rfq->id)->update($rfqUpdate);
+
+            if (Schema::hasColumn('trade_rfq_quotes', 'status')) {
+                DB::table('trade_rfq_quotes')
+                    ->where('trade_rfq_id', $rfq->id)
+                    ->where('id', '!=', $quote->id)
+                    ->update(['status' => 'declined', 'updated_at' => now()]);
+
+                DB::table('trade_rfq_quotes')
+                    ->where('id', $quote->id)
+                    ->update(['status' => 'accepted', 'updated_at' => now()]);
+            }
+        });
+
+        $totalContract = round((float) $quote->quoted_unit_price_ghs * (float) $rfq->quantity, 2);
+        $depositDue = round($totalContract * 0.30, 2);
+
+        return response()->json([
+            'message' => 'Quote accepted! Contract awarded with Trade Assurance protection.',
+            'rfq_id' => $rfq->id,
+            'quote_id' => $quote->id,
+            'supplier_name' => $quote->supplier_name,
+            'total_contract_ghs' => $totalContract,
+            'deposit_due_ghs' => $depositDue,
+            'trade_assurance' => (bool) ($rfq->requires_insurance ?? true),
+        ], 200);
+    }
+
     public function fx_rates()
     {
         $rates = Cache::remember('trade_fx_rates_ghs_v1', now()->addHours(6), function () {
