@@ -4,6 +4,7 @@ namespace App\Http\Requests\Admin;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 /**
  * @property array name
@@ -15,6 +16,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * @property string|int digital_payment
  * @property string|int offline_payment
  * @property array lang
+ * @property string country_code
  */
 class ZoneUpdateRequest extends FormRequest
 {
@@ -37,6 +39,7 @@ class ZoneUpdateRequest extends FormRequest
             'name' => 'required|max:191|unique:zones,name,'.$this->id,
             'coordinates' => 'required',
             'name.0' => 'required',
+            'country_code' => ['required', 'string', Rule::in(array_keys(config('market_profiles.profiles', [])))],
         ];
     }
 

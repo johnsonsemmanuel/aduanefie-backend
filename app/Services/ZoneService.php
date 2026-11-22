@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Services\Markets\MarketProfileService;
 use MatanYadaev\EloquentSpatial\Objects\LineString;
 use MatanYadaev\EloquentSpatial\Objects\Point;
 use MatanYadaev\EloquentSpatial\Objects\Polygon;
@@ -27,6 +28,7 @@ class ZoneService
         return [
             'name' => $request->name[array_search('default', $request->lang)],
             'display_name' => $request->display_name[array_search('default', $request->lang)],
+            'country_code' => app(MarketProfileService::class)->normalizeCountry($request->country_code ?? null),
             'coordinates' => new Polygon([new LineString($polygon)]),
             'store_wise_topic' => 'zone_'.$zoneId.'_store',
             'customer_wise_topic' => 'zone_'.$zoneId.'_customer',
@@ -53,6 +55,7 @@ class ZoneService
         return [
             'name' => $request->name[array_search('default', $request->lang)],
             'display_name' => $request->display_name[array_search('default', $request->lang)],
+            'country_code' => app(MarketProfileService::class)->normalizeCountry($request->country_code ?? null),
             'store_wise_topic' => 'zone_'.$zoneId.'_store',
             'customer_wise_topic' => 'zone_'.$zoneId.'_customer',
             'deliveryman_wise_topic' => 'zone_'.$zoneId.'_delivery_man',

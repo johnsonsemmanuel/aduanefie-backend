@@ -57,6 +57,15 @@
                         </div>
                         <div class="col-md-6 col-xl-7 zone-setup">
                             <div class="pl-xl-5 pl-xxl-0">
+                                <div class="form-group mb-3">
+                                    <label class="input-label" for="zone-country">{{ translate('Market_country') }}</label>
+                                    <select name="country_code" id="zone-country" class="form-control" required>
+                                        <option value="" disabled selected>{{ translate('Select_country') }}</option>
+                                        @foreach($countries as $code => $countryName)
+                                            <option value="{{ $code }}">{{ $countryName }} ({{ $code }})</option>
+                                        @endforeach
+                                    </select>
+                                </div>
                                 @if($language)
                                     @php($defaultLang = $language[0])
                                     <ul class="nav nav-tabs mb-4">

@@ -6,6 +6,7 @@ use App\CentralLogics\Helpers;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -18,6 +19,7 @@ use Illuminate\Validation\ValidationException;
  * @property string|int digital_payment
  * @property string|int offline_payment
  * @property array lang
+ * @property string country_code
  */
 class ZoneAddRequest extends FormRequest
 {
@@ -40,6 +42,7 @@ class ZoneAddRequest extends FormRequest
             'name' => 'required|unique:zones|max:191',
             'coordinates' => 'required',
             'name.0' => 'required',
+            'country_code' => ['required', 'string', Rule::in(array_keys(config('market_profiles.profiles', [])))],
         ];
     }
 

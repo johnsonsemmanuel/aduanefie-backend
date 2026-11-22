@@ -7,6 +7,7 @@ use Illuminate\View\View;
 use App\Exports\ZoneExport;
 use Illuminate\Http\Request;
 use App\Services\ZoneService;
+use App\Services\Markets\MarketProfileService;
 use Illuminate\Http\JsonResponse;
 use Brian2694\Toastr\Facades\Toastr;
 use Maatwebsite\Excel\Facades\Excel;
@@ -46,7 +47,10 @@ class ZoneController extends BaseController
         );
         $language = getWebConfig('language');
         $defaultLang = str_replace('_', '-', app()->getLocale());
-        return view(ZoneViewPath::INDEX[VIEW], compact('zones','language','defaultLang'));
+        $countries = collect(app(MarketProfileService::class)->all())
+            ->mapWithKeys(fn ($profile, $code) => [$code => $profile['name'] ?? $code])
+            ->all();
+        return view(ZoneViewPath::INDEX[VIEW], compact('zones','language','defaultLang','countries'));
     }
 
     public function add(ZoneAddRequest $request): JsonResponse
@@ -84,8 +88,11 @@ class ZoneController extends BaseController
         $area = json_decode($zone['coordinates'][0]->toJson(),true);
         $language = getWebConfig('language');
         $defaultLang = str_replace('_', '-', app()->getLocale());
+        $countries = collect(app(MarketProfileService::class)->all())
+            ->mapWithKeys(fn ($profile, $code) => [$code => $profile['name'] ?? $code])
+            ->all();
 
-        return view(ZoneViewPath::UPDATE[VIEW], compact(['zone','area','language','defaultLang']));
+        return view(ZoneViewPath::UPDATE[VIEW], compact(['zone','area','language','defaultLang','countries']));
     }
 
     public function update(ZoneUpdateRequest $request, $id): RedirectResponse
