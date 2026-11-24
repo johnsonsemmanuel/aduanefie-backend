@@ -66,6 +66,8 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
             Route::post('bulk-import', 'MarketerController@bulkImportMarketers')->name('bulk-import');
             Route::post('notify/{id}', 'MarketerController@notifyMarketer')->name('notify');
             Route::post('notify-all', 'MarketerController@notifyAllMarketers')->name('notify-all');
+            Route::post('send-reset/{id}', 'MarketerController@sendResetEmail')->name('send-reset');
+            Route::post('send-reset-all', 'MarketerController@sendBulkResetEmails')->name('send-reset-all');
         });
 
         Route::post('item/variant-price', 'ItemController@variant_price')->name('item.variant-price');

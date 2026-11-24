@@ -31,6 +31,11 @@
                     <input type="hidden" name="region" value="{{ $selectedRegion ?? '' }}">
                     <button type="submit" class="btn btn--secondary">Notify All (Email &amp; SMS)</button>
                 </form>
+                <form method="post" action="{{ route('admin.marketer.send-reset-all') }}" class="mb-0" onsubmit="return confirm('Send account reset emails to all listed marketers?');">
+                    @csrf
+                    <input type="hidden" name="region" value="{{ $selectedRegion ?? '' }}">
+                    <button type="submit" class="btn btn-outline-primary">Bulk Send Reset Emails</button>
+                </form>
             </div>
         </div>
     </div>
@@ -225,11 +230,17 @@
                                     </form>
                                 </td>
                                 <td>
-                                    <form method="post" action="{{ route('admin.marketer.notify', $m->id) }}">
-                                        @csrf
-                                        <input type="hidden" name="reset_password" value="1">
-                                        <button type="submit" class="btn btn-sm btn-outline-primary">Send Email &amp; SMS</button>
-                                    </form>
+                                    <div class="d-flex flex-column gap-1">
+                                        <form method="post" action="{{ route('admin.marketer.send-reset', $m->id) }}" class="mb-1">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-outline-primary w-100">Send Reset Email</button>
+                                        </form>
+                                        <form method="post" action="{{ route('admin.marketer.notify', $m->id) }}">
+                                            @csrf
+                                            <input type="hidden" name="reset_password" value="1">
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary w-100">Send Email &amp; SMS</button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         @empty

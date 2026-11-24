@@ -704,6 +704,96 @@ class MarketerController extends Controller
         return back();
     }
 
+    public function sendResetEmail(Request $request, $id)
+    {
+        $this->authorizeSuperAdmin();
+
+        $marketer = Admin::where('role_id', config('marketer.role_id', 5))->findOrFail($id);
+        $sent = $this->dispatchMarketerAccountResetEmail($marketer);
+
+        if ($sent) {
+            Toastr::success("Sent account reset email to {$marketer->email}.");
+        } else {
+            Toastr::warning("Could not send reset email to {$marketer->email}. Please check the email address or mail settings.");
+        }
+
+        return back();
+    }
+
+    public function sendBulkResetEmails(Request $request)
+    {
+        $this->authorizeSuperAdmin();
+
+        $region = trim((string) $request->input('region', ''));
+        $query = Admin::where('role_id', config('marketer.role_id', 5));
+        if ($region !== '' && Schema::hasColumn('admins', 'marketer_region')) {
+            $query->where('marketer_region', $region);
+        }
+
+        $marketers = $query->get();
+        $sentCount = 0;
+        foreach ($marketers as $marketer) {
+            if ($this->dispatchMarketerAccountResetEmail($marketer)) {
+                $sentCount++;
+            }
+        }
+
+        Toastr::success("Sent account reset emails to {$sentCount} existing remote marketer(s).");
+        return back();
+    }
+
+    private function dispatchMarketerAccountResetEmail(Admin $marketer): bool
+    {
+        if (empty($marketer->email)) {
+            return false;
+        }
+
+        if (Schema::hasColumn('admins', 'marketer_code') && empty($marketer->marketer_code)) {
+            $code = 'MKT-' . str_pad((string) $marketer->id, 4, '0', STR_PAD_LEFT);
+            DB::table('admins')->where('id', $marketer->id)->update(['marketer_code' => $code]);
+            $marketer->marketer_code = $code;
+        }
+
+        $refCode = $marketer->marketer_code ?: ('MKT-' . str_pad((string) $marketer->id, 4, '0', STR_PAD_LEFT));
+        $resetLink = \App\Http\Controllers\MarketerAuthController::buildSignedLoginUrl($marketer, 168);
+        $portalUrl = 'https://admin.aduanefie.com/marketer-login';
+        $firstName = trim((string) ($marketer->f_name ?: 'Partner'));
+
+        $recipients = [$marketer->email];
+        if (str_starts_with(strtolower($marketer->email), 'www.')) {
+            $recipients[] = substr($marketer->email, 4);
+        }
+
+        $sentAny = false;
+        foreach (array_unique($recipients) as $toEmail) {
+            if (! filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
+                continue;
+            }
+            try {
+                Mail::raw(
+                    "Hello {$firstName},\n\n"
+                    . "We have upgraded the Aduanefie Remote Marketer Portal. Please reset and activate your account using your secure link below (valid for 7 days):\n\n"
+                    . "{$resetLink}\n\n"
+                    . "Your Account Details:\n"
+                    . "- Login Email: {$toEmail}\n"
+                    . "- Referral Code: {$refCode}\n"
+                    . "- Marketer Portal: {$portalUrl}\n\n"
+                    . "Once you open the link and complete verification, you can set your new password inside your Marketer Dashboard.\n\n"
+                    . "Thank you,\nAduanefie Operations Team",
+                    function ($message) use ($toEmail, $marketer) {
+                        $message->to($toEmail, trim("{$marketer->f_name} {$marketer->l_name}"))
+                            ->subject('Reset & Activate Your Aduanefie Marketer Account');
+                    }
+                );
+                $sentAny = true;
+            } catch (\Throwable $e) {
+                // Continue across recipients
+            }
+        }
+
+        return $sentAny;
+    }
+
     private function ensureMarketerRoleExists(): void
     {
         $roleId = (int) config('marketer.role_id', 5);

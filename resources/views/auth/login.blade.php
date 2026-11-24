@@ -55,10 +55,10 @@
                 <div class="auth-header">
                     <div class="mb-5">
                         <h2 class="title">
-                            {{ $isAdmin ? translate('messages.signin') : ($isMarketer ? translate('messages.marketer_signin') : translate('messages.store_signin')) }}
+                            {{ $isAdmin ? translate('messages.signin') : ($isMarketer ? translate('Marketer Sign In') : translate('messages.store_signin')) }}
                         </h2>
                         <div>
-                            {{ $isAdmin ? translate('messages.welcome_back_login_to_your_panel') : ($isMarketer ? translate('messages.signin_to_your_marketer_panel') : translate('messages.signin_to_your_store_panel')) }}.
+                            {{ $isAdmin ? translate('messages.welcome_back_login_to_your_panel') : ($isMarketer ? translate('Sign in to your marketer panel') : translate('messages.signin_to_your_store_panel')) }}.
                         </div>
                     </div>
                 </div>
