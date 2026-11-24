@@ -68,6 +68,7 @@ class AdminMfaService
         // half-authenticated session on the next request.
         Auth::guard($guard)->logout();
         $request->session()->regenerate();
+        $request->session()->regenerateToken();
 
         if ($mode === self::MODE_SETUP) {
             // A fresh secret per setup attempt. An abandoned attempt must not

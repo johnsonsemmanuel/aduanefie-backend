@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <title>@yield('title', 'Rider Portal') · Aduanefie</title>
+    @php($store_logo = \App\Models\BusinessSetting::where(['key' => 'icon'])->first() ?? \App\Models\BusinessSetting::where(['key' => 'logo'])->first())
+    @php($store_logo_url = \App\CentralLogics\Helpers::get_full_url('business', $store_logo?->value ?? '', $store_logo?->storage[0]?->value ?? 'public', 'favicon'))
+    <link rel="shortcut icon" href="{{ $store_logo_url }}">
+    <link rel="icon" type="image/png" href="{{ $store_logo_url }}">
     <style>
         :root {
             --ink: #67513A;

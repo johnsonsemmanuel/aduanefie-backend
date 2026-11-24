@@ -3,39 +3,54 @@
 namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Session\TokenMismatchException;
 use Throwable;
 
 class Handler extends ExceptionHandler
 {
-    /**
-     * A list of the exception types that are not reported.
-     *
-     * @var array
-     */
     protected $dontReport = [
         //
     ];
 
-    /**
-     * A list of the inputs that are never flashed for validation exceptions.
-     *
-     * @var array
-     */
     protected $dontFlash = [
         'current_password',
         'password',
         'password_confirmation',
     ];
 
-    /**
-     * Register the exception handling callbacks for the application.
-     *
-     * @return void
-     */
     public function register()
     {
         $this->reportable(function (Throwable $e) {
             //
+        });
+
+        $this->renderable(function (TokenMismatchException $e, $request) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json(['message' => 'CSRF token mismatch.'], 419);
+            }
+
+            if ($request->hasSession()) {
+                $request->session()->regenerateToken();
+            }
+
+            $path = ltrim($request->path(), '/');
+            $targetRoute = null;
+
+            if (str_starts_with($path, 'admin-mfa') || str_starts_with($path, 'admin-login') || str_starts_with($path, 'login/admin')) {
+                $targetRoute = 'admin.login';
+            } elseif (str_starts_with($path, 'vendor-mfa') || str_starts_with($path, 'store-login') || str_starts_with($path, 'login/store')) {
+                $targetRoute = 'store.login';
+            } elseif (str_starts_with($path, 'marketer-mfa') || str_starts_with($path, 'marketer-login')) {
+                $targetRoute = 'marketer.login';
+            } elseif (str_starts_with($path, 'rider-login')) {
+                $targetRoute = 'rider.login';
+            }
+
+            $redirect = $targetRoute ? redirect()->route($targetRoute) : redirect()->back();
+
+            return $redirect
+                ->withInput($request->except(['password', 'password_confirmation', '_token', 'code']))
+                ->withErrors(['email' => 'Your session expired. Please sign in again.']);
         });
     }
 }

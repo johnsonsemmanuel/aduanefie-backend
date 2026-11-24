@@ -1,264 +1,141 @@
 <!DOCTYPE html>
-    <?php
+<?php
+    $log_email_succ = session()->get('log_email_succ');
+    $isAdmin = ($role ?? '') === 'admin';
+    $isVendor = in_array($role ?? '', ['vendor', 'vendor_employee']);
+    $isMarketer = ($role ?? '') === 'marketer';
+    $forgotRoute = $forgotRoute ?? route('reset-password');
 
-        $log_email_succ = session()->get('log_email_succ');
-        $mfaRequired = (bool) ($mfa_required ?? false);
-        $mfaMode = $mfa_mode ?? null;
-        $mfaEmail = old('email');
-        $isAdmin = ($role ?? '') === 'admin';
-        $isVendor = in_array($role ?? '', ['vendor', 'vendor_employee']);
-        $isMarketer = ($role ?? '') === 'marketer';
-        $forgotRoute = $forgotRoute ?? route('reset-password');
-
-        // Every controller that renders this shared view calls
-        // VerifiesHuman::passesHumanCheck() on POST. The view must therefore
-        // always render the matching field and keep the phrase in the session,
-        // otherwise admin/store login cannot pass when reCAPTCHA is enabled.
-        $captcha = $captcha ?? null;
-        if (! $captcha) {
-            $captcha = new \Gregwar\Captcha\CaptchaBuilder();
-            $captcha->build();
-            session()->put('six_captcha', $captcha->getPhrase());
-        }
-        $showCaptcha = true;
-        $recaptcha = $recaptcha ?? \App\CentralLogics\Helpers::get_business_settings('recaptcha');
-        $recaptchaOn = !empty($recaptcha['status']) && (int) $recaptcha['status'] === 1
-            && !empty($recaptcha['site_key']);
-    ?>
-
-<html dir="{{ $site_direction }}" lang="{{ $locale }}" class="{{ $site_direction === 'rtl'?'active':'' }}">
+    $captcha = $captcha ?? null;
+    if (! $captcha) {
+        $captcha = new \Gregwar\Captcha\CaptchaBuilder();
+        $captcha->build();
+        session()->put('six_captcha', $captcha->getPhrase());
+    }
+    $showCaptcha = true;
+    $recaptcha = $recaptcha ?? \App\CentralLogics\Helpers::get_business_settings('recaptcha');
+    $recaptchaOn = ! empty($recaptcha['status']) && (int) $recaptcha['status'] === 1
+        && ! empty($recaptcha['site_key']);
+?>
+<html dir="{{ $site_direction }}" lang="{{ $locale }}" class="{{ $site_direction === 'rtl' ? 'active' : '' }}">
 <head>
-    <!-- Required Meta Tags Always Come First -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <!-- Title -->
-    <title>{{translate('messages.login')}}</title>
+    <title>{{ translate('messages.login') }}</title>
 
-    <!-- Favicon -->
-    @php($store_logo = \App\Models\BusinessSetting::where(['key' => 'logo'])->first() ?? \App\Models\BusinessSetting::where(['key' => 'icon'])->first())
-    @php($store_logo_url = \App\CentralLogics\Helpers::get_full_url('business', $store_logo?->value?? '', $store_logo?->storage[0]?->value ?? 'public','favicon'))
+    @php($store_logo = \App\Models\BusinessSetting::where(['key' => 'icon'])->first() ?? \App\Models\BusinessSetting::where(['key' => 'logo'])->first())
+    @php($store_logo_url = \App\CentralLogics\Helpers::get_full_url('business', $store_logo?->value ?? '', $store_logo?->storage[0]?->value ?? 'public', 'favicon'))
+    @php($brand_logo = \App\Models\BusinessSetting::where(['key' => 'logo'])->first() ?? $store_logo)
+    @php($brand_logo_url = \App\CentralLogics\Helpers::get_full_url('business', $brand_logo?->value ?? '', $brand_logo?->storage[0]?->value ?? 'public', 'favicon'))
     <link rel="shortcut icon" href="{{ $store_logo_url }}">
     <link rel="icon" type="image/png" href="{{ $store_logo_url }}">
 
-    <!-- Font -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
-    <!-- CSS Implementing Plugins -->
-    <link rel="stylesheet" href="{{asset('public/assets/admin')}}/css/vendor.min.css">
-    <link rel="stylesheet" href="{{asset('public/assets/admin')}}/vendor/icon-set/style.css">
-    <!-- CSS Front Template -->
-    <link rel="stylesheet" href="{{asset('public/assets/admin/css/bootstrap.min.css')}}">
-    <link rel="stylesheet" href="{{asset('public/assets/admin/css/theme.minc619.css?v=1.0')}}">
-    <link rel="stylesheet" href="{{asset('public/assets/admin/css/style.css?v=2.3')}}">
-    <link rel="stylesheet" href="{{asset('public/assets/admin')}}/css/toastr.css">
-    <link rel="stylesheet" href="{{asset('public/assets/admin/css/custom.css')}}">
-
-    <style>
-        .auth-wrapper {
-            flex-direction: row-reverse;
-        }
-
-        @media (max-width: 991px) {
-            .auth-wrapper {
-                flex-direction: column;
-            }
-        }
-
-        /* Sliding 2FA panel inside .auth-wrapper-form */
-        .slide-container {
-            width: 100%;
-            overflow: hidden;
-        }
-
-        .slide-track {
-            display: flex;
-            transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
-            width: 200%;
-            position: relative;
-        }
-
-        .slide-container.mfa-active .slide-track {
-            transform: translateX(-50%);
-        }
-
-        .slide-step {
-            flex: 0 0 50%;
-            width: 50%;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Store logins have no second factor, so the track is one full step. */
-        .slide-container.single-step .slide-track {
-            width: 100%;
-        }
-
-        .slide-container.single-step .slide-step {
-            flex: 0 0 100%;
-            width: 100%;
-        }
-
-        .slide-step-header {
-            margin-bottom: 24px;
-        }
-
-        .slide-step-title {
-            font-size: 26px;
-            font-weight: 700;
-            color: #1E2022;
-            margin-bottom: 6px;
-        }
-
-        .slide-step-subtitle {
-            color: #677788;
-            font-size: 14px;
-            line-height: 1.5;
-        }
-
-        .step-indicator {
-            display: flex;
-            justify-content: flex-start;
-            margin-bottom: 16px;
-        }
-
-        .step-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #E0D6BD;
-            margin-right: 6px;
-            transition: all 0.3s ease;
-        }
-
-        .slide-container:not(.mfa-active) .step-dot:nth-child(1),
-        .slide-container.mfa-active .step-dot:nth-child(2) {
-            background: #5E7042;
-            width: 20px;
-            border-radius: 4px;
-        }
-
-        .slide-footer {
-            margin-top: 20px;
-            text-align: center;
-            color: #666;
-            font-size: 13px;
-        }
-
-        .slide-footer a {
-            color: #5E7042;
-            font-weight: 600;
-            text-decoration: none;
-        }
-
-        .slide-footer a:hover {
-            text-decoration: underline;
-        }
-
-        .mfa-info {
-            background: #F0F7EE;
-            border: 1px solid #8B9F69;
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 24px;
-        }
-
-        .mfa-info h4 {
-            margin: 0 0 6px 0;
-            color: #5E7042;
-            font-size: 15px;
-        }
-
-        .mfa-info p {
-            margin: 0;
-            color: #67513A;
-            font-size: 13px;
-            opacity: 0.85;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ asset('public/assets/admin') }}/css/vendor.min.css">
+    <link rel="stylesheet" href="{{ asset('public/assets/admin') }}/vendor/icon-set/style.css">
+    <link rel="stylesheet" href="{{ asset('public/assets/admin/css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('public/assets/admin/css/theme.minc619.css?v=1.0') }}">
+    <link rel="stylesheet" href="{{ asset('public/assets/admin/css/style.css?v=2.3') }}">
+    <link rel="stylesheet" href="{{ asset('public/assets/admin') }}/css/toastr.css">
+    <link rel="stylesheet" href="{{ asset('public/assets/admin/css/custom.css') }}">
 </head>
 
 <body>
-<!-- ========== MAIN CONTENT ========== -->
 <main id="content" role="main" class="main">
     <div class="auth-wrapper">
         <div class="auth-wrapper-left">
-            <img class="auth-left-logo onerror-image" data-onerror-image="{{asset('/public/assets/admin/img/favicon.png')}}"
-                 src="{{ $store_logo_url }}" alt="Aduanefie">
+            <img class="auth-left-logo onerror-image" data-onerror-image="{{ asset('/public/assets/admin/img/favicon.png') }}"
+                 src="{{ $brand_logo_url }}" alt="Aduanefie">
             <div class="auth-left-cont">
                 <h2 class="title">...building <span class="d-block">Africa's biggest</span> <strong class="aduanefie-auth-accent">marketplace.</strong></h2>
             </div>
         </div>
         <div class="auth-wrapper-right">
             <div class="auth-wrapper-form">
-                <div class="slide-container {{ $mfaRequired ? 'mfa-active' : '' }} {{ $isAdmin ? '' : 'single-step' }}">
-                    @if($isAdmin)
-                    <div class="step-indicator">
-                        <div class="step-dot"></div>
-                        <div class="step-dot"></div>
-                    </div>
-                    @endif
-
-                    <div class="slide-track">
-            <!-- Step 1: Credentials -->
-            <div class="slide-step">
-                <div class="slide-step-header">
-                    <h2 class="slide-step-title">
-                        {{ $isAdmin ? translate('messages.welcome_back') : ($isMarketer ? translate('messages.welcome_back_marketer') : translate('messages.welcome_back_store')) }}
-                    </h2>
-                    <div class="slide-step-subtitle">
-                        {{ $isAdmin ? translate('messages.signin_to_your_admin_panel') : ($isMarketer ? translate('messages.signin_to_your_marketer_panel') : translate('messages.signin_to_your_store_panel')) }}.
+                <div class="auth-header">
+                    <div class="mb-5">
+                        <h2 class="title">
+                            {{ $isAdmin ? translate('messages.signin') : ($isMarketer ? translate('messages.marketer_signin') : translate('messages.store_signin')) }}
+                        </h2>
+                        <div>
+                            {{ $isAdmin ? translate('messages.welcome_back_login_to_your_panel') : ($isMarketer ? translate('messages.signin_to_your_marketer_panel') : translate('messages.signin_to_your_store_panel')) }}.
+                        </div>
                     </div>
                 </div>
 
-                <form class="" action="{{ $postRoute ?? ($isAdmin ? route('admin.login.submit') : route('login_post')) }}" method="post" id="loginForm" novalidate>
+                @if ($errors->any())
+                    <div class="alert alert-danger" role="alert">
+                        @foreach ($errors->all() as $error)
+                            <div>{{ $error }}</div>
+                        @endforeach
+                    </div>
+                @endif
+
+                <form action="{{ $postRoute ?? ($isAdmin ? route('admin.login.submit') : route('login_post')) }}" method="post" id="loginForm" novalidate>
                     @csrf
                     <input type="hidden" name="role" value="{{ $role ?? 'admin' }}">
 
-                    <x-ui.form-input
-                        name="email"
-                        label="{{ translate('messages.your_email') }}"
-                        type="email"
-                        placeholder="email@address.com"
-                        value="{{ old('email') }}"
-                        required
-                        icon="tio-mail"
-                        dataMsg="{{ translate('Please_enter_a_valid_email_address.') }}"
-                    />
+                    <div class="js-form-message form-group">
+                        <label class="input-label text-capitalize" for="signinSrEmail">{{ translate('messages.your_email') }}</label>
+                        <input type="email" class="form-control form-control-lg" name="email" id="signinSrEmail"
+                               tabindex="1" placeholder="email@address.com" value="{{ $email ?? old('email') }}"
+                               aria-label="email@address.com" required
+                               data-msg="{{ translate('Please_enter_a_valid_email_address.') }}">
+                    </div>
 
-                    <x-ui.form-input
-                        name="password"
-                        label="{{ translate('messages.password') }}"
-                        type="password"
-                        placeholder="{{ translate('messages.password_length_placeholder',['length'=>'6+']) }}"
-                        value="{{ old('password') }}"
-                        required
-                        togglePassword
-                        icon="tio-lock"
-                        dataMsg="{{ translate('messages.invalid_password_warning') }}"
-                    />
+                    <div class="js-form-message form-group mb-2">
+                        <label class="input-label" for="signupSrPassword" tabindex="0">
+                            <span class="d-flex justify-content-between align-items-center">
+                                {{ translate('messages.password') }}
+                            </span>
+                        </label>
+                        <div class="input-group input-group-merge">
+                            <input type="password" class="js-toggle-password form-control form-control-lg"
+                                   name="password" id="signupSrPassword"
+                                   placeholder="{{ translate('messages.password_length_placeholder', ['length' => '6+']) }}"
+                                   value="{{ $password ?? '' }}"
+                                   aria-label="{{ translate('messages.password_length_placeholder', ['length' => '6+']) }}"
+                                   required
+                                   data-msg="{{ translate('messages.invalid_password_warning') }}"
+                                   data-hs-toggle-password-options='{
+                                       "target": "#changePassTarget",
+                                       "defaultClass": "tio-hidden-outlined",
+                                       "showClass": "tio-visible-outlined",
+                                       "classChangeTarget": "#changePassIcon"
+                                   }'>
+                            <div id="changePassTarget" class="input-group-append">
+                                <a class="input-group-text" href="javascript:">
+                                    <i id="changePassIcon" class="tio-visible-outlined"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
 
                     @if($showCaptcha)
                         @if($recaptchaOn)
                             <input type="hidden" name="g-recaptcha-response" id="g-recaptcha-response" value="">
                             <input type="hidden" name="set_default_captcha" id="set_default_captcha" value="0">
 
-                            <div class="form-group" id="image-captcha-block" style="display:none;">
-                                <label>{{ translate('Enter recaptcha value') }}</label>
+                            <div class="form-group mt-3" id="image-captcha-block" style="display:none;">
+                                <label class="input-label">{{ translate('Enter recaptcha value') }}</label>
                                 <input type="text" name="custome_recaptcha" id="custome_recaptcha"
-                                       class="form-control" autocomplete="off">
+                                       class="form-control form-control-lg" autocomplete="off">
                                 <img src="{{ $captcha->inline() }}" class="rounded captcha-img mt-2" alt="captcha">
                             </div>
                         @else
-                            @include('auth.custom-captcha', ['custome_recaptcha' => $captcha])
+                            <div class="mt-3">
+                                @include('auth.custom-captcha', ['custome_recaptcha' => $captcha])
+                            </div>
                         @endif
                     @endif
 
-                    <div class="d-flex justify-content-between align-items-center mt-4">
+                    <div class="d-flex justify-content-between mt-4">
                         <div class="form-group">
                             <div class="custom-control custom-checkbox">
-                                <input type="checkbox" class="custom-control-input" id="rememberCheckbox"
-                                       name="remember">
-                                <label class="custom-control-label text-muted" for="rememberCheckbox">
-                                    {{translate('messages.remember_me')}}
+                                <input type="checkbox" class="custom-control-input" id="termsCheckbox"
+                                       {{ $password ? 'checked' : '' }} name="remember">
+                                <label class="custom-control-label text-muted" for="termsCheckbox">
+                                    {{ translate('messages.remember_me') }}
                                 </label>
                             </div>
                         </div>
@@ -271,14 +148,9 @@
                         </div>
                     </div>
 
-                    <div class="mt-5">
-                        <x-ui.form-button
-                            label="{{translate('messages.login') }}"
-                            class="primary"
-                            size="lg"
-                            block
-                        />
-                    </div>
+                    <button type="submit" class="btn btn-lg btn-block btn--primary mt-xxl-3">
+                        {{ translate('messages.login') }}
+                    </button>
                 </form>
 
                 @if($isVendor)
@@ -288,27 +160,11 @@
                     @else
                         <a href="{{ route('store.login') }}" class="text-muted small">{{ translate('Store owner login') }}</a>
                     @endif
-                    <div class="mt-2">
-                        <a href="{{ route('marketer.login') }}" class="small" style="color: #67513A; font-weight: 600;">
-                            Remote Marketer? Sign in here →
-                        </a>
-                    </div>
-                </div>
-                @endif
-
-                @if($isMarketer)
-                <div class="mt-4 text-center">
-                    <a href="https://aduanefie.com/become-a-marketer" class="small" style="color: #67513A; font-weight: 600;">
-                        Apply as a marketer
-                    </a>
-                    <div class="mt-2">
-                        <a href="{{ route('store.login') }}" class="text-muted small">Farm or store owner? Store sign in →</a>
-                    </div>
                 </div>
                 @endif
 
                 @if(env('APP_MODE') == 'demo')
-                <div class="auto-fill-data-copy mt-4">
+                <div class="auto-fill-data-copy">
                     <div class="d-flex flex-wrap align-items-center justify-content-between">
                         <div>
                             @if($isAdmin)
@@ -326,210 +182,113 @@
                 </div>
                 @endif
             </div>
-
-            @if($isAdmin)
-            <!-- Step 2: Two-Factor Authentication (slides in on same page) -->
-            <div class="slide-step">
-                <div class="slide-step-header">
-                    <h2 class="slide-step-title">{{ translate('messages.two_factor_verification') }}</h2>
-                    <div class="slide-step-subtitle">
-                        {{ $mfaMode === 'setup'
-                            ? translate('messages.setup_your_authenticator')
-                            : translate('messages.enter_code_from_authenticator', ['email' => $mfaEmail ?? '']) }}
-                    </div>
-                </div>
-
-                <div class="mfa-info">
-                    <h4>{{ translate('messages.secure_signin') }}</h4>
-                    <p>{{ translate('messages.enter_6_digit_code') }}</p>
-                </div>
-
-                <form method="post" action="{{ route('admin.mfa.verify') }}" id="mfaForm" autocomplete="off">
-                    @csrf
-
-                    <x-ui.form-input
-                        name="code"
-                        label="{{ translate('messages.authentication_code') }}"
-                        type="text"
-                        placeholder="123456"
-                        required
-                        inputmode="numeric"
-                        maxlength="6"
-                        autocomplete="one-time-code"
-                        autofocus
-                        icon="tio-shield"
-                    />
-
-                    <div class="mt-4">
-                        <x-ui.form-button
-                            label="{{ translate('messages.verify_and_continue') }}"
-                            class="primary"
-                            size="lg"
-                            block
-                        />
-                    </div>
-
-                    <input type="hidden" name="remember" value="{{ old('remember', false) ? '1' : '0' }}">
-                </form>
-
-                <div class="slide-footer mt-4">
-                    <p>
-                        {{ translate('messages.lost_access_authenticator') }} <br>
-                        <a href="{{ route('admin.login') }}">{{ translate('messages.back_to_sign_in') }}</a>
-                    </p>
-                </div>
-            </div>
-            @endif
-        </div>
-    </div>
-            </div>
         </div>
     </div>
 </main>
 
-    <!-- Modals -->
-    <div class="modal fade" id="forgetPassModal">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header justify-content-end">
-            <span type="button" class="close-modal-icon" data-dismiss="modal">
-                <i class="tio-clear"></i>
-            </span>
-          </div>
-          <div class="modal-body">
-            <div class="forget-pass-content">
-                <img src="{{asset('/public/assets/admin/img/send-mail.svg')}}" alt="">
-                <h4>{{ translate('Send_Mail_to_Your_Email') }} ?</h4>
-                <p>{{ translate('A mail will be send to your registered email with a link to change password') }}</p>
-                <a class="btn btn-lg btn-block btn--primary mt-3" href="{{ $forgotRoute }}">
-                    {{ translate('Send Mail') }}
-                </a>
-            </div>
-          </div>
+<div class="modal fade" id="forgetPassModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header justify-content-end">
+        <span type="button" class="close-modal-icon" data-dismiss="modal">
+            <i class="tio-clear"></i>
+        </span>
+      </div>
+      <div class="modal-body">
+        <div class="forget-pass-content">
+            <img src="{{ asset('/public/assets/admin/img/send-mail.svg') }}" alt="">
+            <h4>{{ translate('Send_Mail_to_Your_Email') }} ?</h4>
+            <p>{{ translate('A mail will be send to your registered email with a link to change password') }}</p>
+            <a class="btn btn-lg btn-block btn--primary mt-3" href="{{ $forgotRoute }}">
+                {{ translate('Send Mail') }}
+            </a>
         </div>
       </div>
     </div>
+  </div>
+</div>
 
-    <!-- JS Implementing Plugins -->
-    <script src="{{asset('public/assets/admin')}}/js/vendor.min.js"></script>
-    <script src="{{asset('public/assets/admin')}}/js/theme.min.js"></script>
-    <script src="{{asset('public/assets/admin')}}/js/toastr.js"></script>
-    {!! Toastr::message() !!}
+<script src="{{ asset('public/assets/admin') }}/js/vendor.min.js"></script>
+<script src="{{ asset('public/assets/admin') }}/js/theme.min.js"></script>
+<script src="{{ asset('public/assets/admin') }}/js/toastr.js"></script>
+{!! Toastr::message() !!}
 
-    @if ($errors->any())
-    <script>
-        "use strict";
-        @foreach($errors->all() as $error)
-        toastr.error('{{translate($error)}}', '{{ translate("Error") }}', {
-            CloseButton: true,
-            ProgressBar: true
-        });
-        @endforeach
-    </script>
-    @endif
+@if ($errors->any())
+<script>
+    "use strict";
+    @foreach($errors->all() as $error)
+    toastr.error('{{ translate($error) }}', '{{ translate("Error") }}', {
+        CloseButton: true,
+        ProgressBar: true
+    });
+    @endforeach
+</script>
+@endif
 
-    @if ($log_email_succ)
-    @php(session()->forget('log_email_succ'))
-    <script>
-        "use strict";
-        if (window.jQuery && typeof $('#successMailModal').modal === 'function') {
-            $('#successMailModal').modal('show');
+@if ($log_email_succ)
+@php(session()->forget('log_email_succ'))
+<script>
+    "use strict";
+    if (window.jQuery && typeof $('#successMailModal').modal === 'function') {
+        $('#successMailModal').modal('show');
+    }
+</script>
+@endif
+
+<script>
+    "use strict";
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof HSTogglePassword !== 'undefined') {
+            document.querySelectorAll('.js-toggle-password').forEach(function (el) {
+                new HSTogglePassword(el).init();
+            });
         }
-    </script>
-    @endif
+        document.querySelectorAll('.onerror-image').forEach(function (imgEl) {
+            imgEl.addEventListener('error', function () {
+                var fallback = imgEl.getAttribute('data-onerror-image');
+                if (fallback && imgEl.getAttribute('src') !== fallback) {
+                    imgEl.setAttribute('src', fallback);
+                }
+            });
+        });
+    });
+</script>
 
+@if($showCaptcha && $recaptchaOn)
+    <script src="https://www.google.com/recaptcha/api.js?render={{ $recaptcha['site_key'] }}"></script>
     <script>
-        "use strict";
+        (function () {
+            var form = document.getElementById('loginForm');
+            var tokenField = document.getElementById('g-recaptcha-response');
+            var fallback = document.getElementById('set_default_captcha');
+            var imageBlock = document.getElementById('image-captcha-block');
 
-        document.addEventListener('DOMContentLoaded', function () {
-            if (typeof HSTogglePassword !== 'undefined') {
-                document.querySelectorAll('.js-toggle-password').forEach(function (el) {
-                    new HSTogglePassword(el).init();
-                });
+            function useImageCaptcha() {
+                imageBlock.style.display = 'block';
+                fallback.value = '1';
+                document.getElementById('custome_recaptcha').required = true;
             }
 
-            // Auto-focus the code input when MFA panel is active
-            @if ($mfaRequired)
-            var mfaInput = document.querySelector('#mfaForm input[name=code]');
-            if (mfaInput) { mfaInput.focus(); }
-            @endif
-
-            document.querySelectorAll('.onerror-image').forEach(function (imgEl) {
-                imgEl.addEventListener('error', function () {
-                    var fallback = imgEl.getAttribute('data-onerror-image');
-                    if (fallback && imgEl.getAttribute('src') !== fallback) {
-                        imgEl.setAttribute('src', fallback);
-                    }
+            form.addEventListener('submit', function (event) {
+                if (fallback.value === '1') {
+                    return;
+                }
+                event.preventDefault();
+                if (typeof grecaptcha === 'undefined') {
+                    useImageCaptcha();
+                    return;
+                }
+                grecaptcha.ready(function () {
+                    grecaptcha.execute('{{ $recaptcha['site_key'] }}', {action: '{{ $recaptcha_action ?? 'login' }}'})
+                        .then(function (token) {
+                            tokenField.value = token;
+                            form.submit();
+                        })
+                        .catch(useImageCaptcha);
                 });
             });
-        });
+        })();
     </script>
-
-    @if(env('APP_MODE')=='demo')
-    <script>
-        "use strict";
-        document.querySelectorAll('.copy_cred').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var emailInput = document.querySelector('#loginForm input[name=email]');
-                var passInput = document.querySelector('#loginForm input[name=password]');
-                @if($isAdmin)
-                if (emailInput) emailInput.value = 'admin@admin.com';
-                if (passInput) passInput.value = '12345678';
-                @else
-                if (emailInput) emailInput.value = 'test.restaurant@gmail.com';
-                if (passInput) passInput.value = '12345678';
-                @endif
-                if (typeof toastr !== 'undefined') {
-                    toastr.success('Copied successfully!', 'Success!', {
-                        CloseButton: true,
-                        ProgressBar: true
-                    });
-                }
-            });
-        });
-    </script>
-    @endif
-
-    <!-- IE Support -->
-    <script>
-        if (/MSIE \d|Trident.*rv:/.test(navigator.userAgent)) document.write('<script src="{{asset('public//assets/admin')}}/vendor/babel-polyfill/polyfill.min.js"><\/script>');
-    </script>
-
-    @if($showCaptcha && $recaptchaOn)
-        <script src="https://www.google.com/recaptcha/api.js?render={{ $recaptcha['site_key'] }}"></script>
-        <script>
-            (function () {
-                var form = document.getElementById('loginForm');
-                var tokenField = document.getElementById('g-recaptcha-response');
-                var fallback = document.getElementById('set_default_captcha');
-                var imageBlock = document.getElementById('image-captcha-block');
-
-                function useImageCaptcha() {
-                    imageBlock.style.display = 'block';
-                    fallback.value = '1';
-                    document.getElementById('custome_recaptcha').required = true;
-                }
-
-                form.addEventListener('submit', function (event) {
-                    if (fallback.value === '1') {
-                        return;
-                    }
-                    event.preventDefault();
-                    if (typeof grecaptcha === 'undefined') {
-                        useImageCaptcha();
-                        return;
-                    }
-                    grecaptcha.ready(function () {
-                        grecaptcha.execute('{{ $recaptcha['site_key'] }}', {action: '{{ $recaptcha_action ?? 'login' }}'})
-                            .then(function (token) {
-                                tokenField.value = token;
-                                form.submit();
-                            })
-                            .catch(useImageCaptcha);
-                    });
-                });
-            })();
-        </script>
-    @endif
+@endif
 </body>
 </html>
