@@ -4,6 +4,7 @@ namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Session\TokenMismatchException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -23,8 +24,11 @@ class Handler extends ExceptionHandler
         $this->reportable(function (Throwable $e) {
             //
         });
+    }
 
-        $this->renderable(function (TokenMismatchException $e, $request) {
+    public function render($request, Throwable $e)
+    {
+        if ($e instanceof TokenMismatchException || ($e instanceof HttpExceptionInterface && $e->getStatusCode() === 419)) {
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json(['message' => 'CSRF token mismatch.'], 419);
             }
@@ -51,6 +55,8 @@ class Handler extends ExceptionHandler
             return $redirect
                 ->withInput($request->except(['password', 'password_confirmation', '_token', 'code']))
                 ->withErrors(['email' => 'Your session expired. Please sign in again.']);
-        });
+        }
+
+        return parent::render($request, $e);
     }
 }
