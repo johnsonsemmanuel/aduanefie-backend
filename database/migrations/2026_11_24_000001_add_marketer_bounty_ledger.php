@@ -19,43 +19,110 @@ use Illuminate\Support\Facades\Schema;
  */
 return new class extends Migration
 {
+    private function indexExists(string $table, string $indexName): bool
+    {
+        try {
+            if (Schema::hasIndex($table, $indexName)) {
+                return true;
+            }
+        } catch (\Throwable $e) {
+            // Fall through to driver-specific check
+        }
+
+        if (DB::getDriverName() === 'pgsql') {
+            $found = DB::selectOne(
+                'SELECT 1 FROM pg_indexes WHERE tablename = ? AND indexname = ?',
+                [$table, $indexName]
+            );
+            if ($found) {
+                return true;
+            }
+            $constraint = DB::selectOne(
+                'SELECT 1 FROM pg_constraint WHERE conrelid = ?::regclass AND conname = ?',
+                [$table, $indexName]
+            );
+            return (bool) $constraint;
+        }
+
+        return false;
+    }
+
     public function up(): void
     {
-        Schema::table('marketer_commissions', function (Blueprint $table) {
-            $table->dropUnique(['order_id']);
-            $table->unsignedBigInteger('order_id')->nullable()->change();
-            $table->string('type', 20)->default('order')->after('id');
-            $table->string('bounty_key', 191)->nullable()->after('order_transaction_id');
+        if (! Schema::hasTable('marketer_commissions')) {
+            return;
+        }
 
-            $table->unique('bounty_key', 'marketer_commissions_bounty_key_unique');
-            $table->index(['marketer_id', 'type'], 'marketer_commissions_marketer_type_index');
+        if ($this->indexExists('marketer_commissions', 'marketer_commissions_order_id_unique')) {
+            Schema::table('marketer_commissions', function (Blueprint $table) {
+                $table->dropUnique('marketer_commissions_order_id_unique');
+            });
+        }
+
+        Schema::table('marketer_commissions', function (Blueprint $table) {
+            $table->unsignedBigInteger('order_id')->nullable()->change();
+
+            if (! Schema::hasColumn('marketer_commissions', 'type')) {
+                $table->string('type', 20)->default('order')->after('id');
+            }
+            if (! Schema::hasColumn('marketer_commissions', 'bounty_key')) {
+                $table->string('bounty_key', 191)->nullable()->after('order_transaction_id');
+            }
         });
+
+        if (! $this->indexExists('marketer_commissions', 'marketer_commissions_bounty_key_unique')) {
+            Schema::table('marketer_commissions', function (Blueprint $table) {
+                $table->unique('bounty_key', 'marketer_commissions_bounty_key_unique');
+            });
+        }
+
+        if (! $this->indexExists('marketer_commissions', 'marketer_commissions_marketer_type_index')) {
+            Schema::table('marketer_commissions', function (Blueprint $table) {
+                $table->index(['marketer_id', 'type'], 'marketer_commissions_marketer_type_index');
+            });
+        }
 
         $this->backfillExistingBounties();
     }
 
     public function down(): void
     {
-        // Bounty rows cannot exist under the old order-unique schema.
+        if (! Schema::hasTable('marketer_commissions')) {
+            return;
+        }
+
         DB::table('marketer_commissions')->whereNull('order_id')->delete();
 
+        if ($this->indexExists('marketer_commissions', 'marketer_commissions_marketer_type_index')) {
+            Schema::table('marketer_commissions', function (Blueprint $table) {
+                $table->dropIndex('marketer_commissions_marketer_type_index');
+            });
+        }
+        if ($this->indexExists('marketer_commissions', 'marketer_commissions_bounty_key_unique')) {
+            Schema::table('marketer_commissions', function (Blueprint $table) {
+                $table->dropUnique('marketer_commissions_bounty_key_unique');
+            });
+        }
+
         Schema::table('marketer_commissions', function (Blueprint $table) {
-            $table->dropIndex('marketer_commissions_marketer_type_index');
-            $table->dropUnique('marketer_commissions_bounty_key_unique');
-            $table->dropColumn(['type', 'bounty_key']);
+            foreach (['type', 'bounty_key'] as $col) {
+                if (Schema::hasColumn('marketer_commissions', $col)) {
+                    $table->dropColumn($col);
+                }
+            }
             $table->unsignedBigInteger('order_id')->nullable(false)->change();
-            $table->unique('order_id', 'marketer_commissions_order_id_unique');
         });
+
+        if (! $this->indexExists('marketer_commissions', 'marketer_commissions_order_id_unique')) {
+            Schema::table('marketer_commissions', function (Blueprint $table) {
+                $table->unique('order_id', 'marketer_commissions_order_id_unique');
+            });
+        }
     }
 
-    /**
-     * Credit farmers that were already attributed and verified when this
-     * migration runs, so the ledger matches what the dashboard has been
-     * showing. Idempotent via bounty_key.
-     */
     private function backfillExistingBounties(): void
     {
-        if (!Schema::hasTable('admins') || !Schema::hasTable('stores')) {
+        if (! Schema::hasTable('admins') || ! Schema::hasTable('stores')) {
             return;
         }
 
@@ -90,21 +157,23 @@ return new class extends Migration
                 continue;
             }
 
-            DB::table('marketer_commissions')->insertOrIgnore([
+            $key = $store->marketer_id . ':' . $store->store_id;
+            $exists = DB::table('marketer_commissions')->where('bounty_key', $key)->exists();
+            if ($exists) {
+                continue;
+            }
+
+            DB::table('marketer_commissions')->insert([
+                'type' => 'bounty',
                 'marketer_id' => $store->marketer_id,
                 'store_id' => $store->store_id,
                 'order_id' => null,
                 'order_transaction_id' => null,
-                'type' => 'bounty',
-                'bounty_key' => $store->marketer_id . ':' . $store->store_id,
-                'base_amount' => $amount,
-                'rate' => 100,
-                'amount' => $amount,
-                'currency' => (string) (config('marketer.currency') ?: 'GHS'),
+                'bounty_key' => $key,
+                'order_amount' => 0,
+                'commission_amount' => $amount,
                 'status' => 'eligible',
                 'eligible_at' => $now,
-                'payout_id' => null,
-                'void_reason' => null,
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);

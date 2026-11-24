@@ -16,7 +16,7 @@ jobs:
           php-version: "8.2"
           extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, gd, zip
       - run: cp .env.example .env && composer install --no-interaction --prefer-dist --no-progress
-      - run: php artisan key:generate
+      - run: php artisan key:generate && php artisan passport:keys --force
       - run: find app routes -name "*.php" -print0 | xargs -0 -n1 php -l
       - run: php artisan route:cache && php artisan route:clear
       - run: php artisan test
