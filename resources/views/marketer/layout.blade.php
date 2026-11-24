@@ -9,49 +9,52 @@
     @php($store_logo_url = \App\CentralLogics\Helpers::get_full_url('business', $store_logo?->value ?? '', $store_logo?->storage[0]?->value ?? 'public', 'favicon'))
     <link rel="shortcut icon" href="{{ $store_logo_url }}">
     <link rel="icon" type="image/png" href="{{ $store_logo_url }}">
+    <link rel="stylesheet" href="{{ asset('public/assets/admin/css/vendor.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('public/assets/admin/vendor/icon-set/style.css') }}">
+    <link rel="stylesheet" href="{{ asset('public/assets/admin/css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('public/assets/admin/css/theme.minc619.css?v=1.0') }}">
+    <link rel="stylesheet" href="{{ asset('public/assets/admin/css/style.css') }}">
     <style>
         :root {
             --ink: var(--primary-clr, #67513A);
-            --muted: #8B9F69;
-            --line: #E0D6BD;
-            --bg: #FAF8F5;
+            --muted: #677788;
+            --line: #E7EAF3;
+            --bg: #F8FAFD;
             --brand: var(--primary-clr, #67513A);
             --danger: #b3261e;
             --warn: #8a5a00;
         }
-        * { box-sizing: border-box; }
         body {
             margin: 0;
             background: var(--bg);
-            color: var(--ink);
-            font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #1E2022;
         }
-        a { color: var(--brand); }
-        .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px 48px; }
-        header.topbar { background: var(--ink); color: #fff; padding: 14px 0; margin-bottom: 20px; }
+        .wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px 48px; }
+        header.topbar { background: var(--ink); color: #fff; padding: 12px 0; margin-bottom: 18px; }
         header.topbar .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 0; }
-        .brand { font-weight: 700; }
-        .brand small { display: block; font-weight: 400; opacity: .7; font-size: 12px; }
-        .who { font-size: 13px; text-align: right; opacity: .85; }
-        nav.tabs { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+        .brand { font-weight: 700; font-size: 16px; }
+        .brand small { display: block; font-weight: 400; opacity: .75; font-size: 12px; }
+        .who { font-size: 13px; text-align: right; opacity: .9; }
+        nav.tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
         nav.tabs a {
-            text-decoration: none; padding: 8px 13px; border-radius: 9px;
-            border: 1px solid var(--line); background: #fff; color: var(--ink); font-size: 14px;
+            text-decoration: none; padding: 8px 14px; border-radius: 6px;
+            border: 1px solid var(--line); background: #fff; color: #1E2022; font-size: 13px; font-weight: 600;
+            height: 38px; display: inline-flex; align-items: center;
         }
         nav.tabs a.active { background: var(--brand); border-color: var(--brand); color: #fff; }
-        .card { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin-bottom: 18px; }
-        h1 { font-size: 22px; margin: 0 0 4px; }
-        h2 { font-size: 17px; margin: 0 0 12px; }
+        .card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 18px; margin-bottom: 16px; box-shadow: 0 3px 6px rgba(140, 152, 164, 0.05); }
+        h1 { font-size: 20px; font-weight: 700; margin: 0 0 4px; }
+        h2 { font-size: 16px; font-weight: 700; margin: 0 0 12px; }
         .muted { color: var(--muted); }
         .small { font-size: 13px; }
         table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
-        th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
-        .stat { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
-        .stat .label { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
-        .stat .value { font-size: 21px; font-weight: 700; margin-top: 4px; }
-        .badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; border: 1px solid var(--line); background: #f8fafc; }
+        th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+        th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); background: #F8FAFD; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 12px; }
+        .stat { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+        .stat .label { font-size: 12px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); font-weight: 600; }
+        .stat .value { font-size: 20px; font-weight: 700; margin-top: 4px; color: #1E2022; }
+        .badge { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 12px; border: 1px solid var(--line); background: #f8fafc; font-weight: 600; }
         .badge.pending { color: var(--warn); border-color: #f0d9a8; background: #fdf6e6; }
         .badge.eligible { color: var(--brand); border-color: #b9e0d1; background: #eaf6f1; }
         .badge.in_payout { color: var(--primary-clr, #67513A); border-color: #c7d7fb; background: #eef3ff; }
@@ -60,31 +63,32 @@
         .badge.requested, .badge.approved { color: var(--warn); border-color: #f0d9a8; background: #fdf6e6; }
         label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
         input[type=text], input[type=tel], input[type=password], input[type=email], select, textarea {
-            width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px;
-            font-size: 15px; background: #fff; color: var(--ink); font-family: inherit;
+            width: 100%; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px;
+            font-size: 14px; background: #fff; color: #1E2022; font-family: inherit;
         }
-        input:focus, select:focus, textarea:focus { outline: 2px solid rgba(103, 81, 58, .25); border-color: var(--brand); }
+        input:focus, select:focus, textarea:focus { outline: 2px solid rgba(103, 81, 58, .2); border-color: var(--brand); }
         .field { margin-bottom: 14px; }
         button, .btn {
-            display: inline-block; padding: 11px 18px; border-radius: 10px; border: 1px solid var(--brand);
-            background: var(--brand); color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; text-decoration: none;
+            display: inline-flex; align-items: center; justify-content: center;
+            height: 38px; padding: 0 16px; border-radius: 6px; border: 1px solid var(--brand);
+            background: var(--brand); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none;
         }
-        .btn.secondary { background: #fff; color: var(--ink); border-color: var(--line); }
-        button.link { background: none; border: 0; color: #fff; padding: 0; font-size: 13px; text-decoration: underline; }
-        .alert { border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; font-size: 14px; }
+        .btn.secondary, .btn--secondary { background: #fff; color: #1E2022; border-color: var(--line); }
+        .btn-sm { height: 32px; padding: 0 12px; font-size: 12px; }
+        .alert { border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-size: 13px; }
         .alert.error { background: #fdf1f0; border: 1px solid #f2c9c6; color: #7f1d1d; }
         .alert.ok { background: #eefaf1; border: 1px solid #c7e6cf; color: #14532d; }
         .captcha-row { display: flex; gap: 10px; align-items: center; }
-        .captcha-row .captcha-img { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; line-height: 0; background: #fff; }
-        .captcha-row img { height: 48px; width: auto; display: block; }
-        .empty { color: var(--muted); font-size: 14px; padding: 8px 0; }
-        .pager { display: flex; gap: 10px; margin-top: 14px; font-size: 14px; }
+        .captcha-row .captcha-img { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; line-height: 0; background: #fff; }
+        .captcha-row img { height: 44px; width: auto; display: block; }
+        .empty { color: var(--muted); font-size: 13px; padding: 8px 0; margin: 0; }
+        .pager { display: flex; gap: 10px; margin-top: 14px; font-size: 13px; }
         .mobile-bottom-nav { display: none; }
         @media (max-width: 720px) {
             .wrap { padding-bottom: 84px; }
             .mobile-bottom-nav {
                 display: grid;
-                grid-template-columns: repeat(4, 1fr);
+                grid-template-columns: repeat(5, 1fr);
                 position: fixed;
                 left: 0;
                 right: 0;
@@ -102,11 +106,11 @@
                 justify-content: center;
                 gap: 2px;
                 text-decoration: none;
-                color: var(--ink);
+                color: #1E2022;
                 font-size: 11px;
                 font-weight: 600;
                 padding: 4px 2px;
-                border-radius: 8px;
+                border-radius: 6px;
                 opacity: 0.75;
             }
             .mobile-bottom-nav a.active {
@@ -114,7 +118,7 @@
                 background: rgba(103, 81, 58, 0.08);
                 opacity: 1;
             }
-            .mobile-bottom-nav .nav-ico { font-size: 16px; line-height: 1; }
+            .mobile-bottom-nav .nav-ico { font-size: 15px; line-height: 1; }
         }
     </style>
 </head>
@@ -152,25 +156,25 @@
 </div>
 
 @hasSection('nav')
-    <nav class="mobile-bottom-nav" aria-label="Marketer mobile navigation" style="grid-template-columns:repeat(5,1fr);">
+    <nav class="mobile-bottom-nav" aria-label="Marketer mobile navigation">
         <a href="{{ route('marketer.dashboard') }}" class="{{ request()->routeIs('marketer.dashboard') ? 'active' : '' }}">
-            <span class="nav-ico" aria-hidden="true">🏠</span>
+            <span class="nav-ico" aria-hidden="true"><i class="tio-home-vs-1-outlined"></i></span>
             <span>Home</span>
         </a>
         <a href="{{ route('marketer.register-farmer') }}" class="{{ request()->routeIs('marketer.register-farmer*') ? 'active' : '' }}">
-            <span class="nav-ico" aria-hidden="true">➕</span>
+            <span class="nav-ico" aria-hidden="true"><i class="tio-add-circle-outlined"></i></span>
             <span>Register</span>
         </a>
         <a href="{{ route('marketer.regional-tours') }}" class="{{ request()->routeIs('marketer.regional-tours*') ? 'active' : '' }}">
-            <span class="nav-ico" aria-hidden="true">🗺️</span>
+            <span class="nav-ico" aria-hidden="true"><i class="tio-poi-outlined"></i></span>
             <span>Tours</span>
         </a>
         <a href="{{ route('marketer.backyard-farms') }}" class="{{ request()->routeIs('marketer.backyard-farms*') ? 'active' : '' }}">
-            <span class="nav-ico" aria-hidden="true">🌱</span>
+            <span class="nav-ico" aria-hidden="true"><i class="tio-shop-outlined"></i></span>
             <span>Farms</span>
         </a>
         <a href="{{ route('marketer.payouts') }}" class="{{ request()->routeIs('marketer.payout*') ? 'active' : '' }}">
-            <span class="nav-ico" aria-hidden="true">💳</span>
+            <span class="nav-ico" aria-hidden="true"><i class="tio-wallet-outlined"></i></span>
             <span>Payouts</span>
         </a>
     </nav>

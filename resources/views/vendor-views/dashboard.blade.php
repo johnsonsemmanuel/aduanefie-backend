@@ -12,96 +12,28 @@
 
         @if(auth('vendor')->check())
         <!-- Page Header -->
-        <div class="page-header">
-            <div class="row align-items-center">
-                <div class="col-sm">
-                    <h1 class="page-header-title">
-                    <span class="page-header-icon">
-                        <img src="{{asset('public/assets/admin/img/category.png')}}" class="w--20" alt="">
-                    </span>
-                        <span>{{translate('messages.dashboard')}}</span>
-                    </h1>
-                </div>
-                <div class="col-sm ">
-                    @if (isset($out_of_stock_count) &&   $out_of_stock_count  > 1 )
-                            <div class="alert __alert-4 m-0 py-1 px-2  max-w-450px hide-warning d-none" role="alert">
-                                <div class="alert-inner">
-                                    <img class="rounded mr-1"  width="25" src="{{ asset('/public/assets/admin/img/invalid-icon.png') }}" alt="">
-                                    <div class="cont">
-                                        <h4 class="mb-2">{{ translate('Warning!') }} </h4>{{  ( $out_of_stock_count -1).'+ '.  translate('more_products_are_low_on_Stock.') }}
-                                        <br>
-                                        <a data-id="stock_out_reminder_close_btn"  class="text-primary text-underline reming_me_later">{{ translate('Remind_Me_Later') }}</a>  &nbsp; &nbsp; <a href="{{ route('vendor.item.stock-limit-list') }}" class="text-primary text-underline">{{ translate('Click_To_View') }}</a>
-                                    </div>
-                                </div>
-                                <button class="position-absolute right-0 top-0 py-2 px-2 bg-transparent border-0 outline-none shadow-none reming_me_later"  type="button">
-                                    <i class="tio-clear fz--18"></i>
-                                </button>
-                            </div>
-
-                            @elseif (isset($out_of_stock_count)  &&  $out_of_stock_count  == 1  && isset($item))
-                            <div class="alert __alert-4 m-0 py-1 px-2  max-w-450px hide-warning d-none" role="alert">
-                                <div class="alert-inner">
-                                    <img class="aspect-1-1 mr-1 object--contain rounded" width="100" src="{{ $item?->image_full_url ?? asset('/public/assets/admin/img/100x100/food-default-image.png') }}" alt="">
-                                    <div class="cont">
-                                        <h4 class="mb-2">{{ $item?->name }} </h4>{{  translate('This product is low stock.') }}
-                                        <br>
-                                        <a
-                                        data-id="stock_out_reminder_close_btn"  class="text-primary text-underline reming_me_later">{{ translate('Remind_Me_Later') }}</a>  &nbsp; &nbsp; <a href="{{ route('vendor.item.stock-limit-list') }}" class="text-primary text-underline">{{ translate('Click_To_View') }}</a>
-                                    </div>
-                                </div>
-                                <button class="position-absolute right-0 top-0 py-2 px-2 bg-transparent border-0 outline-none shadow-none reming_me_later"  type="button">
-                                    <i class="tio-clear fz--18"></i>
-                                </button>
-                            </div>
-
-                        @endif
-
-
-
-
-                    <div class="promo-card-2">
-                        <img src="{{asset('public/assets/admin/img/promo-arrow.png')}}" class="shapes" alt="">
-                        <div class="left">
-                            <img src="{{asset('public/assets/admin/img/promo.png')}}" width="40" class="mw-100" alt="">
-                            <div class="inner">
-                                <div class="d-flex flex-wrap flex-md-nowrap align-items-center justify-content-between gap-2">
-                                    <div>
-                                        <h4 class="m-0 text-white">{{ translate('Want_to_get_highlighted?') }}</h4>
-                                        <p class="m-0 text-white">
-                                            {{ translate('Create_ads_to_get_highlighted_on_the_app_and_web_browser') }}
-                                        </p>
-                                    </div>
-                                    <a href="{{ route('vendor.advertisement.create') }}" class="btn btn-white text-nowrap font-semibold text-dark">{{ translate('Create_Ads') }}</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        @php
+            $vendorActions = '
+                <a href="' . route('vendor.sales-statement') . '" class="btn btn--secondary">' . translate('Sales Statement (CSV)') . '</a>
+                <button type="button" onclick="window.location.reload()" class="btn btn--primary">' . translate('Refresh Orders') . '</button>
+            ';
+        @endphp
+        @include('partials.dashboard._page-header', [
+            'title' => translate('messages.dashboard'),
+            'icon' => asset('public/assets/admin/img/category.png'),
+            'actionsHtml' => $vendorActions,
+        ])
         <!-- End Page Header -->
 
-        <!-- Vendor Quick Actions & Low-Stock Alert Strip -->
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-            @if(isset($out_of_stock_count) && $out_of_stock_count > 0)
-                <div class="alert alert-soft-warning d-flex align-items-center justify-content-between flex-grow-1 mb-0 py-2 px-3" role="alert">
-                    <div>
-                        <i class="tio-warning-outlined mr-1"></i>
-                        <strong>{{ $out_of_stock_count }} {{ $out_of_stock_count == 1 ? 'item is' : 'items are' }} low or out of stock.</strong>
-                        Restock quickly so shoppers don't miss your fresh produce.
-                    </div>
-                    <a href="{{ route('vendor.item.stock-limit-list') }}" class="btn btn-sm btn-warning ml-3 text-nowrap">Restock Now</a>
+        @if(isset($out_of_stock_count) && $out_of_stock_count > 0)
+            <div class="alert alert-soft-warning d-flex align-items-center justify-content-between mb-3 py-2 px-3" role="alert">
+                <div>
+                    <i class="tio-warning-outlined mr-1"></i>
+                    <strong>{{ $out_of_stock_count }} {{ $out_of_stock_count == 1 ? 'item is' : 'items are' }} low or out of stock.</strong>
                 </div>
-            @endif
-            <div class="d-flex align-items-center gap-2 ml-auto">
-                <a href="{{ route('vendor.sales-statement') }}" class="btn btn-outline-success btn-sm text-nowrap" title="Download bankable verified sales history">
-                    <i class="tio-download-to mr-1"></i> {{ translate('Sales Statement (CSV)') }}
-                </a>
-                <button type="button" onclick="window.location.reload()" class="btn btn-outline-primary btn-sm text-nowrap">
-                    <i class="tio-refresh mr-1"></i> {{ translate('Refresh Orders') }}
-                </button>
+                <a href="{{ route('vendor.item.stock-limit-list') }}" class="btn btn-sm btn--primary ml-3 text-nowrap">Restock</a>
             </div>
-        </div>
+        @endif
 
         <div class="card mb-3">
             <div class="card-body">

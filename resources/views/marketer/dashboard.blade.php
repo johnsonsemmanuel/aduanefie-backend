@@ -16,203 +16,202 @@
 @endsection
 
 @section('content')
+    @php
+        $refCode = $marketer->marketer_code ?? ('MKT-' . $marketer->id);
+        $refUrl = 'https://aduanefie.com/store-registration?ref=' . urlencode($refCode);
+        $waText = rawurlencode("Sell your farm produce on Aduanefie Marketplace. Register with code {$refCode}: {$refUrl}");
+        $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' . urlencode($refUrl);
+        $bountyRate = number_format($summary['onboarding_bounty_rate'] ?? 25, 2);
+        $commRate = rtrim(rtrim(number_format($marketer->marketerCommissionRate(), 3), '0'), '.');
+        $kpiItems = [
+            [
+                'label' => 'Farmers Onboarded',
+                'value' => $summary['stores'],
+                'meta' => ($summary['verified_stores'] ?? 0) . ' verified · ' . ((int) $summary['stores'] - (int) ($summary['verified_stores'] ?? 0)) . ' pending',
+            ],
+            [
+                'label' => 'Onboarding Bounty',
+                'value' => number_format($summary['onboarding_bounty_earned'] ?? 0, 2) . ' ' . $summary['currency'],
+                'meta' => $bountyRate . ' ' . $summary['currency'] . ' per verified farmer',
+            ],
+            [
+                'label' => 'Available to Withdraw',
+                'value' => number_format($summary['eligible'], 2) . ' ' . $summary['currency'],
+                'meta' => number_format($summary['pending'], 2) . ' ' . $summary['currency'] . ' on hold',
+            ],
+            [
+                'label' => 'Paid to Date',
+                'value' => number_format($summary['paid'], 2) . ' ' . $summary['currency'],
+                'meta' => $summary['paid_count'] . ' orders · ' . $commRate . '% commission rate',
+            ],
+        ];
+    @endphp
+
+    @include('partials.dashboard._page-header', [
+        'title' => 'Overview',
+        'subtitle' => 'Referral Code: ' . $refCode,
+        'actionsHtml' => '<a href="' . route('marketer.register-farmer') . '" class="btn">Register Farmer</a> <a href="' . route('marketer.payouts.request') . '" class="btn secondary">Request Payout</a>',
+    ])
+
+    @include('partials.dashboard._kpi-grid', ['items' => $kpiItems])
+
     <div class="card">
-        <h1>Your Earnings &amp; Farmer Onboarding</h1>
-        <p class="muted small" style="margin-top:0;">
-            You earn <strong>{{ number_format($summary['onboarding_bounty_rate'] ?? 25, 2) }} {{ $summary['currency'] }}</strong> for every verified farmer / agro-stakeholder you bring onboard, plus
-            <strong>{{ rtrim(rtrim(number_format($marketer->marketerCommissionRate(), 3), '0'), '.') }}%</strong>
-            of Aduanefie's commission on every delivered order from your attributed farms.
-            Sales commissions become requestable {{ (int) config('marketer.holding_days', 14) }} days after delivery.
-        </p>
-
-        <div class="grid">
-            <div class="stat">
-                <div class="label">Farmers Onboarded</div>
-                <div class="value">{{ $summary['stores'] }}</div>
-                <div class="small muted">{{ $summary['verified_stores'] ?? 0 }} verified live · {{ (int) $summary['stores'] - (int) ($summary['verified_stores'] ?? 0) }} awaiting verification</div>
-            </div>
-            <div class="stat">
-                <div class="label">Onboarding Bounty</div>
-                <div class="value">{{ number_format($summary['onboarding_bounty_earned'] ?? 0, 2) }} {{ $summary['currency'] }}</div>
-                <div class="small muted">@ {{ number_format($summary['onboarding_bounty_rate'] ?? 25, 2) }} {{ $summary['currency'] }} / farmer · {{ number_format(((int) $summary['stores'] - (int) ($summary['verified_stores'] ?? 0)) * (float) ($summary['onboarding_bounty_rate'] ?? 25), 2) }} {{ $summary['currency'] }} pending verification</div>
-            </div>
-            <div class="stat">
-                <div class="label">Total Farmer Sales</div>
-                <div class="value">{{ number_format($summary['total_sales'] ?? 0, 2) }} {{ $summary['currency'] }}</div>
-                <div class="small muted">{{ $summary['delivered_orders_count'] ?? 0 }} delivered orders</div>
-            </div>
-            <div class="stat">
-                <div class="label">Commission On Hold</div>
-                <div class="value">{{ number_format($summary['pending'], 2) }} {{ $summary['currency'] }}</div>
-                <div class="small muted">{{ $summary['pending_count'] }} orders</div>
-            </div>
-            <div class="stat">
-                <div class="label">Available to Withdraw</div>
-                <div class="value">{{ number_format($summary['eligible'], 2) }} {{ $summary['currency'] }}</div>
-                <div class="small muted">{{ $summary['eligible_count'] }} orders</div>
-            </div>
-            <div class="stat">
-                <div class="label">Paid to Date</div>
-                <div class="value">{{ number_format($summary['paid'], 2) }} {{ $summary['currency'] }}</div>
-                <div class="small muted">{{ $summary['paid_count'] }} orders</div>
-            </div>
-        </div>
-
-        @if($summary['next_eligible_at'])
-            <p class="small muted" style="margin-bottom:0;">
-                Next commission becomes available on {{ $summary['next_eligible_at'] }}.
-            </p>
-        @endif
-        <p class="small muted" style="margin-bottom:8px;">
-            Your farmer referral code: <strong>{{ $marketer->marketer_code ?? ('MKT-' . $marketer->id) }}</strong>
-            - share this when onboarding commercial farms or backyard growers.
-        </p>
-        @php
-            $refCode = $marketer->marketer_code ?? ('MKT-' . $marketer->id);
-            $refUrl = 'https://aduanefie.com/store-registration?ref=' . urlencode($refCode);
-            $waText = rawurlencode("Sell your farm produce directly on Aduanefie Marketplace! Register using my Regional Marketer link ({$refCode}): {$refUrl}");
-            $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' . urlencode($refUrl);
-        @endphp
-        <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:8px;">
-            <img src="{{ $qrUrl }}" alt="QR code for {{ $refCode }}" width="96" height="96" style="border:1px solid #E6DCC4;border-radius:8px;padding:4px;background:#fff;flex-shrink:0;">
-            <div style="flex:1;min-width:240px;">
-                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                    <input type="text" id="marketer-ref-url" value="{{ $refUrl }}" readonly style="flex:1;min-width:220px;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;background:#f9fafb;">
-                    <button type="button" onclick="var i=document.getElementById('marketer-ref-url');i.select();navigator.clipboard.writeText(i.value);this.innerText='Copied!';setTimeout(()=>this.innerText='Copy Link',2000);" style="padding:7px 14px;background:#67513A;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;">Copy Link</button>
-                    <a href="https://wa.me/?text={{ $waText }}" target="_blank" rel="noopener" style="padding:7px 14px;background:#25D366;color:#fff;border-radius:6px;font-size:13px;text-decoration:none;font-weight:600;">Share on WhatsApp</a>
-                    <a href="{{ route('marketer.register-farmer') }}" class="btn" style="padding:7px 14px;font-size:13px;text-decoration:none;">+ Register Farmer</a>
-                    <button type="button" onclick="window.print()" class="btn secondary" style="padding:7px 12px;font-size:13px;">Print QR Poster</button>
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div class="d-flex align-items-center" style="gap:12px;flex:1;min-width:260px;">
+                <img src="{{ $qrUrl }}" alt="QR code for {{ $refCode }}" width="72" height="72" style="border:1px solid #E7EAF3;border-radius:8px;padding:4px;background:#fff;flex-shrink:0;">
+                <div style="flex:1;">
+                    <label for="marketer-ref-url" class="mb-1">Farmer Referral Link ({{ $refCode }})</label>
+                    <input type="text" id="marketer-ref-url" value="{{ $refUrl }}" readonly style="background:#F8FAFD;">
                 </div>
             </div>
+            <div class="d-flex flex-wrap" style="gap:8px;">
+                <button type="button" class="btn" onclick="var i=document.getElementById('marketer-ref-url');i.select();navigator.clipboard.writeText(i.value);this.innerText='Copied';setTimeout(()=>this.innerText='Copy Link',2000);">Copy Link</button>
+                <a href="https://wa.me/?text={{ $waText }}" target="_blank" rel="noopener" class="btn secondary">WhatsApp</a>
+                <button type="button" onclick="window.print()" class="btn secondary">Print QR</button>
+            </div>
         </div>
     </div>
 
     <div class="card">
-        <h2>Stores credited to you</h2>
+        <h2>Attributed Farms</h2>
         @if($stores->isEmpty())
-            <p class="empty">No stores have been assigned to you yet.</p>
+            <p class="empty">No farms assigned yet.</p>
         @else
-            <table>
-                <thead>
-                <tr><th>Farmer / Store</th><th>Type &amp; Region</th><th>Cultivation</th><th>Orders &amp; Sales</th><th>Your Commission</th><th>Field verification</th></tr>
-                </thead>
-                <tbody>
-                @foreach($stores as $store)
+            <div class="table-responsive">
+                <table>
+                    <thead>
                     <tr>
-                        <td>
-                            <strong>{{ $store->name }}</strong>
-                            @if(!empty($store->phone))
-                                <div class="small muted">{{ $store->phone }}</div>
-                            @endif
-                        </td>
-                        <td>
-                            {{ ($store->is_backyard ?? false) ? 'Backyard Grower' : ucfirst($store->farm_type ?? $store->store_business_model) }}
-                            @if(!empty($store->region))
-                                <div class="small muted">{{ $store->region }}{{ !empty($store->district) ? ' · ' . $store->district : '' }}</div>
-                            @endif
-                        </td>
-                        <td>{{ ucfirst(str_replace('_', ' ', $store->cultivation_status ?? 'active')) }}</td>
-                        <td>
-                            <strong>{{ number_format($store->total_sales ?? 0, 2) }} {{ $summary['currency'] }}</strong>
-                            <div class="small muted">{{ $store->delivered_orders_count ?? 0 }} delivered orders</div>
-                        </td>
-                        <td>
-                            <strong>{{ number_format($store->commission_earned ?? 0, 2) }} {{ $summary['currency'] }}</strong>
-                            <div class="small muted">+ {{ number_format($summary['onboarding_bounty_rate'] ?? 25, 2) }} {{ $summary['currency'] }} bounty</div>
-                        </td>
-                        <td>
-                            @if($store->marketer_verified ?? false)
-                                <span class="badge paid">Verified</span>
-                            @else
-                                <form method="post" action="{{ route('marketer.stores.verify', $store->id) }}" style="display:inline-flex; gap:6px; align-items:center;">
-                                    @csrf
-                                    <select name="cultivation_status" style="padding:3px 6px; font-size:12px;">
-                                        <option value="farming">Farming</option>
-                                        <option value="harvest_ready">Harvest ready</option>
-                                        <option value="active">Active</option>
-                                    </select>
-                                    <button type="submit" class="btn" style="padding:4px 8px; font-size:12px;">Verify Farming</button>
-                                </form>
-                            @endif
-                        </td>
+                        <th>Farmer / Store</th>
+                        <th>Type &amp; Region</th>
+                        <th>Status</th>
+                        <th>Sales</th>
+                        <th>Commission</th>
+                        <th>Verification</th>
                     </tr>
-                @endforeach
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                    @foreach($stores as $store)
+                        <tr>
+                            <td>
+                                <strong>{{ $store->name }}</strong>
+                                @if(!empty($store->phone))
+                                    <div class="small muted">{{ $store->phone }}</div>
+                                @endif
+                            </td>
+                            <td>
+                                {{ ($store->is_backyard ?? false) ? 'Backyard Grower' : ucfirst($store->farm_type ?? $store->store_business_model) }}
+                                @if(!empty($store->region))
+                                    <div class="small muted">{{ $store->region }}{{ !empty($store->district) ? ' · ' . $store->district : '' }}</div>
+                                @endif
+                            </td>
+                            <td>{{ ucfirst(str_replace('_', ' ', $store->cultivation_status ?? 'active')) }}</td>
+                            <td>
+                                <strong>{{ number_format($store->total_sales ?? 0, 2) }} {{ $summary['currency'] }}</strong>
+                                <div class="small muted">{{ $store->delivered_orders_count ?? 0 }} orders</div>
+                            </td>
+                            <td>
+                                <strong>{{ number_format($store->commission_earned ?? 0, 2) }} {{ $summary['currency'] }}</strong>
+                                <div class="small muted">+ {{ $bountyRate }} {{ $summary['currency'] }} bounty</div>
+                            </td>
+                            <td>
+                                @if($store->marketer_verified ?? false)
+                                    <span class="badge paid">Verified</span>
+                                @else
+                                    <form method="post" action="{{ route('marketer.stores.verify', $store->id) }}" style="display:inline-flex; gap:6px; align-items:center;">
+                                        @csrf
+                                        <select name="cultivation_status" style="width:auto;padding:4px 8px;font-size:12px;height:32px;">
+                                            <option value="farming">Farming</option>
+                                            <option value="harvest_ready">Harvest ready</option>
+                                            <option value="active">Active</option>
+                                        </select>
+                                        <button type="submit" class="btn btn-sm">Verify</button>
+                                    </form>
+                                @endif
+                            </td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
         @endif
     </div>
 
-    <div class="card">
-        <h2>Recent commissions</h2>
-        @if($recent->isEmpty())
-            <p class="empty">No commissions yet. They appear after an order from one of your stores is delivered.</p>
-        @else
-            <table>
-                <thead>
-                <tr><th>Order</th><th>Store</th><th>Platform commission</th><th>Rate</th><th>Yours</th><th>Status</th></tr>
-                </thead>
-                <tbody>
-                @foreach($recent as $commission)
-                    <tr>
-                        <td>#{{ $commission->order_id }}</td>
-                        <td>{{ $commission->store?->name }}</td>
-                        <td>{{ number_format($commission->base_amount, 2) }}</td>
-                        <td>{{ rtrim(rtrim(number_format($commission->rate, 3), '0'), '.') }}%</td>
-                        <td>{{ number_format($commission->amount, 2) }} {{ $commission->currency }}</td>
-                        <td><span class="badge {{ $commission->status }}">{{ str_replace('_', ' ', $commission->status) }}</span></td>
-                    </tr>
-                @endforeach
-                </tbody>
-            </table>
-            <p class="small" style="margin-bottom:0;"><a href="{{ route('marketer.commissions') }}">See all commissions</a></p>
-        @endif
-    </div>
+    <div class="row">
+        <div class="col-lg-7">
+            <div class="card">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h2 class="mb-0">Recent Commissions</h2>
+                    @if(!$recent->isEmpty())
+                        <a href="{{ route('marketer.commissions') }}" class="small">View all</a>
+                    @endif
+                </div>
+                @if($recent->isEmpty())
+                    <p class="empty">No commissions yet.</p>
+                @else
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                            <tr><th>Order</th><th>Store</th><th>Rate</th><th>Amount</th><th>Status</th></tr>
+                            </thead>
+                            <tbody>
+                            @foreach($recent as $commission)
+                                <tr>
+                                    <td>#{{ $commission->order_id }}</td>
+                                    <td>{{ $commission->store?->name }}</td>
+                                    <td>{{ rtrim(rtrim(number_format($commission->rate, 3), '0'), '.') }}%</td>
+                                    <td>{{ number_format($commission->amount, 2) }} {{ $commission->currency }}</td>
+                                    <td><span class="badge {{ $commission->status }}">{{ str_replace('_', ' ', $commission->status) }}</span></td>
+                                </tr>
+                            @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card">
+                <h2>Payouts</h2>
+                @if($payouts->isEmpty())
+                    <p class="empty">No payout requests yet.</p>
+                @else
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                            <tr><th>#</th><th>Amount</th><th>Status</th><th>Requested</th></tr>
+                            </thead>
+                            <tbody>
+                            @foreach($payouts as $payout)
+                                <tr>
+                                    <td>{{ $payout->id }}</td>
+                                    <td>{{ number_format($payout->amount, 2) }} {{ $payout->currency }}</td>
+                                    <td><span class="badge {{ $payout->status }}">{{ $payout->status }}</span></td>
+                                    <td>{{ $payout->requested_at }}</td>
+                                </tr>
+                            @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </div>
 
-    <div class="card">
-        <h2>Payouts</h2>
-        @if($payouts->isEmpty())
-            <p class="empty">No payout requests yet.</p>
-        @else
-            <table>
-                <thead>
-                <tr><th>#</th><th>Amount</th><th>Status</th><th>Requested</th><th>Paid</th></tr>
-                </thead>
-                <tbody>
-                @foreach($payouts as $payout)
-                    <tr>
-                        <td>{{ $payout->id }}</td>
-                        <td>{{ number_format($payout->amount, 2) }} {{ $payout->currency }}</td>
-                        <td><span class="badge {{ $payout->status }}">{{ $payout->status }}</span></td>
-                        <td>{{ $payout->requested_at }}</td>
-                        <td>{{ $payout->paid_at ?? '-' }}</td>
-                    </tr>
-                @endforeach
-                </tbody>
-            </table>
-        @endif
-        <p style="margin-bottom:0;">
-            <a class="btn" href="{{ route('marketer.payouts.request') }}">Request a payout</a>
-        </p>
-    </div>
-
-    <div class="card">
-        <h2>Set or Update Portal Password</h2>
-        <p class="muted small" style="margin-top:0;">
-            Keep your account ready for direct sign-in at <strong>admin.aduanefie.com/marketer-login</strong>.
-        </p>
-        <form method="post" action="{{ route('marketer.password.update') }}" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;align-items:end;">
-            @csrf
-            <div class="field" style="margin-bottom:0;">
-                <label for="new_password">New Password (min 8 chars)</label>
-                <input type="password" name="new_password" id="new_password" minlength="8" required autocomplete="new-password">
+            <div class="card">
+                <h2>Update Password</h2>
+                <form method="post" action="{{ route('marketer.password.update') }}">
+                    @csrf
+                    <div class="row">
+                        <div class="col-sm-6 field">
+                            <label for="new_password">New Password</label>
+                            <input type="password" name="new_password" id="new_password" minlength="8" required autocomplete="new-password">
+                        </div>
+                        <div class="col-sm-6 field">
+                            <label for="new_password_confirmation">Confirm Password</label>
+                            <input type="password" name="new_password_confirmation" id="new_password_confirmation" minlength="8" required autocomplete="new-password">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn">Update Password</button>
+                </form>
             </div>
-            <div class="field" style="margin-bottom:0;">
-                <label for="new_password_confirmation">Confirm Password</label>
-                <input type="password" name="new_password_confirmation" id="new_password_confirmation" minlength="8" required autocomplete="new-password">
-            </div>
-            <div>
-                <button type="submit">Update Password</button>
-            </div>
-        </form>
+        </div>
     </div>
 @endsection
