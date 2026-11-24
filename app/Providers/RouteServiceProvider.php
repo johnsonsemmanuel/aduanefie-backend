@@ -124,6 +124,13 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by('marketer|' . $this->loginThrottleKey($request));
         });
 
+        // The forgot form posts `identifier` (email OR phone), not `email`.
+        // Sharing the login limiter meant every request keyed on an empty
+        // string, so one attacker locked out every marketer on the host.
+        RateLimiter::for('marketer-forgot', function (Request $request) {
+            return Limit::perMinute(5)->by('marketer-forgot|' . $this->loginThrottleKey($request, 'identifier'));
+        });
+
         // Riders sign in by phone, so the key has to read the phone field or
         // every rider would share the empty-string bucket and lock each other
         // out after five attempts from the same IP.

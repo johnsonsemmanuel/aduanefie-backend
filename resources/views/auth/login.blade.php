@@ -7,6 +7,23 @@
         $mfaEmail = old('email');
         $isAdmin = ($role ?? '') === 'admin';
         $isVendor = in_array($role ?? '', ['vendor', 'vendor_employee']);
+        $isMarketer = ($role ?? '') === 'marketer';
+        $forgotRoute = $forgotRoute ?? route('reset-password');
+
+        // Every controller that renders this shared view calls
+        // VerifiesHuman::passesHumanCheck() on POST. The view must therefore
+        // always render the matching field and keep the phrase in the session,
+        // otherwise admin/store login cannot pass when reCAPTCHA is enabled.
+        $captcha = $captcha ?? null;
+        if (! $captcha) {
+            $captcha = new \Gregwar\Captcha\CaptchaBuilder();
+            $captcha->build();
+            session()->put('six_captcha', $captcha->getPhrase());
+        }
+        $showCaptcha = true;
+        $recaptcha = $recaptcha ?? \App\CentralLogics\Helpers::get_business_settings('recaptcha');
+        $recaptchaOn = !empty($recaptcha['status']) && (int) $recaptcha['status'] === 1
+            && !empty($recaptcha['site_key']);
     ?>
 
 <html dir="{{ $site_direction }}" lang="{{ $locale }}" class="{{ $site_direction === 'rtl'?'active':'' }}">
@@ -184,9 +201,11 @@
             <!-- Step 1: Credentials -->
             <div class="slide-step">
                 <div class="slide-step-header">
-                    <h2 class="slide-step-title">{{ $isAdmin ? translate('messages.welcome_back') : translate('messages.welcome_back_store') }}</h2>
+                    <h2 class="slide-step-title">
+                        {{ $isAdmin ? translate('messages.welcome_back') : ($isMarketer ? translate('messages.welcome_back_marketer') : translate('messages.welcome_back_store')) }}
+                    </h2>
                     <div class="slide-step-subtitle">
-                        {{ $isAdmin ? translate('messages.signin_to_your_admin_panel') : translate('messages.signin_to_your_store_panel') }}.
+                        {{ $isAdmin ? translate('messages.signin_to_your_admin_panel') : ($isMarketer ? translate('messages.signin_to_your_marketer_panel') : translate('messages.signin_to_your_store_panel')) }}.
                     </div>
                 </div>
 
@@ -216,6 +235,22 @@
                         icon="tio-lock"
                         dataMsg="{{ translate('messages.invalid_password_warning') }}"
                     />
+
+                    @if($showCaptcha)
+                        @if($recaptchaOn)
+                            <input type="hidden" name="g-recaptcha-response" id="g-recaptcha-response" value="">
+                            <input type="hidden" name="set_default_captcha" id="set_default_captcha" value="0">
+
+                            <div class="form-group" id="image-captcha-block" style="display:none;">
+                                <label>{{ translate('Enter recaptcha value') }}</label>
+                                <input type="text" name="custome_recaptcha" id="custome_recaptcha"
+                                       class="form-control" autocomplete="off">
+                                <img src="{{ $captcha->inline() }}" class="rounded captcha-img mt-2" alt="captcha">
+                            </div>
+                        @else
+                            @include('auth.custom-captcha', ['custome_recaptcha' => $captcha])
+                        @endif
+                    @endif
 
                     <div class="d-flex justify-content-between align-items-center mt-4">
                         <div class="form-group">
@@ -257,6 +292,17 @@
                         <a href="{{ route('marketer.login') }}" class="small" style="color: #67513A; font-weight: 600;">
                             Remote Marketer? Sign in here →
                         </a>
+                    </div>
+                </div>
+                @endif
+
+                @if($isMarketer)
+                <div class="mt-4 text-center">
+                    <a href="https://aduanefie.com/become-a-marketer" class="small" style="color: #67513A; font-weight: 600;">
+                        Apply as a marketer
+                    </a>
+                    <div class="mt-2">
+                        <a href="{{ route('store.login') }}" class="text-muted small">Farm or store owner? Store sign in →</a>
                     </div>
                 </div>
                 @endif
@@ -355,7 +401,7 @@
                 <img src="{{asset('/public/assets/admin/img/send-mail.svg')}}" alt="">
                 <h4>{{ translate('Send_Mail_to_Your_Email') }} ?</h4>
                 <p>{{ translate('A mail will be send to your registered email with a link to change password') }}</p>
-                <a class="btn btn-lg btn-block btn--primary mt-3" href="{{route('reset-password')}}">
+                <a class="btn btn-lg btn-block btn--primary mt-3" href="{{ $forgotRoute }}">
                     {{ translate('Send Mail') }}
                 </a>
             </div>
@@ -448,5 +494,42 @@
     <script>
         if (/MSIE \d|Trident.*rv:/.test(navigator.userAgent)) document.write('<script src="{{asset('public//assets/admin')}}/vendor/babel-polyfill/polyfill.min.js"><\/script>');
     </script>
+
+    @if($showCaptcha && $recaptchaOn)
+        <script src="https://www.google.com/recaptcha/api.js?render={{ $recaptcha['site_key'] }}"></script>
+        <script>
+            (function () {
+                var form = document.getElementById('loginForm');
+                var tokenField = document.getElementById('g-recaptcha-response');
+                var fallback = document.getElementById('set_default_captcha');
+                var imageBlock = document.getElementById('image-captcha-block');
+
+                function useImageCaptcha() {
+                    imageBlock.style.display = 'block';
+                    fallback.value = '1';
+                    document.getElementById('custome_recaptcha').required = true;
+                }
+
+                form.addEventListener('submit', function (event) {
+                    if (fallback.value === '1') {
+                        return;
+                    }
+                    event.preventDefault();
+                    if (typeof grecaptcha === 'undefined') {
+                        useImageCaptcha();
+                        return;
+                    }
+                    grecaptcha.ready(function () {
+                        grecaptcha.execute('{{ $recaptcha['site_key'] }}', {action: '{{ $recaptcha_action ?? 'login' }}'})
+                            .then(function (token) {
+                                tokenField.value = token;
+                                form.submit();
+                            })
+                            .catch(useImageCaptcha);
+                    });
+                });
+            })();
+        </script>
+    @endif
 </body>
 </html>

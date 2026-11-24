@@ -15,30 +15,6 @@ use Illuminate\Support\Facades\DB;
 
 class StoreLogic
 {
-    public const DEFAULT_NEARBY_RADIUS_KM = 25;
-
-    /**
-     * Keep nearby store lists inside each store's own delivery radius. Stores
-     * without a radius use the shared default so they do not silently become
-     * unlimited nationwide results.
-     */
-    public static function applyNearbyRadius($query, $longitude, $latitude, ?float $radiusKm = null)
-    {
-        $longitude = (float) $longitude;
-        $latitude = (float) $latitude;
-        if ($longitude === 0.0 && $latitude === 0.0) {
-            return $query;
-        }
-
-        $radiusKm = max(1, min(100, $radiusKm ?? self::DEFAULT_NEARBY_RADIUS_KM));
-        $distance = Store::distanceExpression($longitude, $latitude, 'stores');
-
-        return $query
-            ->whereNotNull('stores.latitude')
-            ->whereNotNull('stores.longitude')
-            ->whereRaw($distance . ' <= COALESCE(stores.delivery_radius_km, ?) * 1000', [$radiusKm]);
-    }
-
     public static function get_stores( $zone_id, $filter_data, $type, $store_type, $limit = 10, $offset = 1, $featured=false,$longitude=0,$latitude=0,$filter=null,$rating_count=null)
     {
 
@@ -144,9 +120,8 @@ class StoreLogic
             $query = $query->when($filter && in_array('open',$filter),function ($qurey){
                 return $qurey->orderBy('open', 'desc');
             });
-            $query = $query->when(($filter && in_array('nearby',$filter)), function ($nearbyQuery) use ($longitude, $latitude) {
-                return self::applyNearbyRadius($nearbyQuery, $longitude, $latitude)
-                    ->orderBy('distance');
+            $query = $query->when(($filter && in_array('nearby',$filter))   ,function ($qurey){
+                return  $qurey->orderByDesc('distance');
             });
             $query = $query->when($filter_data=='delivery', function($q){
                 return $q->delivery();
@@ -435,9 +410,8 @@ class StoreLogic
             ->when($filter && in_array('popular',$filter),function ($qurey){
                 return $qurey->withCount('orders')->orderBy('orders_count', 'desc');
             })
-            ->when(($filter && in_array('nearby',$filter)), function ($nearbyQuery) use ($longitude, $latitude) {
-                return self::applyNearbyRadius($nearbyQuery, $longitude, $latitude)
-                    ->orderBy('distance');
+            ->when(($filter && in_array('nearby',$filter))   ,function ($qurey){
+                return  $qurey->orderBy('distance');
             })
             ->when($filter && in_array('fast_delivery',$filter),function ($qurey){
                 return $qurey->orderBy('min_delivery_time');
@@ -633,9 +607,8 @@ class StoreLogic
             ->when($filter && in_array('popular',$filter),function ($qurey){
                 return $qurey->withCount('orders')->orderBy('orders_count', 'desc');
             })
-            ->when(($filter && in_array('nearby',$filter)), function ($nearbyQuery) use ($longitude, $latitude) {
-                return self::applyNearbyRadius($nearbyQuery, $longitude, $latitude)
-                    ->orderBy('distance');
+            ->when(($filter && in_array('nearby',$filter))   ,function ($qurey){
+                return  $qurey->orderBy('distance');
             })
             ->when($filter && in_array('fast_delivery',$filter),function ($qurey){
                 return $qurey->orderBy('min_delivery_time');
@@ -934,8 +907,6 @@ class StoreLogic
             })
             ->type($type)->Active();
 
-        $query = self::applyNearbyRadius($query, $longitude, $latitude);
-
             if($top_offer_near_me_stores_default_status== 1){
                 $query= $query->orderByDesc('open')->orderby('distance');
             }else{
@@ -982,7 +953,6 @@ class StoreLogic
                 }
             }
 
-        $query = $query->orderBy('distance');
         $paginator= $query->paginate($limit??50, ['*'], 'page', $offset??1);
 
         return [

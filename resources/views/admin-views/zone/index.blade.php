@@ -57,15 +57,6 @@
                         </div>
                         <div class="col-md-6 col-xl-7 zone-setup">
                             <div class="pl-xl-5 pl-xxl-0">
-                                <div class="form-group mb-3">
-                                    <label class="input-label" for="zone-country">{{ translate('Market_country') }}</label>
-                                    <select name="country_code" id="zone-country" class="form-control" required>
-                                        <option value="" disabled selected>{{ translate('Select_country') }}</option>
-                                        @foreach($countries as $code => $countryName)
-                                            <option value="{{ $code }}">{{ $countryName }} ({{ $code }})</option>
-                                        @endforeach
-                                    </select>
-                                </div>
                                 @if($language)
                                     @php($defaultLang = $language[0])
                                     <ul class="nav nav-tabs mb-4">
@@ -512,13 +503,10 @@
         }
 
         function initialize() {
-            @php($default_location = App\CentralLogics\Helpers::validatedCoordinates(App\CentralLogics\Helpers::get_business_settings('default_location')))
-            let myLatlng = @json($default_location);
-            if (!myLatlng) {
-                document.getElementById("map-canvas").innerHTML = '<div class="alert alert-warning">Set a valid default location before using the zone map.</div>';
-                map = null;
-                return;
-            }
+            @php($default_location=\App\Models\BusinessSetting::where('key','default_location')->first())
+            @php($default_location=$default_location->value?json_decode($default_location->value, true):0)
+            let myLatlng = { lat: {{$default_location?$default_location['lat']:'23.757989'}}, lng: {{$default_location?$default_location['lng']:'90.360587'}} };
+
 
             let myOptions = {
                 zoom: 13,

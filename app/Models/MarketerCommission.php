@@ -11,8 +11,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $id
  * @property int $marketer_id
  * @property int $store_id
- * @property int $order_id
+ * @property int|null $order_id
  * @property int|null $order_transaction_id
+ * @property string $type
+ * @property string|null $bounty_key
  * @property string $base_amount
  * @property string $rate
  * @property string $amount
@@ -39,11 +41,19 @@ class MarketerCommission extends Model
     /** Order was canceled/refunded/failed. Never payable. */
     public const STATUS_VOID = 'void';
 
+    /** A share of a delivered order's platform commission. */
+    public const TYPE_ORDER = 'order';
+
+    /** A fixed onboarding bounty for a verified farmer store. */
+    public const TYPE_BOUNTY = 'bounty';
+
     protected $fillable = [
         'marketer_id',
         'store_id',
         'order_id',
         'order_transaction_id',
+        'type',
+        'bounty_key',
         'base_amount',
         'rate',
         'amount',
@@ -99,5 +109,10 @@ class MarketerCommission extends Model
     public function scopePayable($query)
     {
         return $query->where('status', self::STATUS_ELIGIBLE);
+    }
+
+    public function scopeBounties($query)
+    {
+        return $query->where('type', self::TYPE_BOUNTY);
     }
 }

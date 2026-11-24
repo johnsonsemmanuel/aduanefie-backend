@@ -79,6 +79,16 @@ class RegionalTourController extends Controller
             ], 503);
         }
 
+        // The route is auth:api, but fail closed here as well: without a
+        // resolved account there is no application, even if the middleware is
+        // later relaxed or this controller is reached from another entry point.
+        $user = $request->user('api');
+        if (! $user) {
+            return response()->json([
+                'errors' => [['code' => 'auth', 'message' => 'Sign in to your account before applying for a regional tour.']],
+            ], 401);
+        }
+
         $validator = Validator::make($request->all(), [
             'tour_id' => 'nullable|integer|exists:regional_tours,id',
             'farmer_name' => 'required|string|max:150',
@@ -115,6 +125,14 @@ class RegionalTourController extends Controller
             }
         }
 
+        if ($tour && RegionalTourRegistration::where('user_id', $user->id)
+            ->where('tour_id', $tour->id)
+            ->exists()) {
+            return response()->json([
+                'errors' => [['code' => 'duplicate', 'message' => 'You have already applied for this regional tour.']],
+            ], 409);
+        }
+
         // Resolve optional marketer attribution (strictly role_id = 5)
         $marketerId = $tour?->lead_marketer_id;
         if ($request->filled('marketer_code')) {
@@ -135,6 +153,7 @@ class RegionalTourController extends Controller
         }
 
         $registration = RegionalTourRegistration::create([
+            'user_id' => $user->id,
             'tour_id' => $tour?->id,
             'farmer_name' => trim($request->input('farmer_name')),
             'phone' => trim($request->input('phone')),

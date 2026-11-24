@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Services\Markets\MarketProfileService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -37,21 +36,9 @@ class CustomsDuty extends Model
      */
     public static function resolve(string $destinationCountry, ?string $hsCode): ?self
     {
-        $raw = trim($destinationCountry);
-        $markets = app(MarketProfileService::class);
-        $code = $markets->normalizeCountry($raw);
-        $profile = $code ? $markets->find($code) : null;
+        $destinationCountry = strtoupper($destinationCountry);
 
-        // Seed data historically used full country names while quotes pass ISO
-        // codes. Match both shapes so duty never silently resolves to zero.
-        $candidates = array_values(array_unique(array_filter([
-            $raw,
-            strtoupper($raw),
-            $code,
-            $profile['name'] ?? null,
-        ])));
-
-        $rules = static::whereIn('destination_country', $candidates)->get();
+        $rules = static::where('destination_country', $destinationCountry)->get();
 
         if ($hsCode) {
             $exact = $rules

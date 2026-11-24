@@ -65,7 +65,7 @@
                     <div class="__dashboard-card-2 h-100">
                         <img src="{{ asset('/public/assets/admin/img/dashboard/grocery/orders.svg') }}" alt="sms">
                         <h6 class="name">IntekHost SMS Credits</h6>
-                        <h3 class="count">{{ isset($opsSmsBalance['units']) ? number_format($opsSmsBalance['units']) : 'N/A' }}</h3>
+                        <h3 class="count">{{ isset($opsSmsBalance['units']) ? number_format($opsSmsBalance['units']) : '—' }}</h3>
                         <div class="subtxt">Sender ID: Aduanefie</div>
                     </div>
                 </a>

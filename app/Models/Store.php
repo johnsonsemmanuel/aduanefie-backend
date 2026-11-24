@@ -148,6 +148,22 @@ class Store extends Model
         'marketer_id',
         'marketer_assigned_at',
         'delivery_radius_km',
+
+        // Farm/onboarding fields. These are real columns and are written by the
+        // marketplace onboarding paths; leaving them out of $fillable made
+        // Store::create() silently discard them.
+        'store_business_model',
+        'farm_type',
+        'is_backyard',
+        'farm_size_acres',
+        'primary_crops',
+        'cultivation_status',
+        'next_harvest_date',
+        'marketer_verified',
+        'marketer_verified_at',
+        'marketer_verification_notes',
+        'region',
+        'district',
     ];
 
     /**
@@ -763,30 +779,18 @@ class Store extends Model
     }
 
     /**
-     * SQL for the distance between a store row and the given point, in metres.
-     * The table prefix lets product queries reuse this expression in a scalar
-     * subquery without colliding with item columns.
-     */
-    public static function distanceExpression($longitude, $latitude, ?string $table = null): string
-    {
-        $longitude = (float) $longitude;
-        $latitude = (float) $latitude;
-        $longitudeColumn = $table ? $table . '.longitude' : 'longitude';
-        $latitudeColumn = $table ? $table . '.latitude' : 'latitude';
-
-        if (static::isPostgres()) {
-            return "ST_DistanceSphere(ST_MakePoint({$longitudeColumn}::double precision, {$latitudeColumn}::double precision), ST_MakePoint({$longitude}, {$latitude}))";
-        }
-
-        return 'ST_Distance_Sphere(point(' . $longitudeColumn . ', ' . $latitudeColumn . '),point(' . $longitude . ', ' . $latitude . '))';
-    }
-
-    /**
      * SQL for the distance between the store and the given point, in metres.
      */
     public static function distanceSqlExpression($longitude, $latitude): string
     {
-        return static::distanceExpression($longitude, $latitude) . ' as distance';
+        $longitude = (float) $longitude;
+        $latitude = (float) $latitude;
+
+        if (static::isPostgres()) {
+            return "ST_DistanceSphere(ST_MakePoint(longitude::double precision, latitude::double precision), ST_MakePoint({$longitude}, {$latitude})) as distance";
+        }
+
+        return 'ST_Distance_Sphere(point(longitude, latitude),point(' . $longitude . ', ' . $latitude . ')) as distance';
     }
 
     /**

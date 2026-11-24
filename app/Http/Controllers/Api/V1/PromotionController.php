@@ -332,7 +332,7 @@ class PromotionController extends Controller
                 ],
                 [
                     'question' => 'Can I cancel anytime?',
-                    'answer' => 'Yes, you can cancel anytime from your Subscription Plan page.',
+                    'answer' => 'Yes — you can cancel anytime from your Subscription Plan page.',
                 ],
             ],
         ], 200);

@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Auth;
  *
  * This runs *in addition* to the login-time check, not instead of it. It is the
  * backstop for every path that can create an admin session: the dedicated
- * login, the legacy four-role login and a remembered
+ * login, the legacy four-role login, the DriveMond bridge and a remembered
  * recaller cookie. If any of them establishes a session without MFA, this
  * middleware ends that session and sends the admin back to the password step
  * rather than degrading to password-only access.

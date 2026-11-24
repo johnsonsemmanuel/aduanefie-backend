@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\CentralLogics\Helpers;
 use App\Http\Controllers\Concerns\VerifiesHuman;
 use App\Models\Admin;
 use App\Services\AdminMfaService;
@@ -39,12 +40,10 @@ class MarketerAuthController extends Controller
 
     public function showLogin()
     {
-        $mfaRequired = (bool) config('marketer.mfa_required', false);
-
         if (Auth::guard('admin')->check()) {
             $admin = Auth::guard('admin')->user();
 
-            if ($admin->isMarketer() && (!$mfaRequired || $this->mfa->isVerifiedFor($admin))) {
+            if ($admin->isMarketer() && $this->mfa->isVerifiedFor($admin)) {
                 return redirect()->route('marketer.dashboard');
             }
 
@@ -63,10 +62,23 @@ class MarketerAuthController extends Controller
         $captcha->build();
         Session::put('six_captcha', $captcha->getPhrase());
 
-        return view('marketer.login', [
-            'custome_recaptcha' => $captcha,
+        // Same login component the store and admin portals use. Only the
+        // destination route, label and human check are marketer-specific; MFA
+        // remains on the dedicated setup/challenge routes after credentials
+        // are accepted.
+        return view('auth.login', [
+            'role' => 'marketer',
             'site_direction' => $siteDirection,
             'locale' => $locale,
+            'email' => null,
+            'password' => null,
+            'postRoute' => route('marketer.login.submit'),
+            'forgotRoute' => route('marketer.forgot'),
+            'mfa_required' => false,
+            'mfa_mode' => null,
+            'captcha' => $captcha,
+            'recaptcha' => Helpers::get_business_settings('recaptcha'),
+            'recaptcha_action' => 'marketer_login',
         ]);
     }
 
@@ -91,28 +103,16 @@ class MarketerAuthController extends Controller
                 ->withErrors(['email' => translate('messages.Incorrect_credential,_please_try_again')]);
         }
 
-        $mfaRequired = (bool) config('marketer.mfa_required', false);
+        // begin() destroys the password-only session and leaves only a short
+        // lived pending marker. There is deliberately no branch that creates a
+        // usable session from a password alone.
+        $mode = $this->mfa->begin($request, $admin, false);
 
-        if ($mfaRequired) {
-            $mode = $this->mfa->begin($request, $admin, false);
-
-            return redirect()->route(
-                $mode === AdminMfaService::MODE_SETUP
-                    ? 'marketer.mfa.setup'
-                    : 'marketer.mfa.challenge'
-            );
-        }
-
-        // Direct field login when MFA is not strictly required
-        Auth::guard('admin')->login($admin);
-        $admin->forceFill(['is_logged_in' => 1])->save();
-        $request->session()->regenerate();
-        $request->session()->put(AdminMfaService::SESSION_VERIFIED, [
-            'id' => $admin->id,
-            'at' => now()->getTimestamp(),
-        ]);
-
-        return redirect()->route('marketer.dashboard');
+        return redirect()->route(
+            $mode === AdminMfaService::MODE_SETUP
+                ? 'marketer.mfa.setup'
+                : 'marketer.mfa.challenge'
+        );
     }
 
     public function logout(Request $request)
@@ -172,27 +172,15 @@ class MarketerAuthController extends Controller
             ]);
         }
 
-        $mfaRequired = (bool) config('marketer.mfa_required', false);
-        if ($mfaRequired) {
-            $mode = $this->mfa->begin($request, $admin, false);
-            return redirect()->route(
-                $mode === AdminMfaService::MODE_SETUP
-                    ? 'marketer.mfa.setup'
-                    : 'marketer.mfa.challenge'
-            );
-        }
+        // A signed link proves the mailbox/phone, not the person. It lands in
+        // the same MFA setup/challenge as a password login and never creates
+        // a session by itself.
+        $mode = $this->mfa->begin($request, $admin, false);
 
-        Auth::guard('admin')->login($admin);
-        $admin->forceFill(['is_logged_in' => 1])->save();
-        $request->session()->regenerate();
-        $request->session()->put(AdminMfaService::SESSION_VERIFIED, [
-            'id' => $admin->id,
-            'at' => now()->getTimestamp(),
-        ]);
-
-        return redirect()->route('marketer.dashboard')->with(
-            'status',
-            'Signed in via one-time link. You can set a new password below anytime.'
+        return redirect()->route(
+            $mode === AdminMfaService::MODE_SETUP
+                ? 'marketer.mfa.setup'
+                : 'marketer.mfa.challenge'
         );
     }
 
@@ -263,7 +251,7 @@ class MarketerAuthController extends Controller
                     . "Referral Code: {$code}\n"
                     . "Portal URL: https://admin.aduanefie.com/marketer-login\n\n"
                     . "Once signed in, you can set a new password at the bottom of your dashboard.\n\n"
-                    . "- Aduanefie Partner Operations";
+                    . "— Aduanefie Partner Operations";
 
                 Mail::raw($body, function ($message) use ($admin) {
                     $message->to($admin->email, trim($admin->f_name . ' ' . $admin->l_name))

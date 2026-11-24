@@ -14,6 +14,7 @@ class RegionalTourRegistration extends Model
     public const STATUS_NO_SHOW = 'no_show';
 
     protected $fillable = [
+        'user_id',
         'tour_id',
         'farmer_name',
         'phone',
@@ -41,6 +42,11 @@ class RegionalTourRegistration extends Model
         'longitude' => 'float',
         'checked_in_at' => 'datetime',
     ];
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 
     public function tour(): BelongsTo
     {

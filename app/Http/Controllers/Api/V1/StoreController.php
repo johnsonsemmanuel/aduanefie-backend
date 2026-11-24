@@ -27,17 +27,11 @@ class StoreController extends Controller
             ], 403);
         }
 
-        $coordinates = $this->validatedNearbyCoordinates($request);
-        $asksForNearby = $this->requestAsksForNearby($request) || $filter_data === 'nearby';
-        if ($asksForNearby && !$coordinates) {
-            return $this->invalidNearbyCoordinatesResponse();
-        }
-
         $type = $request->query('type', 'all');
         $store_type = $request->query('store_type', 'all');
         $zone_id= $request->header('zoneId');
-        $longitude = $coordinates['longitude'] ?? null;
-        $latitude = $coordinates['latitude'] ?? null;
+        $longitude= $request->header('longitude');
+        $latitude= $request->header('latitude');
         $featured = $request->query('featured');
         $cacheKey = 'api_v1_stores_' . md5(json_encode([
             $zone_id,
@@ -311,12 +305,8 @@ class StoreController extends Controller
         $type = $request->query('type', 'all');
         $limit = $request->query('limit', 10);
         $offset = $request->query('offset', 1);
-        $coordinates = $this->validatedNearbyCoordinates($request);
-        if ($this->requestAsksForNearby($request) && !$coordinates) {
-            return $this->invalidNearbyCoordinatesResponse();
-        }
-        $longitude = $coordinates['longitude'] ?? null;
-        $latitude = $coordinates['latitude'] ?? null;
+        $longitude =  $request->header('longitude') ?? 0;
+        $latitude =  $request->header('latitude') ?? 0;
         $filter = $request->query('filter', '');
         $filter = $filter?(is_array($filter)?$filter:str_getcsv(trim($filter, "[]"), ',')):'';
         $rating_count = $request->query('rating_count');
@@ -373,14 +363,11 @@ class StoreController extends Controller
                 'errors' => $errors
             ], 403);
         }
-        $coordinates = $this->validatedNearbyCoordinates($request);
-        if (!$coordinates) {
-            return $this->invalidNearbyCoordinatesResponse();
-        }
-
         $type = $request->query('type', 'all');
         $zone_id= $request->header('zoneId');
-        $stores = StoreLogic::get_top_offer_near_me($zone_id, $request['limit'], $request['offset'], $type,$coordinates['longitude'],$coordinates['latitude']);
+        $longitude= $request->header('longitude');
+        $latitude= $request->header('latitude');
+        $stores = StoreLogic::get_top_offer_near_me($zone_id, $request['limit'], $request['offset'], $type,$longitude,$latitude);
         $stores['stores'] = Helpers::store_data_formatting($stores['stores'], true);
 
 

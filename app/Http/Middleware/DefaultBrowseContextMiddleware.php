@@ -4,17 +4,14 @@ namespace App\Http\Middleware;
 
 use App\Models\Module;
 use App\Models\Zone;
-use App\Services\Markets\ZoneAccessService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * Ensures API requests that carry a zoneId use one that belongs to the
- * declared market, and that public browse endpoints have valid active
- * zoneId/moduleId defaults. A client that declares X-Market-Country is
- * validated fail-closed: a stale or foreign zone is rejected instead of being
- * silently scoped to another country's data.
+ * Ensures public read-only catalog browse endpoints have valid active zoneId
+ * and moduleId defaults when a visitor has not selected a location/module yet
+ * or holds a stale deactivated module ID from an older session.
  */
 class DefaultBrowseContextMiddleware
 {
@@ -35,51 +32,11 @@ class DefaultBrowseContextMiddleware
 
     public function handle(Request $request, Closure $next)
     {
-        /** @var ZoneAccessService $zoneAccess */
-        $zoneAccess = app(ZoneAccessService::class);
-        $countryHeader = $request->header('X-Market-Country');
-        $countryQuery = $request->query('country_code');
-        $declared = $zoneAccess->isDeclared($countryHeader, $countryQuery);
-        $country = $declared
-            ? $zoneAccess->resolveCountry($countryHeader, $countryQuery)
-            : $zoneAccess->resolveCountry();
-
-        // A declared market makes the zone header authoritative. Validate it
-        // on every API request, not just browse GETs, so checkout/order/zone
-        // update paths cannot persist a stale zone from another country.
-        if ($declared && $this->hasZoneHeader($request)) {
-            $validated = $zoneAccess->resolveZoneIds($this->zoneHeader($request), $country);
-            if (empty($validated)) {
-                return response()->json([
-                    'errors' => [[
-                        'code' => 'zone_mismatch',
-                        'message' => 'The selected location does not belong to the current market.',
-                    ]],
-                ], 403);
-            }
-            $this->setZoneHeaders($request, $validated);
-        }
-
         if (! $request->isMethod('GET') || ! $this->isPublicBrowsePath($request)) {
             return $next($request);
         }
 
-        if ($declared) {
-            if ($country === null) {
-                // Unsupported/unknown market: never synthesise a zone.
-                $request->headers->remove('zoneId');
-                $request->headers->remove('zoneid');
-            } elseif (! $this->hasZoneHeader($request)) {
-                $defaults = $zoneAccess->defaultZoneIds($country);
-                if (! empty($defaults)) {
-                    $this->setZoneHeaders($request, $defaults);
-                }
-                // No zones for this market yet: leave the header absent so the
-                // controller returns its empty/unsupported state, not Ghana.
-            }
-        } elseif (! $this->hasValidZoneHeader($request)) {
-            // Legacy callers without a market declaration keep the previous
-            // behaviour: all active zones as the default browse context.
+        if (! $this->hasValidZoneHeader($request)) {
             $defaultZoneIds = Cache::remember('default_browse_zone_ids_v1', now()->addMinutes(5), function () {
                 $ids = Zone::where('status', 1)
                     ->orderBy('id')
@@ -91,7 +48,8 @@ class DefaultBrowseContextMiddleware
                 return empty($ids) ? [1] : $ids;
             });
 
-            $this->setZoneHeaders($request, $defaultZoneIds);
+            $request->headers->set('zoneId', json_encode($defaultZoneIds));
+            $request->headers->set('zoneid', json_encode($defaultZoneIds));
         }
 
         $activeModules = Cache::remember('active_modules_by_id_v1', now()->addMinutes(5), function () {
@@ -128,41 +86,16 @@ class DefaultBrowseContextMiddleware
         return false;
     }
 
-    /** @return string|null */
-    private function zoneHeader(Request $request): ?string
-    {
-        return $request->header('zoneId') ?? $request->header('zoneid');
-    }
-
-    private function hasZoneHeader(Request $request): bool
-    {
-        $raw = $this->zoneHeader($request);
-        if ($raw === null || $raw === '') {
-            return false;
-        }
-
-        return ! in_array(strtolower((string) $raw), ['null', 'undefined', 'nan'], true);
-    }
-
-    /** @param array<int> $ids */
-    private function setZoneHeaders(Request $request, array $ids): void
-    {
-        $encoded = json_encode(array_values(array_map('intval', $ids)));
-        $request->headers->set('zoneId', $encoded);
-        $request->headers->set('zoneid', $encoded);
-    }
-
     private function hasValidZoneHeader(Request $request): bool
     {
-        $raw = $this->zoneHeader($request);
-        if ($raw === null || $raw === '' || in_array(strtolower((string) $raw), ['null', 'undefined', 'nan'], true)) {
+        $raw = $request->header('zoneId');
+        if ($raw === null || $raw === '' || strtolower((string) $raw) === 'null' || strtolower((string) $raw) === 'undefined') {
             return false;
         }
 
         $decoded = json_decode((string) $raw, true);
         if (is_numeric($decoded) && (int) $decoded > 0) {
             $request->headers->set('zoneId', json_encode([(int) $decoded]));
-            $request->headers->set('zoneid', json_encode([(int) $decoded]));
             return true;
         }
 

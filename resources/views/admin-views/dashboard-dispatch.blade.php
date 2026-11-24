@@ -190,13 +190,12 @@
         }
 
         function initialize() {
-            @php($default_location = App\CentralLogics\Helpers::validatedCoordinates(App\CentralLogics\Helpers::get_business_settings('default_location')))
-            var myLatlng = @json($default_location);
-            if (!myLatlng) {
-                document.getElementById("map-canvas").innerHTML = '<div class="alert alert-warning">Set a valid default location before using the dispatch map.</div>';
-                map = null;
-                return;
-            }
+            @php($default_location = \App\Models\BusinessSetting::where('key', 'default_location')->first())
+            @php($default_location = $default_location->value ? json_decode($default_location->value, true) : 0)
+            var myLatlng = {
+                lat: {{ $default_location ? $default_location['lat'] : '23.757989' }},
+                lng: {{ $default_location ? $default_location['lng'] : '90.360587' }}
+            };
             var dmbounds = new google.maps.LatLngBounds(null);
             var myOptions = {
                 zoom: 13,

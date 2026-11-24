@@ -388,8 +388,10 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
         Route::post('{id}/quote', 'GroupBuyController@quote');
     });
 
-    // Regional Tours: farmer/cooperative tour signups & regional visit requests
-    Route::group(['prefix' => 'regional-tours'], function () {
+    // Regional Tours: account-only. A signed-in customer must own every
+    // application; the registration controller rejects requests without a
+    // resolved user even if this middleware is changed later.
+    Route::group(['prefix' => 'regional-tours', 'middleware' => 'auth:api'], function () {
         Route::get('/', 'RegionalTourController@index');
         Route::post('register', 'RegionalTourController@register')->middleware('throttle:api-public-write');
     });

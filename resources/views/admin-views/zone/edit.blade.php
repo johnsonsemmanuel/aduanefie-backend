@@ -74,15 +74,6 @@
                     </div>
 
                     <div class="pl-xl-5 pl-xxl-0">
-                        <div class="form-group mb-3">
-                            <label class="input-label" for="zone-country">{{ translate('Market_country') }}</label>
-                            <select name="country_code" id="zone-country" class="form-control" required>
-                                <option value="" disabled {{ $zone->country_code ? '' : 'selected' }}>{{ translate('Select_country') }}</option>
-                                @foreach($countries as $code => $countryName)
-                                    <option value="{{ $code }}" {{ $zone->country_code === $code ? 'selected' : '' }}>{{ $countryName }} ({{ $code }})</option>
-                                @endforeach
-                            </select>
-                        </div>
                         @if($language)
                             <div class="row lang_form" id="default-form">
                                 <div class="form-group col-6">

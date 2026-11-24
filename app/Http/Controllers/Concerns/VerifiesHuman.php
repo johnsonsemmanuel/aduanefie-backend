@@ -33,7 +33,12 @@ trait VerifiesHuman
                 'remoteip' => $request->ip(),
             ]);
 
-            if (!$response->successful()) {
+            $payload = $response->json();
+
+            // Google answers HTTP 200 even when the token is invalid, expired
+            // or belongs to another site key. The status code proves we reached
+            // Google; only payload.success proves the human check passed.
+            if (!$response->successful() || !is_array($payload) || ($payload['success'] ?? false) !== true) {
                 Toastr::error(translate('ReCaptcha Failed'));
                 return false;
             }

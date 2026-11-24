@@ -13,7 +13,6 @@ class CurrencyRate extends Model
         'base_currency',
         'quote_currency',
         'rate',
-        'source',
         'effective_at',
     ];
 
@@ -47,27 +46,5 @@ class CurrencyRate extends Model
         }
 
         return round($amount * (float) $rate->rate, 3);
-    }
-
-    /**
-     * Provenance for the exact row used by convert(). Displayed in quotes so a
-     * manual baseline is never mistaken for a live market rate.
-     */
-    public static function provenance(string $from, string $to): ?array
-    {
-        $rate = static::where('base_currency', strtoupper($from))
-            ->where('quote_currency', strtoupper($to))
-            ->orderByDesc('effective_at')
-            ->orderByDesc('id')
-            ->first();
-
-        if (! $rate) {
-            return null;
-        }
-
-        return [
-            'source' => $rate->source,
-            'effective_at' => optional($rate->effective_at)->toIso8601String(),
-        ];
     }
 }

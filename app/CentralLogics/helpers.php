@@ -86,45 +86,6 @@ class Helpers
         });
     }
 
-    /**
-     * Return a safe map point or null. Callers must show an explicit empty
-     * state instead of substituting a hardcoded city or placeholder 0,0.
-     */
-    public static function validatedCoordinates($location, bool $allowZero = false): ?array
-    {
-        if (is_object($location)) {
-            $location = (array) $location;
-        }
-
-        if (!is_array($location)) {
-            return null;
-        }
-
-        $lat = $location['lat'] ?? $location['latitude'] ?? null;
-        $lng = $location['lng'] ?? $location['longitude'] ?? null;
-
-        if (!is_numeric($lat) || !is_numeric($lng)) {
-            return null;
-        }
-
-        $lat = (float) $lat;
-        $lng = (float) $lng;
-
-        if (!is_finite($lat) || !is_finite($lng)) {
-            return null;
-        }
-
-        if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {
-            return null;
-        }
-
-        if (!$allowZero && $lat === 0.0 && $lng === 0.0) {
-            return null;
-        }
-
-        return ['lat' => $lat, 'lng' => $lng];
-    }
-
     public static function cached_priority_list(string $name, string $type, $default = '')
     {
         return Cache::remember("pl_val_{$name}_{$type}_v1", now()->addMinutes(3), function () use ($name, $type, $default) {
@@ -1290,6 +1251,19 @@ class Helpers
 
         return $config;
     }
+    public static function get_external_data($name)
+    {
+        $config = null;
+
+        $paymentmethod = ExternalConfiguration::where('key', $name)->first();
+
+        if ($paymentmethod) {
+            $config = $paymentmethod?->value;
+        }
+
+        return $config;
+    }
+
     public static function currency_code()
     {
         if (!config('currency') ){
@@ -2190,107 +2164,19 @@ class Helpers
         return isset($config)?($config==0?'s3':'public'):'public';
     }
 
-    /**
-     * Strict content-based upload validation. The client-supplied filename and
-     * declared MIME type are never trusted; the real MIME is sniffed from the
-     * file bytes and mapped to a fixed, non-executable extension.
-     *
-     * @return string safe extension (without dot)
-     *
-     * @throws \Illuminate\Validation\ValidationException
-     */
-    public static function validatedUploadExtension($file): string
-    {
-        if (! $file instanceof \Illuminate\Http\UploadedFile || ! $file->isValid()) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'file' => ['Invalid file upload.'],
-            ]);
-        }
-
-        // finfo-based detection on the actual bytes, not the client's headers.
-        $mime = strtolower((string) $file->getMimeType());
-        $map = self::uploadMimeMap();
-        if (! isset($map[$mime])) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'file' => ['Unsupported file type.'],
-            ]);
-        }
-        if ($file->getSize() > self::uploadMaxBytes()) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'file' => ['File is too large.'],
-            ]);
-        }
-
-        return $map[$mime];
-    }
-
-    /** Detect the MIME of raw bytes (used for files extracted from archives). */
-    public static function mimeFromBytes(string $bytes): ?string
-    {
-        $finfo = @finfo_open(FILEINFO_MIME_TYPE);
-        if ($finfo === false) {
-            return null;
-        }
-        $mime = finfo_buffer($finfo, $bytes);
-        finfo_close($finfo);
-
-        return is_string($mime) ? strtolower($mime) : null;
-    }
-
-    public static function safeUploadExtensionForMime(?string $mime): ?string
-    {
-        return self::uploadMimeMap()[$mime] ?? null;
-    }
-
-    public static function uploadMaxBytes(): int
-    {
-        return (int) (config('uploads.max_bytes') ?: 50 * 1024 * 1024);
-    }
-
-    private static function uploadMimeMap(): array
-    {
-        // Deliberately excludes SVG (stored XSS), archives and every executable
-        // or script MIME. Extensions are fixed here, never taken from input.
-        return [
-            'image/png' => 'png',
-            'image/jpeg' => 'jpg',
-            'image/gif' => 'gif',
-            'image/webp' => 'webp',
-            'image/bmp' => 'bmp',
-            'image/x-icon' => 'ico',
-            'image/vnd.microsoft.icon' => 'ico',
-            'application/pdf' => 'pdf',
-            'video/mp4' => 'mp4',
-            'video/webm' => 'webm',
-            'video/quicktime' => 'mov',
-            'video/x-m4v' => 'm4v',
-        ];
-    }
-
     public static function upload(string $dir, string $format, $image = null)
     {
-        if ($image === null) {
-            return 'def.png';
-        }
-
-        // $format is kept for backwards compatibility but is no longer trusted
-        // to choose the extension; that would allow a .php upload to be stored
-        // as .php and executed through the public/storage symlink.
-        $extension = self::validatedUploadExtension($image);
-
         try {
-            $imageName = \Carbon\Carbon::now()->toDateString() . "-" . uniqid() . "." . $extension;
-            $disk = Storage::disk(self::getDisk());
-            if (! $disk->exists($dir)) {
-                $disk->makeDirectory($dir);
+            if ($image != null) {
+                $imageName = \Carbon\Carbon::now()->toDateString() . "-" . uniqid() . "." . $format;
+                if (!Storage::disk(self::getDisk())->exists($dir)) {
+                    Storage::disk(self::getDisk())->makeDirectory($dir);
+                }
+                Storage::disk(self::getDisk())->putFileAs($dir, $image, $imageName);
+            } else {
+                $imageName = 'def.png';
             }
-            $disk->putFileAs($dir, $image, $imageName);
         } catch (\Exception $e) {
-            // Fail closed: never hand back a filename for a file that was not
-            // written, and never silently swallow an unsafe upload.
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'file' => ['Upload could not be stored.'],
-            ]);
         }
         return $imageName;
     }
@@ -2688,67 +2574,6 @@ class Helpers
     public static function remove_invalid_charcaters($str)
     {
         return str_ireplace(['\'', '"', ';', '<', '>'], ' ', $str);
-    }
-
-    /**
-     * Signed, single-purpose onboarding token. Issued when a store is created
-     * during self-registration and required to finalise that store's business
-     * plan. It is bound to the store id and creation time with an HMAC keyed by
-     * the application key, so a caller cannot finalise an arbitrary store by
-     * guessing its numeric id. No server-side state or migration is required.
-     */
-    public static function storeOnboardingToken($store)
-    {
-        $payload = $store->id . '|' . ($store->created_at?->timestamp ?? 0);
-        $signature = hash_hmac('sha256', $payload, self::onboardingSigningKey());
-
-        return base64_encode($payload . '|' . $signature);
-    }
-
-    /**
-     * Resolve a pending store from an onboarding token, or null when the token
-     * is malformed, tampered with, or targets a store that is no longer in the
-     * pending ('none') state. Requiring the pending state makes the token
-     * effectively single-use: once the plan is chosen it cannot be replayed.
-     */
-    public static function resolveStoreFromOnboardingToken($token, $claimedStoreId = null)
-    {
-        if (!is_string($token) || $token === '') {
-            return null;
-        }
-
-        $decoded = base64_decode($token, true);
-        if ($decoded === false) {
-            return null;
-        }
-
-        $parts = explode('|', $decoded);
-        if (count($parts) !== 3) {
-            return null;
-        }
-        [$id, $timestamp, $signature] = $parts;
-        if (!ctype_digit($id) || !ctype_digit($timestamp)) {
-            return null;
-        }
-
-        $payload = $id . '|' . $timestamp;
-        $expected = hash_hmac('sha256', $payload, self::onboardingSigningKey());
-        if (!hash_equals($expected, $signature)) {
-            return null;
-        }
-
-        if ($claimedStoreId !== null && (string) $claimedStoreId !== $id) {
-            return null;
-        }
-
-        return Store::where('id', (int) $id)
-            ->where('store_business_model', 'none')
-            ->first();
-    }
-
-    private static function onboardingSigningKey()
-    {
-        return hash('sha256', (string) config('app.key'));
     }
 
     //Generate referer code
@@ -3399,6 +3224,47 @@ class Helpers
     public static function product_tax($price , $tax, $is_include=false){
         $price_tax = ($price * $tax) / (100 + ($is_include?$tax:0)) ;
         return $price_tax;
+    }
+
+    public static function apple_client_secret(){
+        // Set up the necessary variables
+        $keyId = 'U7KA7F82UM';
+        $teamId = '7WSYLQ8Y87';
+        $clientId = 'com.sixamtech.sixamMartApp';
+        $privateKey = file_get_contents('AuthKey_U7KA7F82UM.p8'); // Should be a string containing the contents of the private key file.
+
+        // Create the JWT header
+        $header = [
+            'alg' => 'ES256',
+            'kid' => $keyId,
+        ];
+
+        // Create the JWT payload
+        $payload = [
+            'iss' => $teamId,
+            'iat' => time(),
+            'exp' => time() + 86400 * 180, // 180 days in seconds
+            'aud' => 'https://appleid.apple.com',
+            'sub' => $clientId,
+        ];
+
+        // Encode the JWT header and payload
+        $base64Header = base64_encode(json_encode($header));
+        $base64Payload = base64_encode(json_encode($payload));
+
+        // Create the signature using the private key and the SHA-256 algorithm
+        $dataToSign = $base64Header . '.' . $base64Payload;
+        $signature = '';
+        openssl_sign($dataToSign, $signature, $privateKey, 'sha256');
+
+        // Encode the signature
+        $base64Signature = base64_encode($signature);
+
+        // Create the Apple Client Secret key
+        $clientSecret = $base64Header . '.' . $base64Payload . '.' . $base64Signature;
+
+        // Output the key
+        return $clientSecret;
     }
 
     public static function error_formater($key, $mesage, $errors = [])
@@ -4712,6 +4578,24 @@ class Helpers
         }
             return 'closed';
         }
+
+    public static function checkExternalConfiguration($externalBaseUrl, $externalTokem, $martToken)
+    {
+        $activationMode = ExternalConfiguration::where('key', 'activation_mode')->first()?->value;
+        $driveMondBaseUrl = ExternalConfiguration::where('key', 'drivemond_base_url')->first()?->value;
+        $driveMondToken = ExternalConfiguration::where('key', 'drivemond_token')->first()?->value;
+        $systemSelfToken = ExternalConfiguration::where('key', 'system_self_token')->first()?->value;
+        return $activationMode == 1 && $driveMondBaseUrl == $externalBaseUrl && $driveMondToken == $externalTokem && $systemSelfToken == $martToken;
+    }
+
+    public static function checkSelfExternalConfiguration()
+    {
+        $activationMode = ExternalConfiguration::where('key', 'activation_mode')->first()?->value;
+        $driveMondBaseUrl = ExternalConfiguration::where('key', 'drivemond_base_url')->first()?->value;
+        $driveMondToken = ExternalConfiguration::where('key', 'drivemond_token')->first()?->value;
+        $systemSelfToken = ExternalConfiguration::where('key', 'system_self_token')->first()?->value;
+        return $activationMode == 1 && $driveMondBaseUrl != null && $driveMondToken != null && $systemSelfToken != null;
+    }
 
     public static function businessUpdateOrInsert($key, $value)
     {

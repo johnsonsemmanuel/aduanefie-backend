@@ -18,24 +18,6 @@ class GroupBuyParticipant extends Model
 
     protected $guarded = ['id'];
 
-    /**
-     * Defence in depth: these fields are private to the member and must never
-     * appear in a serialised participant, whichever endpoint returns one. The
-     * membership-gated member list uses an explicit allowlist that excludes
-     * them; hiding them here prevents an accidental future `toArray()` from
-     * leaking addresses, coordinates or internal identifiers.
-     */
-    protected $hidden = [
-        'user_id',
-        'guest_id',
-        'delivery_address',
-        'gps_lat',
-        'gps_lng',
-        'consent_accepted_at',
-        'notification_last_sent_at',
-        'released_at',
-    ];
-
     protected $casts = [
         'group_buy_id' => 'integer',
         'user_id' => 'integer',

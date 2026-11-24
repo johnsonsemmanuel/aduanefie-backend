@@ -12,6 +12,7 @@ use App\Models\MarketerPayout;
 use App\Models\Store;
 use App\Scopes\ZoneScope;
 use App\Services\MarketerCommissionService;
+use App\Support\PayoutRails;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -308,7 +309,7 @@ class MarketerController extends Controller
             'note' => 'nullable|string|max:500',
         ]);
 
-        $this->validatePayoutRail($data);
+        $data = $this->validatePayoutRail($data);
 
         $commissions = MarketerCommission::query()
             ->whereIn('id', $data['commission_ids'])
@@ -469,6 +470,16 @@ class MarketerController extends Controller
         $beforeMarketerId = $store->marketer_id;
         $store->assignMarketer($marketerId);
 
+        // If the store is already verified, this attribution earns the bounty
+        // immediately. creditBounty is idempotent, so re-attributing the same
+        // marketer cannot pay twice.
+        if ($marketerId) {
+            $newMarketer = Admin::find($marketerId);
+            if ($newMarketer && $newMarketer->isMarketer()) {
+                $this->commissions->creditBounty($newMarketer, $store->fresh());
+            }
+        }
+
         Toastr::success($marketerId
             ? 'Store attributed. Commission accrues for orders delivered from now on.'
             : 'Marketer removed from the store.');
@@ -494,11 +505,13 @@ class MarketerController extends Controller
         $this->authorizeSuperAdmin();
 
         $created = $this->commissions->accrue();
+        $bounties = $this->commissions->syncBounties();
         $result = $this->commissions->refresh();
 
         Toastr::success(sprintf(
-            '%d accrued, %d voided, %d held, %d restored, %d released.',
+            '%d accrued, %d bounties credited, %d voided, %d held, %d restored, %d released.',
             $created,
+            $bounties,
             $result['voided'],
             $result['held'],
             $result['restored'],
@@ -799,50 +812,14 @@ class MarketerController extends Controller
     }
 
     /**
-     * Validate that the network is supported for the country and that the
-     * account number matches the network's expected pattern.
+     * Canonical rail validation. Returns the normalised values to persist.
+     *
+     * @return array<string, mixed>
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    private function validatePayoutRail(array $data): void
+    private function validatePayoutRail(array $data): array
     {
-        $country = strtoupper(trim((string) ($data['country'] ?? '')));
-        $network = strtoupper(trim((string) ($data['network'] ?? '')));
-        $account = preg_replace('/\D/', '', (string) ($data['account_number'] ?? ''));
-
-        $rails = config('payout.countries', []);
-        $countryConfig = $rails[$country] ?? null;
-
-        if (!$countryConfig) {
-            $validator = \Illuminate\Support\Facades\Validator::make(
-                ['country' => $data['country'] ?? ''],
-                ['country' => 'required|in:' . implode(',', array_keys($rails))],
-                ['country.in' => 'The selected country is not supported for payouts yet.']
-            );
-            throw new \Illuminate\Validation\ValidationException($validator);
-        }
-
-        $networks = $countryConfig['networks'];
-        if (!array_key_exists($network, $networks)) {
-            $validator = \Illuminate\Support\Facades\Validator::make(
-                ['network' => $network],
-                ['network' => 'required|in:' . implode(',', array_keys($networks))],
-                ['network.in' => 'That network is not supported in ' . $countryConfig['name'] . '.']
-            );
-            throw new \Illuminate\Validation\ValidationException($validator);
-        }
-
-        $pattern = $networks[$network]['pattern'] ?? null;
-        if ($pattern && !preg_match('#' . $pattern . '#', $account)) {
-            $validator = \Illuminate\Support\Facades\Validator::make(
-                ['account_number' => $data['account_number'] ?? ''],
-                ['account_number' => 'required|regex:' . $pattern],
-                [
-                    'account_number.regex' => 'The account number does not look like a valid '
-                        . $networks[$network]['label'] . ' number for ' . $countryConfig['name'] . '.',
-                ]
-            );
-            throw new \Illuminate\Validation\ValidationException($validator);
-        }
+        return PayoutRails::validate($data);
     }
 }

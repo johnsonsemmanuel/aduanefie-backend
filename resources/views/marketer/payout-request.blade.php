@@ -23,9 +23,26 @@
             @csrf
 
             <div class="field">
+                <label for="country">Country</label>
+                <select name="country" id="country" required>
+                    <option value="">Select a country</option>
+                    @foreach($countries as $code => $name)
+                        <option value="{{ $code }}" {{ old('country') === $code ? 'selected' : '' }}>{{ $name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="field">
                 <label for="network">Mobile money network</label>
-                <input type="text" name="network" id="network" value="{{ old('network') }}"
-                       placeholder="MTN, Vodafone, AirtelTigo, M-Pesa…" required maxlength="50">
+                <select name="network" id="network" required>
+                    <option value="">Select a network</option>
+                    @foreach($networksByCountry as $countryCode => $networks)
+                        @foreach($networks as $networkKey => $label)
+                            <option value="{{ $networkKey }}" data-country="{{ $countryCode }}"
+                                {{ old('network') === $networkKey ? 'selected' : '' }}>{{ $label }}</option>
+                        @endforeach
+                    @endforeach
+                </select>
             </div>
 
             <div class="field">
@@ -36,14 +53,8 @@
 
             <div class="field">
                 <label for="account_number">Account number</label>
-                <input type="tel" name="account_number" id="account_number" value="{{ old('account_number') }}"
+                <input type="tel" name="account_number" id="account_number" value="{{ old('account_number', $marketer->phone) }}"
                        required maxlength="50">
-            </div>
-
-            <div class="field">
-                <label for="country">Country</label>
-                <input type="text" name="country" id="country" value="{{ old('country') }}"
-                       placeholder="GH, NG, KE…" required maxlength="10">
             </div>
 
             <div class="field">
@@ -61,4 +72,25 @@
             <a class="btn secondary" href="{{ route('marketer.payouts') }}">Cancel</a>
         </form>
     </div>
+
+    <script>
+        (function () {
+            const country = document.getElementById('country');
+            const network = document.getElementById('network');
+            if (!country || !network) return;
+
+            function filterNetworks() {
+                for (const option of network.options) {
+                    if (!option.dataset.country) continue;
+                    const allowed = option.dataset.country === country.value;
+                    option.disabled = !allowed;
+                    option.hidden = !allowed;
+                    if (!allowed && option.selected) option.selected = false;
+                }
+            }
+
+            country.addEventListener('change', filterNetworks);
+            filterNetworks();
+        })();
+    </script>
 @endsection

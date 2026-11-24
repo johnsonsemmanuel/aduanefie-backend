@@ -11,7 +11,7 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $providerId = auth('vendor')->id();
+        $providerId = auth('api')->user() ? auth('api')->user()->id : null;
 
         $stats = [
             'total_services' => Service::where('provider_id', $providerId)->count(),
@@ -29,7 +29,7 @@ class ServiceOfferingController extends Controller
 {
     public function index()
     {
-        $providerId = auth('vendor')->id();
+        $providerId = auth('api')->user() ? auth('api')->user()->id : null;
         $services = Service::where('provider_id', $providerId)->orderBy('created_at', 'desc')->get();
         return view('service::provider.offerings.index', compact('services'));
     }
@@ -39,7 +39,7 @@ class ServiceBookingController extends Controller
 {
     public function index()
     {
-        $providerId = auth('vendor')->id();
+        $providerId = auth('api')->user() ? auth('api')->user()->id : null;
         $bookings = ServiceBooking::with('service')->where('provider_id', $providerId)->orderBy('created_at', 'desc')->paginate(15);
         return view('service::provider.bookings.index', compact('bookings'));
     }

@@ -175,13 +175,9 @@ class CategoryController extends Controller
             return response()->json(['errors' => Helpers::error_processor($validator)], 403);
         }
 
-        $coordinates = $this->validatedNearbyCoordinates($request);
-        if ($this->requestAsksForNearby($request) && !$coordinates) {
-            return $this->invalidNearbyCoordinatesResponse();
-        }
         $zone_id= $request->header('zoneId');
-        $longitude = $coordinates['longitude'] ?? null;
-        $latitude = $coordinates['latitude'] ?? null;
+        $longitude= $request->header('longitude');
+        $latitude= $request->header('latitude');
         $type = $request->query('type', 'all');
 
         $data = CategoryLogic::stores($id, $zone_id, $request['limit'], $request['offset'], $type,$longitude,$latitude);
@@ -208,13 +204,9 @@ class CategoryController extends Controller
             return response()->json(['errors' => Helpers::error_processor($validator)], 403);
         }
 
-        $coordinates = $this->validatedNearbyCoordinates($request);
-        if ($this->requestAsksForNearby($request) && !$coordinates) {
-            return $this->invalidNearbyCoordinatesResponse();
-        }
         $zone_id= $request->header('zoneId');
-        $longitude = $coordinates['longitude'] ?? null;
-        $latitude = $coordinates['latitude'] ?? null;
+        $longitude= $request->header('longitude');
+        $latitude= $request->header('latitude');
         $type = $request->query('type', 'all');
         $category_ids = $request['category_ids']?json_decode($request['category_ids']):'';
 

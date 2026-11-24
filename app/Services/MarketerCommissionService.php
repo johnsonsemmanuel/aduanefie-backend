@@ -12,6 +12,7 @@ use App\Models\Store;
 use App\Scopes\ZoneScope;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use RuntimeException;
 
 /**
@@ -180,6 +181,99 @@ class MarketerCommissionService
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+    }
+
+    /**
+     * Credit the onboarding bounty for one verified, attributed store.
+     *
+     * The bounty is a ledger row just like an order commission, so it can be
+     * reserved, approved and paid by the existing payout flow. bounty_key makes
+     * repeated calls harmless — every attribution/verification path can call
+     * this without coordinating with the others.
+     */
+    public function creditBounty(Admin $marketer, Store $store): bool
+    {
+        if (!Schema::hasColumn('marketer_commissions', 'bounty_key')) {
+            return false;
+        }
+
+        if ((int) $store->marketer_id !== (int) $marketer->id || !$this->storeIsVerified($store)) {
+            return false;
+        }
+
+        $amount = round($marketer->marketerOnboardingBounty(), 2);
+        if ($amount <= 0) {
+            return false;
+        }
+
+        $inserted = DB::table('marketer_commissions')->insertOrIgnore([
+            'marketer_id' => $marketer->id,
+            'store_id' => $store->id,
+            'order_id' => null,
+            'order_transaction_id' => null,
+            'type' => MarketerCommission::TYPE_BOUNTY,
+            'bounty_key' => $marketer->id . ':' . $store->id,
+            'base_amount' => $amount,
+            'rate' => 100,
+            'amount' => $amount,
+            'currency' => $this->currency(),
+            'status' => MarketerCommission::STATUS_ELIGIBLE,
+            'eligible_at' => now(),
+            'payout_id' => null,
+            'void_reason' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return $inserted > 0;
+    }
+
+    /**
+     * Safety net for attribution paths that do not call creditBounty directly
+     * (for example a store approved through a generic admin screen). Runs as a
+     * scan, like order accrual, so a new onboarding path cannot silently lose
+     * a marketer's bounty.
+     */
+    public function syncBounties(?Admin $marketer = null): int
+    {
+        if (!Schema::hasColumn('marketer_commissions', 'bounty_key')) {
+            return 0;
+        }
+
+        $query = Store::withoutGlobalScope(ZoneScope::class)
+            ->whereNotNull('marketer_id')
+            ->where(function ($query) {
+                $query->where('status', 1);
+                if (Schema::hasColumn('stores', 'marketer_verified')) {
+                    $query->orWhere('marketer_verified', true);
+                }
+            })
+            ->with('marketer');
+
+        if ($marketer) {
+            $query->where('marketer_id', $marketer->id);
+        }
+
+        $created = 0;
+        $query->chunkById(200, function ($stores) use (&$created) {
+            foreach ($stores as $store) {
+                $owner = $store->marketer;
+                if ($owner && $owner->isMarketer() && $this->creditBounty($owner, $store)) {
+                    $created++;
+                }
+            }
+        });
+
+        return $created;
+    }
+
+    private function storeIsVerified(Store $store): bool
+    {
+        if ((int) $store->status === 1) {
+            return true;
+        }
+
+        return Schema::hasColumn('stores', 'marketer_verified') && (bool) $store->marketer_verified;
     }
 
     /**
@@ -464,12 +558,19 @@ class MarketerCommissionService
      */
     private function assertCommissionsStillPayable(MarketerPayout $payout): void
     {
-        $orderIds = MarketerCommission::where('payout_id', $payout->id)
+        $payableRows = MarketerCommission::where('payout_id', $payout->id)
             ->where('status', '!=', MarketerCommission::STATUS_VOID)
-            ->pluck('order_id');
+            ->get(['order_id']);
 
-        if ($orderIds->isEmpty()) {
+        if ($payableRows->isEmpty()) {
             throw new RuntimeException('This payout has no valid commissions left.');
+        }
+
+        // A bounty has no order behind it. Once credited it stays payable, so
+        // a bounty-only payout must not be rejected for having "no orders".
+        $orderIds = $payableRows->pluck('order_id')->filter()->values();
+        if ($orderIds->isEmpty()) {
+            return;
         }
 
         $disqualified = Order::withoutGlobalScope(ZoneScope::class)
@@ -571,6 +672,17 @@ class MarketerCommissionService
             ? $marketer->marketerOnboardingBounty()
             : (float) config('marketer.default_onboarding_bounty', 25);
 
+        // The ledger is the source of truth: a bounty shown here is a row that
+        // the payout flow can actually reserve. No derived "count x rate"
+        // number that can never be withdrawn.
+        $bountyEarned = 0.0;
+        if (Schema::hasColumn('marketer_commissions', 'type')) {
+            $bountyEarned = (float) MarketerCommission::where('marketer_id', $marketer->id)
+                ->where('type', MarketerCommission::TYPE_BOUNTY)
+                ->where('status', '!=', MarketerCommission::STATUS_VOID)
+                ->sum('amount');
+        }
+
         return [
             'pending' => $value(MarketerCommission::STATUS_PENDING),
             'pending_count' => $count(MarketerCommission::STATUS_PENDING),
@@ -586,8 +698,8 @@ class MarketerCommissionService
             'stores' => $storeCount,
             'verified_stores' => $verifiedStoreCount,
             'onboarding_bounty_rate' => $bountyRate,
-            'onboarding_bounty_earned' => round($verifiedStoreCount * $bountyRate, 2),
-            'verified_bounty_earned' => round($verifiedStoreCount * $bountyRate, 2),
+            'onboarding_bounty_earned' => round($bountyEarned, 2),
+            'verified_bounty_earned' => round($bountyEarned, 2),
             'total_sales' => round($totalSales, 2),
             'delivered_orders_count' => $deliveredOrdersCount,
             'currency' => $this->currency(),

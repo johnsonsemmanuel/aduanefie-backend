@@ -8,34 +8,10 @@ use App\Models\Category;
 use App\Models\PriorityList;
 use App\Models\FlashSaleItem;
 use App\Models\BusinessSetting;
-use App\Models\Store;
 
 
 class ProductLogic
 {
-    /**
-     * Rank products by the distance of their store from the customer location.
-     * A scalar subquery keeps this valid for item queries that do not join the
-     * stores table directly.
-     */
-    public static function orderByNearbyStoreDistance($query, ?array $coordinates)
-    {
-        if (!$coordinates) {
-            return $query;
-        }
-
-        $distance = Store::distanceExpression(
-            $coordinates['longitude'],
-            $coordinates['latitude'],
-            'stores',
-        );
-
-        return $query
-            ->selectRaw('(SELECT ' . $distance . ' FROM stores WHERE stores.id = items.store_id) as nearby_distance')
-            ->reorder()
-            ->orderBy('nearby_distance');
-    }
-
     public static function get_product($id)
     {
         return Item::active()
@@ -233,7 +209,7 @@ class ProductLogic
         ];
     }
 
-    public static function get_new_products($zone_id, $type, $min=false, $max=false,$product_id=null,$limit = null, $offset = null, $filter = null, $rating_count = null, $category_ids = null, $brand_ids = null, ?array $nearbyCoordinates = null)
+    public static function get_new_products($zone_id, $type, $min=false, $max=false,$product_id=null,$limit = null, $offset = null, $filter = null, $rating_count = null, $category_ids = null, $brand_ids = null)
     {
 
         $latest_items_default_status = 1;
@@ -339,7 +315,6 @@ class ProductLogic
             }
         }
 
-        $query = self::orderByNearbyStoreDistance($query, $nearbyCoordinates);
         $item_categories = $query->pluck('category_id')->toArray();
         $paginator = $query->paginate($limit, ['*'], 'page', $offset);
 
@@ -742,7 +717,7 @@ class ProductLogic
 
     }
 
-    public static function discounted_products($zone_id, $limit = null, $offset = null, $type = 'all', $category_ids = null, $filter = null,$min=false, $max=false, $rating_count = null, $brand_ids = null, ?array $nearbyCoordinates = null)
+    public static function discounted_products($zone_id, $limit = null, $offset = null, $type = 'all', $category_ids = null, $filter = null,$min=false, $max=false, $rating_count = null, $brand_ids = null)
     {
         $special_offer_default_status = Helpers::cached_business_setting('special_offer_default_status', 1);
         $special_offer_sort_by_general = Helpers::cached_priority_list('special_offer_sort_by_general', 'general', '');
@@ -803,8 +778,6 @@ class ProductLogic
             });
 
 
-            $query = self::orderByNearbyStoreDistance($query, $nearbyCoordinates);
-
             if($special_offer_default_status == '1') {
                 $query = $query->orderBy('discount','desc');
             }else{
@@ -858,7 +831,7 @@ class ProductLogic
             'categories' => $categories,
         ];
     }
-    public static function brand_products($zone_id, $limit = null, $offset = null, $type = 'all', $category_ids = null, $filter = null,$min=false, $max=false, $rating_count = null, $brand_ids = null, ?array $nearbyCoordinates = null)
+    public static function brand_products($zone_id, $limit = null, $offset = null, $type = 'all', $category_ids = null, $filter = null,$min=false, $max=false, $rating_count = null, $brand_ids = null)
     {
         $category_ids = isset($category_ids)?(is_array($category_ids)?$category_ids:json_decode($category_ids)):[];
         $brand_ids = isset($brand_ids)?(is_array($brand_ids)?$brand_ids:json_decode($brand_ids)):[];
@@ -915,8 +888,6 @@ class ProductLogic
                 ->when($filter && in_array('discounted',$filter),function ($qurey){
                     return $qurey->Discounted()->orderBy('discount','desc');
                 });
-
-            $paginator = self::orderByNearbyStoreDistance($paginator, $nearbyCoordinates);
 
             if($limit != null && $offset != null)
             {

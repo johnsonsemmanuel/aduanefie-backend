@@ -10,13 +10,10 @@ use App\Library\Payer;
 use App\Traits\Payment;
 use App\Library\Receiver;
 use App\Library\Payment as PaymentInfo;
-use App\Services\Markets\MarketProfileService;
-use InvalidArgumentException;
 
 class PaymentController extends Controller
 {
-    public function __construct(private MarketProfileService $markets)
-    {
+    public function __construct(){
         if (is_dir('App\Traits') && trait_exists('App\Traits\Payment')) {
             $this->extendWithPaymentGatewayTrait();
         }
@@ -102,38 +99,7 @@ class PaymentController extends Controller
 
         $payer = new Payer($customer['first_name'].' '.$customer['last_name'], $customer['email'], $customer['phone'], '');
 
-        // The order's own currency is authoritative. Never charge the global
-        // configured currency for an NGN/XOF-labelled order. If the market,
-        // gateway or currency combination is unsupported, fail closed.
-        $gateway = strtolower((string) $request->payment_method);
-        // The charge currency matches the order amount, which is denominated
-        // in the fulfilling store's market (including cross-border landed
-        // cost). Prefer the origin, then the store. Destination is only a last
-        // resort. Never fall back to Ghana for another market's order.
-        $orderCountry = $this->markets->normalizeCountry(
-            $order->origin_country ?: $order->destination_country
-        );
-        if (! $orderCountry && $order->store_id) {
-            $store = \App\Models\Store::where('id', $order->store_id)
-                ->first(['country_code', 'country']);
-            $storeCountry = $store?->country_code ?: $store?->country;
-            $orderCountry = $this->markets->normalizeCountry($storeCountry);
-        }
-        $orderCountry = $orderCountry ?: $this->markets->defaultCountry();
-        $currency = strtoupper((string) (
-            $order->currency_code ?: $this->markets->currencyForCountry($orderCountry) ?: ''
-        ));
-
-        try {
-            $this->markets->assertPayable($orderCountry, $gateway, $currency);
-        } catch (InvalidArgumentException $exception) {
-            return response()->json([
-                'errors' => [[
-                    'code' => 'unsupported_payment_currency',
-                    'message' => $exception->getMessage(),
-                ]],
-            ], 403);
-        }
+        $currency=BusinessSetting::where(['key'=>'currency'])->first()->value;
 
         $store_logo= BusinessSetting::where(['key' => 'logo'])->first();
         $additional_data = [

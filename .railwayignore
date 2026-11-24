@@ -43,3 +43,4 @@
 !routes/vendor/**
 !routes/rest_api/v1/vendor/
 !routes/rest_api/v1/vendor/**
+public/storage

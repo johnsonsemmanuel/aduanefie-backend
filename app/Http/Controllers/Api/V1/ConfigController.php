@@ -13,7 +13,6 @@ use App\Models\SocialMedia;
 use App\Traits\AddonHelper;
 use Illuminate\Http\Request;
 use App\CentralLogics\Helpers;
-use App\Services\Markets\ZoneAccessService;
 use App\Models\BusinessSetting;
 use App\Models\OfflinePayments;
 use App\Models\ReactTestimonial;
@@ -103,9 +102,7 @@ class ConfigController extends Controller
         });
         $cod = json_decode($settings['cash_on_delivery'], true);
         $digital_payment = json_decode($settings['digital_payment'], true);
-        $default_location = Helpers::validatedCoordinates(
-            isset($settings['default_location']) ? json_decode($settings['default_location'], true) : null
-        );
+        $default_location = isset($settings['default_location']) ? json_decode($settings['default_location'], true) : 0;
         $free_delivery_over = $settings['free_delivery_over'];
         $free_delivery_over = isset($free_delivery_over) ? (float)$free_delivery_over : $free_delivery_over;
         $additional_charge = isset($settings['additional_charge']) ? (float)$settings['additional_charge'] : 0;
@@ -199,7 +196,7 @@ class ConfigController extends Controller
             // 'store_location_coverage' => Branch::where(['id'=>1])->first(['longitude','latitude','coverage']),
             // 'minimum_order_value' => (float)$settings['minimum_order_value'],
             'country' => $settings['country'],
-            'default_location' => $default_location,
+            'default_location' => ['lat' => $default_location ? $default_location['lat'] : '23.757989', 'lng' => $default_location ? $default_location['lng'] : '90.360587'],
             'currency_symbol' => $currency_symbol,
             'currency_symbol_direction' => $settings['currency_symbol_position'],
             'app_minimum_version_android' => (float)$settings['app_minimum_version_android'],
@@ -376,30 +373,8 @@ class ConfigController extends Controller
         if ($validator->errors()->count() > 0) {
             return response()->json(['errors' => Helpers::error_processor($validator)], 403);
         }
-
-        // A coordinate only resolves to a zone inside the declared market.
-        // Without this filter a stale zone from a previous country could be
-        // written back to localStorage and replayed on every later request.
-        /** @var ZoneAccessService $zoneAccess */
-        $zoneAccess = app(ZoneAccessService::class);
-        $countryHeader = $request->header('X-Market-Country');
-        $countryQuery = $request->query('country_code');
-        $declared = $zoneAccess->isDeclared($countryHeader, $countryQuery);
-        $country = $zoneAccess->resolveCountry($countryHeader, $countryQuery);
-        if ($declared && $country === null) {
-            return response()->json([
-                'errors' => [
-                    ['code' => 'unsupported_country', 'message' => translate('messages.service_not_available_in_this_area')]
-                ]
-            ], 403);
-        }
-
-        $zoneQuery = Zone::with('modules')->whereContains('coordinates', new Point($request->lat, $request->lng, POINT_SRID));
-        if ($declared) {
-            $zoneQuery->where('zones.country_code', $country);
-        }
-        $zones = $zoneQuery
-            ->selectRaw('zones.*, ABS(ST_Area(coordinates)) as area')->orderBy('area', 'asc')->latest()->get(['id', 'status', 'country_code', 'cash_on_delivery', 'digital_payment', 'offline_payment', 'increased_delivery_fee', 'increased_delivery_fee_status', 'increase_delivery_charge_message']);
+        $zones = Zone::with('modules')->whereContains('coordinates', new Point($request->lat, $request->lng, POINT_SRID))
+            ->selectRaw('zones.*, ABS(ST_Area(coordinates)) as area')->orderBy('area', 'asc')->latest()->get(['id', 'status', 'cash_on_delivery', 'digital_payment', 'offline_payment', 'increased_delivery_fee', 'increased_delivery_fee_status', 'increase_delivery_charge_message']);
         if (count($zones) < 1) {
             return response()->json([
                 'errors' => [

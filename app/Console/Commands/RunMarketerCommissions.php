@@ -24,11 +24,13 @@ class RunMarketerCommissions extends Command
     public function handle(MarketerCommissionService $service): int
     {
         $created = $service->accrue();
+        $bounties = $service->syncBounties();
         $result = $service->refresh();
 
         $this->info(sprintf(
-            'Marketer commissions: %d accrued, %d voided, %d held, %d restored, %d released.',
+            'Marketer commissions: %d accrued, %d bounties credited, %d voided, %d held, %d restored, %d released.',
             $created,
+            $bounties,
             $result['voided'],
             $result['held'],
             $result['restored'],

@@ -25,12 +25,13 @@ class MarketerAuthenticated
     public function handle(Request $request, Closure $next)
     {
         $admin = Auth::guard('admin')->user();
-        $mfaRequired = (bool) config('marketer.mfa_required', false);
 
+        // Unconditional: configuration can never downgrade a money-moving
+        // portal to password-only access.
         if (!$admin
             || !$admin->isMarketer()
             || (int) $admin->is_logged_in === 0
-            || ($mfaRequired && !$this->mfa->isVerifiedFor($admin))) {
+            || !$this->mfa->isVerifiedFor($admin)) {
             Auth::guard('admin')->logout();
 
             return redirect()->route('marketer.login');

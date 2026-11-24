@@ -453,23 +453,22 @@
         </script>
         <script type="text/javascript">
             "use strict";
-            @php($default_location = App\CentralLogics\Helpers::validatedCoordinates(App\CentralLogics\Helpers::get_business_settings('default_location')))
-            const defaultLocation = @json($default_location);
-            const mapElement = document.getElementById("map");
-            if (!defaultLocation) {
-                mapElement.innerHTML = '<div class="alert alert-warning">Set a valid default location before using this map.</div>';
-            } else {
-                let myLatlng = defaultLocation;
-                let map = new google.maps.Map(mapElement, {
-                    zoom: 13,
-                    center: myLatlng,
-                });
-                let zonePolygon = null;
-                let infoWindow = new google.maps.InfoWindow({
-                    content: "Click the map to get Lat/Lng!",
-                    position: myLatlng,
-                });
-                let bounds = new google.maps.LatLngBounds();
+            @php($default_location = \App\Models\BusinessSetting::where('key', 'default_location')->first())
+            @php($default_location = $default_location->value ? json_decode($default_location->value, true) : 0)
+            let myLatlng = {
+                lat: {{ $default_location ? $default_location['lat'] : '23.757989' }},
+                lng: {{ $default_location ? $default_location['lng'] : '90.360587' }}
+            };
+            let map = new google.maps.Map(document.getElementById("map"), {
+                zoom: 13,
+                center: myLatlng,
+            });
+           let zonePolygon = null;
+            let infoWindow = new google.maps.InfoWindow({
+                content: "Click the map to get Lat/Lng!",
+                position: myLatlng,
+            });
+           let bounds = new google.maps.LatLngBounds();
 
             $('#choice_zones').on('change', function() {
                let id = $(this).val();
@@ -519,8 +518,7 @@
                         });
                     },
                 });
-                });
-            }
+            });
 
             $(document).ready(function() {
                 if($('#choice_zones').val()) {

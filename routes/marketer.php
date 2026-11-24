@@ -20,7 +20,7 @@ Route::post('marketer-login', [MarketerAuthController::class, 'login'])
 Route::get('marketer-forgot-password', [MarketerAuthController::class, 'showForgotPassword'])->name('marketer.forgot');
 Route::post('marketer-forgot-password', [MarketerAuthController::class, 'sendLoginLink'])
     ->name('marketer.forgot.send')
-    ->middleware('throttle:marketer-login');
+    ->middleware('throttle:marketer-forgot');
 Route::get('marketer-magic-login/{id}', [MarketerAuthController::class, 'magicLogin'])
     ->name('marketer.magic-login')
     ->middleware('signed');

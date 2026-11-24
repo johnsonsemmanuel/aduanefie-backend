@@ -71,7 +71,7 @@
         <div class="portal-login-left">
             @include('partials._portal-login-header', [
                 'heading' => 'Marketer sign in',
-                'subtitle' => 'Remote marketers sign in with their registered email address.' . (config('marketer.mfa_required', false) ? ' Two-factor authentication is required.' : ''),
+                'subtitle' => 'Remote marketers sign in with their registered email address.' . (config('marketer.mfa_required', true) ? ' Two-factor authentication is required.' : ''),
             ])
 
                 <div class="portal-step-dots" aria-hidden="true">

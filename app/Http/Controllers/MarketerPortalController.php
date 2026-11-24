@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\MarketerApplication;
 use App\Models\MarketerCommission;
 use App\Models\MarketerPayout;
+use App\Services\MarketerAccessService;
 use App\Services\MarketerCommissionService;
+use App\Support\PayoutRails;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
@@ -18,8 +21,10 @@ use RuntimeException;
  */
 class MarketerPortalController extends Controller
 {
-    public function __construct(private MarketerCommissionService $commissions)
-    {
+    public function __construct(
+        private MarketerCommissionService $commissions,
+        private MarketerAccessService $access
+    ) {
     }
 
     public function dashboard()
@@ -80,12 +85,16 @@ class MarketerPortalController extends Controller
             return $store;
         });
 
-        $pendingBackyardCount = \Illuminate\Support\Facades\Schema::hasTable('backyard_farm_applications')
-            ? \App\Models\BackyardFarmApplication::where('status', \App\Models\BackyardFarmApplication::STATUS_PENDING)->count()
+        // Badges must count this marketer's work, not the whole platform's.
+        // They use the same scoped builders as the queue screens below.
+        $backyardQuery = $this->access->backyardQuery($marketer);
+        $pendingBackyardCount = $backyardQuery
+            ? $backyardQuery->where('status', \App\Models\BackyardFarmApplication::STATUS_PENDING)->count()
             : 0;
 
-        $upcomingToursCount = \Illuminate\Support\Facades\Schema::hasTable('regional_tours')
-            ? \App\Models\RegionalTour::whereIn('status', ['upcoming', 'open', 'in_progress'])->count()
+        $tourQuery = $this->access->tourQuery($marketer);
+        $upcomingToursCount = $tourQuery
+            ? $tourQuery->whereIn('status', ['upcoming', 'open', 'in_progress'])->count()
             : 0;
 
         return view('marketer.dashboard', compact(
@@ -102,7 +111,12 @@ class MarketerPortalController extends Controller
     public function verifyStore(Request $request, int $storeId)
     {
         $marketer = Auth::guard('admin')->user();
-        $store = \App\Models\Store::where('id', $storeId)
+        // Ownership is by attribution, not by the logged-in admin's zone. The
+        // rest of this portal deliberately lifts ZoneScope for the same reason;
+        // leaving it here would make a store visible on the dashboard but
+        // impossible to verify.
+        $store = \App\Models\Store::withoutGlobalScope(\App\Scopes\ZoneScope::class)
+            ->where('id', $storeId)
             ->where('marketer_id', $marketer->id)
             ->firstOrFail();
 
@@ -135,6 +149,10 @@ class MarketerPortalController extends Controller
             ]);
         }
 
+        // Verification is the moment the bounty is earned. The ledger row is
+        // immediately requestable through the ordinary payout flow.
+        $this->commissions->creditBounty($marketer, $store->fresh());
+
         return back()->with('status', "Verified active farming status for {$store->name}.");
     }
 
@@ -143,8 +161,9 @@ class MarketerPortalController extends Controller
         $marketer = Auth::guard('admin')->user();
         $status = $request->query('status', 'pending');
 
-        $applications = \Illuminate\Support\Facades\Schema::hasTable('backyard_farm_applications')
-            ? \App\Models\BackyardFarmApplication::with(['zone:id,name'])
+        $backyardQuery = $this->access->backyardQuery($marketer);
+        $applications = $backyardQuery
+            ? $backyardQuery->with(['zone:id,name'])
                 ->when($status !== 'all', fn ($q) => $q->where('status', $status))
                 ->orderByDesc('id')
                 ->paginate(20)
@@ -157,7 +176,10 @@ class MarketerPortalController extends Controller
     public function verifyBackyardFarm(Request $request, int $id)
     {
         $marketer = Auth::guard('admin')->user();
-        $application = \App\Models\BackyardFarmApplication::findOrFail($id);
+        $backyardQuery = $this->access->backyardQuery($marketer);
+        $application = $backyardQuery
+            ? $backyardQuery->findOrFail($id)
+            : abort(404);
 
         if ($application->status !== \App\Models\BackyardFarmApplication::STATUS_PENDING) {
             return back()->withErrors(['backyard' => 'This application has already been processed.']);
@@ -198,22 +220,24 @@ class MarketerPortalController extends Controller
         $marketer = Auth::guard('admin')->user();
         $region = trim((string) $request->query('region', ''));
 
-        $tours = \Illuminate\Support\Facades\Schema::hasTable('regional_tours')
-            ? \App\Models\RegionalTour::withCount('registrations')
+        $tourQuery = $this->access->tourQuery($marketer);
+        $tours = $tourQuery
+            ? $tourQuery->withCount('registrations')
                 ->when($region !== '', fn ($q) => $q->where('region', $region))
                 ->orderBy('start_date')
                 ->get()
             : collect();
 
-        $registrations = \Illuminate\Support\Facades\Schema::hasTable('regional_tour_registrations')
-            ? \App\Models\RegionalTourRegistration::with(['tour:id,title,region,start_date'])
+        $registrationQuery = $this->access->registrationQuery($marketer);
+        $registrations = $registrationQuery
+            ? $registrationQuery->with(['tour:id,title,region,start_date'])
                 ->when($region !== '', fn ($q) => $q->where('region', $region))
                 ->latest('id')
                 ->paginate(25)
                 ->withQueryString()
             : collect();
 
-        $regions = \App\Models\RegionalTour::GHANA_REGIONS;
+        $regions = $this->access->regionsFor($marketer);
 
         return view('marketer.regional-tours', compact('marketer', 'tours', 'registrations', 'regions', 'region'));
     }
@@ -221,7 +245,10 @@ class MarketerPortalController extends Controller
     public function updateTourRegistrationStatus(Request $request, int $id)
     {
         $marketer = Auth::guard('admin')->user();
-        $reg = \App\Models\RegionalTourRegistration::findOrFail($id);
+        $registrationQuery = $this->access->registrationQuery($marketer);
+        $reg = $registrationQuery
+            ? $registrationQuery->findOrFail($id)
+            : abort(404);
 
         $data = $request->validate([
             'status' => 'required|in:registered,confirmed,visited,onboarded,no_show',
@@ -290,7 +317,19 @@ class MarketerPortalController extends Controller
                 ->withErrors(['payout' => 'You have no eligible commission to request yet.']);
         }
 
-        return view('marketer.payout-request', compact('marketer', 'summary'));
+        $countries = PayoutRails::countryOptions();
+        $networksByCountry = collect(PayoutRails::countries())
+            ->map(fn (array $rail) => collect($rail['networks'] ?? [])
+                ->map(fn (array $network) => (string) ($network['label'] ?? ''))
+                ->all())
+            ->all();
+
+        return view('marketer.payout-request', compact(
+            'marketer',
+            'summary',
+            'countries',
+            'networksByCountry'
+        ));
     }
 
     public function requestPayout(Request $request)
@@ -311,12 +350,25 @@ class MarketerPortalController extends Controller
                 ->withErrors(['current_password' => 'Your password confirmation did not match.']);
         }
 
-        $this->validatePayoutRail($data);
+        // An account created from an application proved ownership of one payout
+        // number at application time. Do not let a different number be swapped
+        // in at withdrawal time. Legacy marketers without an application are
+        // unaffected.
+        $application = MarketerApplication::where('created_admin_id', $marketer->id)
+            ->where('status', MarketerApplication::STATUS_APPROVED)
+            ->first();
+        if ($application && $this->normalizePayoutNumber($data['account_number']) !== $this->normalizePayoutNumber($application->phone)) {
+            return back()->withInput($request->except('current_password'))
+                ->withErrors(['account_number' => 'Use the mobile money number you verified when you applied.']);
+        }
+
+        $details = $this->validatePayoutRail($data);
 
         try {
-            $payout = $this->commissions->requestPayout($marketer, $data);
+            $payout = $this->commissions->requestPayout($marketer, $details);
         } catch (RuntimeException $e) {
-            return back()->withInput()->withErrors(['payout' => $e->getMessage()]);
+            return back()->withInput($request->except('current_password'))
+                ->withErrors(['payout' => $e->getMessage()]);
         }
 
         return redirect()->route('marketer.payouts')
@@ -324,51 +376,24 @@ class MarketerPortalController extends Controller
     }
 
     /**
-     * Validate that the network is supported for the country and that the
-     * account number matches the network's expected pattern.
+     * Canonical rail validation. Returns the normalised values to persist.
+     *
+     * @return array<string, mixed>
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    private function validatePayoutRail(array $data): void
+    private function validatePayoutRail(array $data): array
     {
-        $country = strtoupper(trim((string) ($data['country'] ?? '')));
-        $network = strtoupper(trim((string) ($data['network'] ?? '')));
-        $account = preg_replace('/\D/', '', (string) ($data['account_number'] ?? ''));
+        return PayoutRails::validate($data);
+    }
 
-        $rails = config('payout.countries', []);
-        $countryConfig = $rails[$country] ?? null;
+    private function normalizePayoutNumber(string $number): string
+    {
+        $digits = preg_replace('/\D+/', '', $number) ?? '';
 
-        if (!$countryConfig) {
-            $validator = \Illuminate\Support\Facades\Validator::make(
-                ['country' => $data['country'] ?? ''],
-                ['country' => 'required|in:' . implode(',', array_keys($rails))],
-                ['country.in' => 'The selected country is not supported for payouts yet.']
-            );
-            throw new \Illuminate\Validation\ValidationException($validator);
-        }
-
-        $networks = $countryConfig['networks'];
-        if (!array_key_exists($network, $networks)) {
-            $validator = \Illuminate\Support\Facades\Validator::make(
-                ['network' => $network],
-                ['network' => 'required|in:' . implode(',', array_keys($networks))],
-                ['network.in' => 'That network is not supported in ' . $countryConfig['name'] . '.']
-            );
-            throw new \Illuminate\Validation\ValidationException($validator);
-        }
-
-        $pattern = $networks[$network]['pattern'] ?? null;
-        if ($pattern && !preg_match('#' . $pattern . '#', $account)) {
-            $validator = \Illuminate\Support\Facades\Validator::make(
-                ['account_number' => $data['account_number'] ?? ''],
-                ['account_number' => 'required|regex:' . $pattern],
-                [
-                    'account_number.regex' => 'The account number does not look like a valid '
-                        . $networks[$network]['label'] . ' number for ' . $countryConfig['name'] . '.',
-                ]
-            );
-            throw new \Illuminate\Validation\ValidationException($validator);
-        }
+        return str_starts_with($digits, '233') && strlen($digits) === 12
+            ? '0' . substr($digits, 3)
+            : $digits;
     }
 
     public function showRegisterFarmer()
@@ -429,9 +454,6 @@ class MarketerPortalController extends Controller
         $store->delivery_time = '1-2 days';
 
         $storeCols = \Illuminate\Support\Facades\Schema::getColumnListing('stores');
-        if (in_array('marketer_id', $storeCols, true)) {
-            $store->marketer_id = $marketer->id;
-        }
         if (in_array('marketer_code', $storeCols, true)) {
             $store->marketer_code = $marketer->marketer_code ?: ('MKT-GH-' . str_pad((string) $marketer->id, 3, '0', STR_PAD_LEFT));
         }
@@ -454,6 +476,14 @@ class MarketerPortalController extends Controller
             $store->marketer_verification_notes = 'Crops: ' . $data['primary_crops'];
         }
         $store->save();
+
+        // Attribution must go through assignMarketer(): it is the only place
+        // that stamps marketer_assigned_at, which every commission accrual
+        // depends on. Setting marketer_id directly leaves it null and the
+        // marketer silently earns nothing from this store.
+        if (in_array('marketer_id', $storeCols, true)) {
+            $store->assignMarketer((int) $marketer->id);
+        }
 
         return redirect()
             ->route('marketer.dashboard')

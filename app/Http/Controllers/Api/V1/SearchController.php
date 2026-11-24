@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Validator;
 
 class SearchController extends Controller
 {
-    public function get_searched_products(Request $request, ?array $nearbyCoordinates = null)
+    public function get_searched_products(Request $request)
     {
         if (!$request->hasHeader('zoneId')) {
             $errors = [];
@@ -128,13 +128,6 @@ class SearchController extends Controller
                 $qurey->Discounted();
             });
 
-        if ($nearbyCoordinates) {
-            $items = ProductLogic::orderByNearbyStoreDistance($items, $nearbyCoordinates);
-            $items = $items->reorder()
-                ->orderByRaw('COALESCE(name = ?, false) DESC', [$request['name']])
-                ->orderBy('nearby_distance');
-        }
-
         $item_categories =  $items->pluck('category_id')->toArray();
         $items = $items->paginate($limit, ['*'], 'page', $offset);
 
@@ -181,29 +174,10 @@ class SearchController extends Controller
         $limit = $request->query('limit', 10);
         $offset = $request->query('offset', 1);
 
-        // Nearby requests must carry a real customer location. Generic search
-        // may omit the headers and simply falls back to the existing list
-        // behaviour in the store logic.
-        $coordinates = $this->validatedNearbyCoordinates($request);
-        $nearbyQuickAction = $request->query('quick_action') === 'nearby';
-        if ($this->requestAsksForNearby($request)) {
-            if (!$coordinates) {
-                return $this->invalidNearbyCoordinatesResponse();
-            }
-            $longitude = $coordinates['longitude'];
-            $latitude = $coordinates['latitude'];
-        } else {
-            $longitude = $coordinates['longitude'] ?? null;
-            $latitude = $coordinates['latitude'] ?? null;
-        }
-        $nearbyCoordinates = $nearbyQuickAction ? $coordinates : null;
-
+        $longitude = (float) $request->header('longitude') ?? 0;
+        $latitude = (float) $request->header('latitude') ?? 0;
         $filter = $request->query('filter', '');
         $filter = $filter ? (is_array($filter) ? $filter : str_getcsv(trim($filter, "[]"), ',')) : '';
-        if ($nearbyQuickAction) {
-            $filterValues = is_array($filter) ? $filter : ($filter === '' ? [] : [$filter]);
-            $filter = array_values(array_unique(array_merge($filterValues, ['nearby'])));
-        }
         $rating_count = $request->query('rating_count');
 
 
@@ -216,10 +190,10 @@ class SearchController extends Controller
 
             switch ($data_type) {
                 case 'searched':
-                    return $this->get_searched_products($request, $nearbyCoordinates);
+                    return $this->get_searched_products($request);
                     break;
                 case 'discounted':
-                    $items = ProductLogic::discounted_products($zone_id, $limit, $offset, $type, $category_ids, $filter, $min_price, $max_price, $rating_count, $brand_ids, $nearbyCoordinates);
+                    $items = ProductLogic::discounted_products($zone_id, $limit, $offset, $type, $category_ids, $filter, $min_price, $max_price, $rating_count, $brand_ids);
                     break;
                 case 'brand':
                     $validator = Validator::make($request->all(), [
@@ -229,10 +203,10 @@ class SearchController extends Controller
                     if ($validator->fails()) {
                         return response()->json(['errors' => Helpers::error_processor($validator)], 403);
                     }
-                    $items = ProductLogic::brand_products($zone_id, $limit, $offset, $type, $category_ids, $filter, $min_price, $max_price, $rating_count, $brand_ids, $nearbyCoordinates);
+                    $items = ProductLogic::brand_products($zone_id, $limit, $offset, $type, $category_ids, $filter, $min_price, $max_price, $rating_count, $brand_ids);
                     break;
                 case 'new':
-                    $items = ProductLogic::get_new_products($zone_id, $type, $min_price, $max_price, $product_id, $limit, $offset, $filter, $rating_count, $category_ids, $brand_ids, $nearbyCoordinates);
+                    $items = ProductLogic::get_new_products($zone_id, $type, $min_price, $max_price, $product_id, $limit, $offset, $filter, $rating_count, $category_ids, $brand_ids);
                     break;
                 case 'category':
                     $validator = Validator::make($request->all(), [
@@ -246,17 +220,13 @@ class SearchController extends Controller
                     $items = CategoryLogic::category_products($category_ids, $zone_id, $limit, $offset, $type, $filter, $min_price, $max_price, $rating_count, $brand_ids);
                     break;
                 default:
-                    if ($nearbyCoordinates) {
-                        $items = ProductLogic::get_new_products($zone_id, $type, $min_price, $max_price, $product_id, $limit, $offset, $filter, $rating_count, $category_ids, $brand_ids, $nearbyCoordinates);
-                    } else {
-                        $items =  [
-                            'total_size' => 0,
-                            'limit' => $limit,
-                            'offset' => $offset,
-                            'products' => [],
-                            'categories' => [],
-                        ];
-                    }
+                    $items =  [
+                        'total_size' => 0,
+                        'limit' => $limit,
+                        'offset' => $offset,
+                        'products' => [],
+                        'categories' => [],
+                    ];
             }
 
             $items['products'] = Helpers::product_data_formatting($items['products'], true, false, app()->getLocale());

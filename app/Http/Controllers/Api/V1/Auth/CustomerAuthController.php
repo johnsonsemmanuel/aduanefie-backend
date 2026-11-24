@@ -491,7 +491,7 @@ class CustomerAuthController extends Controller
 
         $token = $user->createToken('RestaurantCustomerAuth')->accessToken;
 
-        $login_settings = array_column(BusinessSetting::whereIn('key',['manual_login_status','otp_login_status','social_login_status','google_login_status','facebook_login_status','email_verification_status','phone_verification_status'
+        $login_settings = array_column(BusinessSetting::whereIn('key',['manual_login_status','otp_login_status','social_login_status','google_login_status','facebook_login_status','apple_login_status','email_verification_status','phone_verification_status'
         ])->get(['key','value'])->toArray(), 'value', 'key');
         $firebase_otp_verification = BusinessSetting::where('key', 'firebase_otp_verification')->first()?->value??0;
         $phone = 1;
@@ -613,7 +613,7 @@ class CustomerAuthController extends Controller
             return response()->json(['errors' => Helpers::error_processor($validator)], 403);
         }
 
-        $login_settings = array_column(BusinessSetting::whereIn('key',['manual_login_status','otp_login_status','social_login_status','google_login_status','facebook_login_status','email_verification_status','phone_verification_status'
+        $login_settings = array_column(BusinessSetting::whereIn('key',['manual_login_status','otp_login_status','social_login_status','google_login_status','facebook_login_status','apple_login_status','email_verification_status','phone_verification_status'
         ])->get(['key','value'])->toArray(), 'value', 'key');
 
         if($request->login_type == 'manual'){
@@ -680,7 +680,7 @@ class CustomerAuthController extends Controller
                 'token' => 'required',
                 'unique_id' => 'required',
                 'email' => 'required_if:medium,google,facebook',
-                'medium' => 'required|in:google,facebook',
+                'medium' => 'required|in:google,facebook,apple',
             ]);
 
             if ($validator->fails()) {
@@ -702,12 +702,67 @@ class CustomerAuthController extends Controller
                 } elseif ($request['medium'] == 'facebook') {
                     $res = $client->request('GET', 'https://graph.facebook.com/' . $unique_id . '?access_token=' . $token . '&&fields=name,email');
                     $data = json_decode($res->getBody()->getContents(), true);
+                } elseif ($request['medium'] == 'apple') {
+                    if($request->has('verified')){
+                        $user = EmailVerifications::where('token', $unique_id)->first();
+                        $data = [
+                            'email' => $user->email
+                        ];
+                    }else{
+                        $apple_login=\App\Models\BusinessSetting::where(['key'=>'apple_login'])->first();
+                        if($apple_login){
+                            $apple_login = json_decode($apple_login->value)[0];
+                        }
+                        $teamId = $apple_login->team_id;
+                        $keyId = $apple_login->key_id;
+                        if($request->platform == 'flutter_app'){
+                            $sub = $apple_login->client_id_app;
+                        }else{
+                            $sub = $apple_login->client_id;
+                        }
+                        $aud = 'https://appleid.apple.com';
+                        $iat = strtotime('now');
+                        $exp = strtotime('+60days');
+                        $keyContent = file_get_contents('storage/app/public/apple-login/'.$apple_login->service_file);
+
+                        $token = JWT::encode([
+                            'iss' => $teamId,
+                            'iat' => $iat,
+                            'exp' => $exp,
+                            'aud' => $aud,
+                            'sub' => $sub,
+                        ], $keyContent, 'ES256', $keyId);
+
+                        if($request->platform == 'flutter_web'){
+                            $redirect_uri = $apple_login->redirect_url_flutter??'www.example.com/apple-callback';
+                        }else{
+                            $redirect_uri = $apple_login->redirect_url_react??'www.example.com/apple-callback';
+                        }
+
+                        $res = Http::asForm()->post('https://appleid.apple.com/auth/token', [
+                            'grant_type' => 'authorization_code',
+                            'code' => $unique_id,
+                            'redirect_uri' => $redirect_uri,
+                            'client_id' => $sub,
+                            'client_secret' => $token,
+                        ]);
+
+
+                        $claims = explode('.', $res['id_token'])[1];
+                        $data = json_decode(base64_decode($claims),true);
+                    }
+
                 }
             } catch (\Exception $e) {
                 return response()->json(['error' => 'wrong credential.','message'=>$e->getMessage()],403);
             }
-            if (strcmp($email, $data['email']) != 0 && (!isset($data['id']) && !isset($data['kid']))) {
-                return response()->json(['error' => translate('messages.email_does_not_match')],403);
+            if(!isset($claims)){
+
+                if (strcmp($email, $data['email']) != 0 && (!isset($data['id']) && !isset($data['kid']))) {
+                    return response()->json(['error' => translate('messages.email_does_not_match')],403);
+                }
+            }else{
+                $email = $data['email'];
             }
 
             $request_data = [
@@ -779,7 +834,7 @@ class CustomerAuthController extends Controller
                 }
             }
 
-            return response()->json(['token' => $token, 'is_phone_verified'=> 1, 'is_email_verified'=> 1, 'is_personal_info' => $is_personal_info, 'is_exist_user' => null, 'login_type' => 'manual', 'email' => $user_email, 'profile_completion_token' => $is_personal_info === 0 ? $this->issueProfileCompletionToken($user) : null], 200);
+            return response()->json(['token' => $token, 'is_phone_verified'=> 1, 'is_email_verified'=> 1, 'is_personal_info' => $is_personal_info, 'is_exist_user' => null, 'login_type' => 'manual', 'email' => $user_email], 200);
         } else {
             $errors = [];
             array_push($errors, ['code' => 'auth-001', 'message' => translate('User_credential_does_not_match')]);
@@ -845,7 +900,7 @@ class CustomerAuthController extends Controller
                 $user_email = $user->email;
             }
 
-            return response()->json(['token' => $token, 'is_phone_verified'=>1, 'is_email_verified'=>1, 'is_personal_info' => $is_personal_info, 'is_exist_user' => null, 'login_type' => 'otp', 'email' => $user_email, 'profile_completion_token' => $is_personal_info === 0 ? $this->issueProfileCompletionToken($user) : null], 200);
+            return response()->json(['token' => $token, 'is_phone_verified'=>1, 'is_email_verified'=>1, 'is_personal_info' => $is_personal_info, 'is_exist_user' => null, 'login_type' => 'otp', 'email' => $user_email], 200);
         }
 
         return response()->json([
@@ -862,6 +917,14 @@ class CustomerAuthController extends Controller
         if($user && $request_data['verified'] == 'default' && $user->is_email_verified == 0 && $user->is_from_pos == 0){
             $is_exist_user = $this->exist_user($user);
             $temporaryToken = null;
+            if($request_data['medium'] == 'apple'){
+                DB::table('email_verifications')->updateOrInsert(['email' => $data['email']],
+                    [
+                        'token' => $request_data['unique_id'],
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+            }
             $user_email = null;
             if($user->email){
                 $user_email = $user->email;
@@ -872,10 +935,12 @@ class CustomerAuthController extends Controller
         if(($user && $request_data['verified'] == 'no') || (!$user && $request_data['verified'] == 'default')){
 
             if(strcmp($request_data['email'], $data['email']) === 0){
-                if(!isset($data['id']) && !isset($data['kid']) &&  !isset($data['sub']) ){
-                    return response()->json(['error' => 'wrong credential.'],403);
+                if($request_data['medium'] != 'apple'){
+                    if(!isset($data['id']) && !isset($data['kid']) &&  !isset($data['sub']) ){
+                        return response()->json(['error' => 'wrong credential.'],403);
+                    }
+                    $pk = isset($data['id'])?$data['id']:(  isset($data['kid']) ?  $data['kid'] : $data['sub'] );
                 }
-                $pk = isset($data['id'])?$data['id']:(  isset($data['kid']) ?  $data['kid'] : $data['sub'] );
                 try {
                     if(($user && $request_data['verified'] == 'no')){
                         $user->email = null;
@@ -886,7 +951,9 @@ class CustomerAuthController extends Controller
                     $user->email = $data['email'];
                     $user->login_medium = $request_data['medium'];
                     $user->temp_token = $request_data['unique_id'];
-                    $user->social_id = $pk;
+                    if($request_data['medium'] != 'apple'){
+                        $user->social_id = $pk;
+                    }
                     $user->save();
                 } catch (\Throwable $e) {
                     return response()->json(['error' => 'wrong credential.','message'=>$e->getMessage()],403);
@@ -894,6 +961,12 @@ class CustomerAuthController extends Controller
             }
         }
 
+        if($request_data['medium'] == 'apple'){
+            DB::table('email_verifications')->where([
+                'email' => $data['email'],
+                'token' => $request_data['unique_id'],
+            ])->delete();
+        }
 
         if (auth()->loginUsingId($user->id)) {
             if(!auth()->user()->status)
@@ -927,7 +1000,7 @@ class CustomerAuthController extends Controller
             if($user->email){
                 $user_email = $user->email;
             }
-            return response()->json(['token' => $token, 'is_phone_verified'=>1, 'is_email_verified'=>1, 'is_personal_info' => $is_personal_info, 'is_exist_user' =>$is_exist_user, 'login_type' => 'social', 'email' => $user_email, 'profile_completion_token' => $is_personal_info === 0 ? $this->issueProfileCompletionToken($user) : null], 200);
+            return response()->json(['token' => $token, 'is_phone_verified'=>1, 'is_email_verified'=>1, 'is_personal_info' => $is_personal_info, 'is_exist_user' =>$is_exist_user, 'login_type' => 'social', 'email' => $user_email], 200);
         } else {
             $errors = [];
             array_push($errors, ['code' => 'auth-001', 'message' => 'Unauthorized.']);
@@ -1049,7 +1122,6 @@ class CustomerAuthController extends Controller
             'login_type' => 'required|in:otp,social,manual',
             'phone' => 'required|min:9|max:14',
             'email' => 'required|email',
-            'profile_completion_token' => 'required|string',
         ];
 
         if ($request->login_type == 'social') {
@@ -1111,13 +1183,19 @@ class CustomerAuthController extends Controller
         $firstName = $nameParts[0];
         $lastName = $nameParts[1] ?? '';
 
-        // The identity is resolved ONLY from the signed proof issued after a
-        // successful OTP / password / OAuth verification. Client-supplied
-        // phone and email can no longer select whose account to complete.
-        $user = $this->resolveProfileCompletionToken($request->profile_completion_token);
+        if($request->login_type == 'otp' || $request->login_type == 'manual'){
+            $user = User::where(['phone' => $request->phone])->first();
+        }else{
+            $user = User::where(['email' => $request->email])->first();
+        }
         if(!$user){
             return response()->json([
-                'errors' => [['code' => 'profile_completion_token', 'message' => 'Invalid or expired profile completion proof.']]
+                'message' => translate('messages.user_not_found')
+            ], 404);
+        }
+        if($user->f_name){
+            return response()->json([
+                'message' => translate('messages.already_exists')
             ], 403);
         }
         $user->f_name = $firstName;
@@ -1154,63 +1232,102 @@ class CustomerAuthController extends Controller
         return response()->json(['token' => $temporaryToken, 'is_phone_verified'=>0, 'is_email_verified'=>1, 'is_personal_info' => 1, 'is_exist_user' => null, 'login_type' => 'otp', 'email' => null], 200);
     }
 
-    /**
-     * Short-lived, single-purpose proof that the caller just completed a real
-     * OTP / password / OAuth verification for this exact user. It is signed
-     * with the app key, expires in 30 minutes, and is bound to the user's
-     * current phone/email so it cannot be replayed for a different identity.
-     * No server-side state is needed: the 'f_name still empty' check makes it
-     * single-use, since update_info writes the name on successful completion.
-     */
-    private function issueProfileCompletionToken(User $user): string
+    #handshake
+    public function customerLoginFromDrivemond(Request $request)
     {
-        $identityHash = hash('sha256', (string) $user->phone . '|' . (string) $user->email);
-        $payload = $user->id . '|' . $identityHash . '|' . (now()->timestamp + 1800);
-        $signature = hash_hmac('sha256', $payload, $this->profileCompletionSigningKey());
+        $validator = Validator::make($request->all(), [
+            'phone' => 'required',
+            'token' => 'required|min:6'
+        ]);
 
-        return base64_encode($payload . '|' . $signature);
-    }
-
-    private function resolveProfileCompletionToken($token): ?User
-    {
-        if (!is_string($token) || $token === '') {
-            return null;
-        }
-        $decoded = base64_decode($token, true);
-        if ($decoded === false) {
-            return null;
-        }
-        $parts = explode('|', $decoded);
-        if (count($parts) !== 4) {
-            return null;
-        }
-        [$id, $identityHash, $expiresAt, $signature] = $parts;
-        if (!ctype_digit($id) || !ctype_digit($expiresAt) || (int) $expiresAt < now()->timestamp) {
-            return null;
+        if ($validator->fails()) {
+            return response()->json(['errors' => Helpers::error_processor($validator)], 403);
         }
 
-        $payload = $id . '|' . $identityHash . '|' . $expiresAt;
-        $expected = hash_hmac('sha256', $payload, $this->profileCompletionSigningKey());
-        if (!hash_equals($expected, $signature)) {
-            return null;
-        }
+        $user = User::where('phone', $request->phone)->first();
 
-        $user = User::find((int) $id);
-        if (!$user || $user->f_name) {
-            // Completed profiles reject the proof: single-use.
-            return null;
-        }
-        $currentHash = hash('sha256', (string) $user->phone . '|' . (string) $user->email);
-        if (!hash_equals($identityHash, $currentHash)) {
-            return null;
-        }
+        if (Helpers::checkSelfExternalConfiguration()) {
+            $driveMondBaseUrl = ExternalConfiguration::where('key', 'drivemond_base_url')->first()->value;
+            $driveMondToken = ExternalConfiguration::where('key', 'drivemond_token')->first()->value;
+            $systemSelfToken = ExternalConfiguration::where('key', 'system_self_token')->first()->value;
+            if (!$user){
+                $response = Http::withToken($request->token)->post($driveMondBaseUrl . '/api/customer/get-data',
+                    [
+                        'token' => $driveMondToken,
+                        'external_base_url' => url('/'),
+                        'external_token' => $systemSelfToken,
+                    ]);
+                if ($response->successful()) {
+                    $drivemondCustomerResponse = $response->json();
+                    if ($drivemondCustomerResponse['status']) {
+                        $drivemondCustomer = $drivemondCustomerResponse['data'];
+                        if (User::where('email', $drivemondCustomer['email'])->first()) {
+                            $errors = [];
+                            array_push($errors, ['code' => 'email_unique_402', 'message' => translate('messages.Email already exists, Please update mart email and switch aduanefie')]);
+                            return response()->json([
+                                'errors' => $errors
+                            ], 403);
+                        }
+                        $user = User::create([
+                            'f_name' => $drivemondCustomer['first_name'],
+                            'l_name' => $drivemondCustomer['last_name'],
+                            'email' => $drivemondCustomer['email'],
+                            'phone' => $drivemondCustomer['phone'],
+                            'password' => $drivemondCustomer['password'],
+                            'is_phone_verified' => $drivemondCustomer['phone_verified_at'] ? 1 : 0,
+                        ]);
+                        $user->ref_code = Helpers::generate_referer_code($user);
+                        $user->save();
+                    } else {
+                        $drivemondCustomer = $drivemondCustomerResponse['data'];
+                        if ($drivemondCustomer['error_code'] == 402) {
+                            $errors = [];
+                            array_push($errors, ['code' => 'drivemond_external_configuration_402', 'message' => translate('messages.Drivemond external authentication failed')]);
+                            return response()->json([
+                                'errors' => $errors
+                            ], 403);
+                        }
+                    }
 
-        return $user;
-    }
+                } else {
+                    $errors = [];
+                    array_push($errors, ['code' => 'drivemond_user_404', 'message' => translate('messages.Drivemond user not found')]);
+                    return response()->json([
+                        'errors' => $errors
+                    ], 403);
+                }
+            }
 
-    private function profileCompletionSigningKey(): string
-    {
-        return hash('sha256', (string) config('app.key') . '|profile-completion-v1');
+
+            if (Auth::loginUsingId($user->id)) {
+                $token = auth()->user()->createToken('RestaurantCustomerAuth')->accessToken;
+                if (!auth()->user()->status) {
+                    $errors = [];
+                    array_push($errors, ['code' => 'auth-003', 'message' => translate('messages.your_account_is_blocked')]);
+                    return response()->json([
+                        'errors' => $errors
+                    ], 403);
+                }
+                $user = auth()->user();
+                if ($user->ref_code == null && isset($user->id)) {
+                    $ref_code = Helpers::generate_referer_code($user);
+                    DB::table('users')->where('phone', $user->phone)->update(['ref_code' => $ref_code]);
+                }
+                return response()->json(['token' => $token, 'is_phone_verified' => auth()->user()->is_phone_verified], 200);
+            }
+
+            $errors = [];
+            array_push($errors, ['code' => 'auth-001', 'message' => translate('messages.Unauthorized')]);
+            return response()->json([
+                'errors' => $errors
+            ], 401);
+
+        }
+        $errors = [];
+        array_push($errors, ['code' => 'external_config_404', 'message' => translate('messages.External configuration not found')]);
+        return response()->json([
+            'errors' => $errors
+        ], 403);
     }
 
 }

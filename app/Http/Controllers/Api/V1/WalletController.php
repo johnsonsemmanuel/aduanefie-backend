@@ -144,4 +144,175 @@ class WalletController extends Controller
         return response()->json($bonuses ?? [], 200);
     }
 
+    #handshake
+
+    public function transferMartToDrivemondWallet(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'amount' => 'required|numeric|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => Helpers::error_processor($validator)], 403);
+        }
+        $customer = Auth::user();
+        if ($customer->wallet_balance < $request->amount) {
+            $errors = [];
+            array_push($errors, ['code' => 'insufficient_fund_403', 'message' => translate('messages.You have insufficient balance on wallet')]);
+            return response()->json([
+                'errors' => $errors
+            ], 403);
+        }
+        if (Helpers::checkSelfExternalConfiguration()) {
+            $currencyCode = Helpers::currency_code();
+            $driveMondBaseUrl = ExternalConfiguration::where('key', 'drivemond_base_url')->first()?->value;
+            $driveMondToken = ExternalConfiguration::where('key', 'drivemond_token')->first()?->value;
+            $systemSelfToken = ExternalConfiguration::where('key', 'system_self_token')->first()?->value;
+            $response = Http::post($driveMondBaseUrl . '/api/customer/wallet/transfer-drivemond-from-mart',
+                [
+                    'bearer_token' => $request->bearerToken(),
+                    'currency' => $currencyCode,
+                    'amount' => $request->amount,
+                    'token' => $driveMondToken,
+                    'external_base_url' => url('/'),
+                    'external_token' => $systemSelfToken,
+                ]);
+            if ($response->successful()) {
+                $drivemondCustomerResponse = $response->json();
+                if (array_key_exists('status',$drivemondCustomerResponse) && $drivemondCustomerResponse['status']) {
+                    $drivemondCustomer = $drivemondCustomerResponse['data'];
+                    $user = User::where(['phone' => $drivemondCustomer['phone']])->first();
+                    if ($user) {
+                        $user = User::find($request->user()->id);
+                        $user->wallet_balance -= $request->amount;
+                        $user->save();
+                        $wallet_transaction = new WalletTransaction();
+                        $wallet_transaction->user_id = $user->id;
+                        $wallet_transaction->transaction_id = Str::uuid();
+                        $wallet_transaction->transaction_type = 'wallet_transfer_mart_to_drivemond';
+                        $wallet_transaction->debit = $request->amount;
+                        $wallet_transaction->balance = $user->wallet_balance;
+                        $wallet_transaction->created_at = now();
+                        $wallet_transaction->updated_at = now();
+                        $wallet_transaction->save();
+                        $data = [
+                            'status' => true,
+                            'data' => $user
+                        ];
+                        return response()->json($data);
+                    }
+                }
+                $drivemondCustomer = $drivemondCustomerResponse['data'];
+                if (array_key_exists('error_code',$drivemondCustomer) && $drivemondCustomer['error_code'] == 405) {
+                    $errors = [];
+                    array_push($errors, ['code' => 'currency_not_match_403', 'message' => translate('messages.Currency not matched, Please contact support')]);
+                    return response()->json([
+                        'errors' => $errors
+                    ], 403);
+                }
+            } else {
+                $errors = [];
+                array_push($errors, ['code' => 'account_not_found_403', 'message' => translate('messages.drivemond account not found')]);
+                return response()->json([
+                    'errors' => $errors
+                ], 403);
+            }
+
+
+        }
+        $errors = [];
+        array_push($errors, ['code' => 'account_not_found_403', 'message' => translate('messages.drivemond account not found')]);
+        return response()->json([
+            'errors' => $errors
+        ], 403);
+
+    }
+
+    public function transferMartFromDrivemondWallet(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'currency' => 'required',
+            'amount' => 'required',
+            'bearer_token' => 'required',
+            'token' => 'required',
+            'external_base_url' => 'required',
+            'external_token' => 'required',
+        ]);
+        if ($validator->fails()) {
+            $data = [
+                'status' => false,
+                'data' =>Helpers::error_processor($validator),
+            ];
+            return response()->json($data);
+        }
+        if (strcasecmp(str_replace('"', '', $request->currency), str_replace('"', '', Helpers::currency_code())) !== 0) {
+            $data = [
+                'status' => false,
+                'data' => ['error_code' => 405, 'message' => "Currency not matched, Please contact support"],
+            ];
+            return response()->json($data);
+        }
+        if (Helpers::checkSelfExternalConfiguration() && Helpers::checkExternalConfiguration($request->external_base_url, $request->external_token, $request->token)) {
+            $driveMondBaseUrl = ExternalConfiguration::where('key', 'drivemond_base_url')->first()?->value;
+            $driveMondToken = ExternalConfiguration::where('key', 'drivemond_token')->first()?->value;
+            $systemSelfToken = ExternalConfiguration::where('key', 'system_self_token')->first()?->value;
+            $response = Http::withToken($request->bearer_token)->post($driveMondBaseUrl . '/api/customer/get-data',
+                [
+                    'token' => $driveMondToken,
+                    'external_base_url' => url('/'),
+                    'external_token' => $systemSelfToken,
+                ]);
+            if ($response->successful()) {
+                $drivemondCustomerResponse = $response->json();
+                if ($drivemondCustomerResponse['status']) {
+                    $drivemondCustomer = $drivemondCustomerResponse['data'];
+                    $user = User::where(['phone' => $drivemondCustomer['phone']])->first();
+                    if ($user) {
+                        $user->wallet_balance += $request->amount;
+                        $user->save();
+                        $wallet_transaction = new WalletTransaction();
+                        $wallet_transaction->user_id = $user->id;
+                        $wallet_transaction->transaction_id = Str::uuid();
+                        $wallet_transaction->transaction_type = 'wallet_transfer_mart_from_drivemond';
+                        $wallet_transaction->credit = $request->amount;
+                        $wallet_transaction->balance = $user->wallet_balance;
+                        $wallet_transaction->created_at = now();
+                        $wallet_transaction->updated_at = now();
+                        $wallet_transaction->save();
+
+                        $notificationData = [
+                            'title' => translate('wallet_transfer_mart_from_drivemond'),
+                            'description' => translate('you_transfer_your_wallet_balance_mart_from_drivemond'),
+                            'order_id' => '',
+                            'image' => '',
+                            'type'=> 'wallet_transfer'
+                        ];
+                        Helpers::send_push_notif_to_device($user->cm_firebase_token, $notificationData);
+
+                        $data = [
+                            'status' => true,
+                            'data' => $user
+                        ];
+                        return response()->json($data);
+                    }
+                }
+            }
+            $drivemondCustomer = $drivemondCustomerResponse['data'];
+            if ($drivemondCustomer['error_code'] == 402) {
+                $data = [
+                    'status' => false,
+                    'data' => ['error_code' => 402, 'message' => "Drivemond user not found"]
+                ];
+                return response()->json($data);
+            }
+
+        }
+        $data = [
+            'status' => false,
+            'data' => ['error_code' => 402, 'message' => "Invalid token"]
+        ];
+        return response()->json($data);
+
+
+    }
 }

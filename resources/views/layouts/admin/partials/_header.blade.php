@@ -91,6 +91,17 @@
                                             </a>
                                         </li>
                                     @endif
+{{--                                    @if (\App\CentralLogics\Helpers::module_permission_check('settings') && (auth('admin')->user()->role_id == 1))--}}
+{{--                                        <li>--}}
+{{--                                            <a href="{{ route('admin.business-settings.external-system.drivemond-configuration') }}"--}}
+{{--                                               class="next-tour">--}}
+{{--                                                <img--}}
+{{--                                                    src="{{asset('/public/assets/admin/img/navbar-setting-icon/external-configuration.svg')}}"--}}
+{{--                                                    alt="">--}}
+{{--                                                <span>{{translate('messages.Ride_Share_Setup_&_Integration')}}</span>--}}
+{{--                                            </a>--}}
+{{--                                        </li>--}}
+{{--                                    @endif--}}
                                     @if (\App\CentralLogics\Helpers::module_permission_check('settings'))
                                         <li>
                                             <a href="{{ route('admin.business-settings.third-party.payment-method') }}"
@@ -209,6 +220,29 @@
                                                     {{translate('Select Module & Monitor your business module wise')}}
                                                 </p>
                                             </div>
+{{--                                            @if((\App\Models\ExternalConfiguration::where('key','activation_mode')->first()->value ?? 0) && (auth('admin')->user()->role_id == 1))--}}
+{{--                                                @php($drivemondBaseUrl = \App\Models\ExternalConfiguration::where('key', 'drivemond_base_url')->first()->value ?? null)--}}
+{{--                                                @php($drivemondBusinessName = \App\Models\ExternalConfiguration::where('key', 'drivemond_business_name')->first()->value ?? "DriveMond")--}}
+{{--                                                @php($drivemondBusinessLogo = \App\Models\ExternalConfiguration::where('key', 'drivemond_business_logo')->first()->value ?? null)--}}
+{{--                                                <div class="col-6">--}}
+{{--                                                    <form method="POST"--}}
+{{--                                                          action="{{url($drivemondBaseUrl."/admin/auth/external-login-from-mart")}}"--}}
+{{--                                                          target="_blank">--}}
+{{--                                                        <input type="hidden" name="mart_token"--}}
+{{--                                                               value="{{\App\Models\ExternalConfiguration::where('key','system_self_token')->first()->value ?? null}}">--}}
+{{--                                                        <input type="hidden" name="mart_base_url" value="{{url('/')}}">--}}
+{{--                                                        <input type="hidden" name="drivemond_token"--}}
+{{--                                                               value="{{\App\Models\ExternalConfiguration::where('key','drivemond_token')->first()->value ?? null}}">--}}
+{{--                                                        <button type="submit" id="tourb-8"--}}
+{{--                                                                class="__nav-module-item set-module __nav-module-item-drivemond">--}}
+{{--                                                            <img--}}
+{{--                                                                src="{{asset('/public/assets/admin/img/how-it-works/ride-sharing.svg')}}"--}}
+{{--                                                                alt="public/img">--}}
+{{--                                                            <span>{{ ($drivemondBusinessName?? "DriveMond"). ' '. translate('Admin Panel')}}</span>--}}
+{{--                                                        </button>--}}
+{{--                                                    </form>--}}
+{{--                                                </div>--}}
+{{--                                            @endif--}}
                                         </div>
                                     </div>
                                 </div>

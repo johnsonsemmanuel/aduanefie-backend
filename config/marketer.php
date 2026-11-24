@@ -27,10 +27,12 @@ return [
     'holding_days' => (int) env('MARKETER_HOLDING_DAYS', 14),
 
     /*
-    | Whether 2FA/MFA is mandatory for field marketers. False allows direct login
-    | with email and password so field agents in rural areas are not locked out.
+    | MFA is mandatory for the marketer portal. A marketer account can request
+    | money, so password-only access is not an acceptable trade-off for field
+    | convenience. The controllers require a verified second factor regardless
+    | of this value; it remains here only as configuration documentation.
     */
-    'mfa_required' => (bool) env('MARKETER_MFA_REQUIRED', false),
+    'mfa_required' => (bool) env('MARKETER_MFA_REQUIRED', true),
 
     /*
     | Smallest payout a marketer may request, in the ledger currency. 0 disables

@@ -567,14 +567,6 @@ class ItemController extends Controller
         $nearby = filter_var($request->query('nearby', 'false'), FILTER_VALIDATE_BOOLEAN);
         $lat = $request->query('lat');
         $lng = $request->query('lng');
-        if ($nearby) {
-            $coordinates = $this->validatedCoordinatePair($lat, $lng);
-            if (!$coordinates) {
-                return $this->invalidNearbyCoordinatesResponse();
-            }
-            $lat = $coordinates['latitude'];
-            $lng = $coordinates['longitude'];
-        }
         $radiusKm = max(1, min(100, (float) $request->query('radius_km', 25)));
         $zoneId = $request->header('zoneId') ? json_decode($request->header('zoneId'), true) : null;
         $moduleId = optional(config('module.current_module_data'))['id'] ?? $request->header('moduleId');
@@ -598,7 +590,7 @@ class ItemController extends Controller
             )
             ->when($backyard === '1' || $backyard === 'true', fn ($q) => $q->where('is_backyard', true));
 
-        if ($nearby) {
+        if ($nearby && $lat && $lng) {
             $query->whereHas('store', function ($storeQ) use ($lat, $lng, $radiusKm) {
                 $storeQ->whereNotNull('latitude')
                     ->whereNotNull('longitude')
@@ -1146,16 +1138,19 @@ class ItemController extends Controller
                 'errors' => $errors
             ], 403);
         }
-        $coordinates = $this->validatedNearbyCoordinates($request);
-        if ($this->requestAsksForNearby($request) && !$coordinates) {
-            return $this->invalidNearbyCoordinatesResponse();
+        if (!$request->hasHeader('longitude') || !$request->hasHeader('latitude')) {
+            $errors = [];
+            array_push($errors, ['code' => 'longitude-latitude', 'message' => translate('messages.longitude-latitude_required')]);
+            return response()->json([
+                'errors' => $errors
+            ], 403);
         }
         $validator = Validator::make($request->all(), [
             'name' => 'required',
         ]);
         $zone_id= $request->header('zoneId');
-        $longitude = $coordinates['longitude'] ?? null;
-        $latitude = $coordinates['latitude'] ?? null;
+        $longitude= $request->header('longitude');
+        $latitude= $request->header('latitude');
 
         if ($validator->fails()) {
             return response()->json(['errors' => Helpers::error_processor($validator)], 403);
