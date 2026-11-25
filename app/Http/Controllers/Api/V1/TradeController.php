@@ -127,11 +127,36 @@ class TradeController extends Controller
         return $this->requests($request);
     }
 
+    private function resolveSupplierStoreIds(Request $request): array
+    {
+        $storeIds = [];
+        $bearer = $request->bearerToken();
+        if ($bearer && Schema::hasTable('vendors') && Schema::hasTable('stores')) {
+            $vendorId = DB::table('vendors')->where('auth_token', $bearer)->value('id');
+            if ($vendorId) {
+                $storeIds = DB::table('stores')
+                    ->where('vendor_id', $vendorId)
+                    ->where('status', 1)
+                    ->pluck('id')
+                    ->map(fn ($v) => (int) $v)
+                    ->all();
+            }
+        }
+        return $storeIds;
+    }
+
     public function requests(Request $request)
     {
+        if (! app(\App\Services\FeatureFlagService::class)->allowsHistoricalAccess('rfq_new_commitments')) {
+            return response()->json(['requests' => [], 'total' => 0], 200);
+        }
+
         if (! Schema::hasTable('trade_rfqs')) {
             return response()->json(['requests' => [], 'total' => 0], 200);
         }
+
+        $actorId = $request->user('api')?->id ?? auth('api')->id();
+        $supplierStoreIds = $this->resolveSupplierStoreIds($request);
 
         $query = DB::table('trade_rfqs')->orderByDesc('id');
         if ($request->filled('status') && $request->query('status') !== 'all') {
@@ -150,11 +175,75 @@ class TradeController extends Controller
                 ->groupBy('trade_rfq_id')
             : collect();
 
-        $enriched = $rfqs->map(function ($rfq) use ($quotesByRfq) {
-            $quotes = $quotesByRfq->get($rfq->id, collect());
-            $rfq->quotes_count = $quotes->count();
-            $rfq->quotes = $quotes->values();
-            return $rfq;
+        $enriched = $rfqs->map(function ($rfq) use ($quotesByRfq, $actorId, $supplierStoreIds) {
+            $allQuotes = $quotesByRfq->get($rfq->id, collect());
+            $isBuyerOwner = $actorId && !empty($rfq->user_id) && (int) $rfq->user_id === (int) $actorId;
+
+            // Public / non-owner summary: never leak buyer_phone, buyer_email, user_id,
+            // or competing supplier quotes/phones/prices.
+            $sanitized = (object) [
+                'id' => $rfq->id,
+                'buyer_company' => $rfq->buyer_company ?: 'Verified Buyer',
+                'commodity' => $rfq->commodity,
+                'category' => $rfq->category ?? null,
+                'quantity' => $rfq->quantity,
+                'unit' => $rfq->unit,
+                'target_price_ghs' => $rfq->target_price_ghs ?? null,
+                'incoterm' => $rfq->incoterm ?? 'DDP',
+                'origin_country' => $rfq->origin_country ?? 'Ghana',
+                'destination_country' => $rfq->destination_country,
+                'destination_city' => $rfq->destination_city ?? null,
+                'trade_bloc' => $rfq->trade_bloc ?? 'ECOWAS',
+                'requires_insurance' => (bool) ($rfq->requires_insurance ?? false),
+                'requires_phytosanitary' => (bool) ($rfq->requires_phytosanitary ?? false),
+                'deadline_date' => $rfq->deadline_date ?? null,
+                'status' => $rfq->status,
+                'created_at' => $rfq->created_at ?? null,
+                'quotes_count' => $allQuotes->count(),
+            ];
+
+            if ($isBuyerOwner) {
+                $sanitized->is_owner = true;
+                $sanitized->buyer_name = $rfq->buyer_name;
+                $sanitized->buyer_phone = $rfq->buyer_phone;
+                $sanitized->buyer_email = $rfq->buyer_email ?? null;
+                $sanitized->notes = $rfq->notes ?? null;
+                $sanitized->quotes = $allQuotes->map(function ($q) {
+                    return [
+                        'id' => $q->id,
+                        'trade_rfq_id' => $q->trade_rfq_id,
+                        'store_id' => $q->store_id ?? null,
+                        'supplier_name' => $q->supplier_name,
+                        // Only reveal supplier direct phone on an accepted quote
+                        'supplier_phone' => ($q->status ?? '') === 'accepted' ? ($q->supplier_phone ?? null) : null,
+                        'quoted_unit_price_ghs' => $q->quoted_unit_price_ghs,
+                        'incoterm' => $q->incoterm ?? null,
+                        'lead_time_days' => $q->lead_time_days ?? null,
+                        'compliance_docs' => $q->compliance_docs ?? null,
+                        'status' => $q->status ?? 'submitted',
+                    ];
+                })->values();
+            } elseif (!empty($supplierStoreIds)) {
+                // Quoting supplier sees ONLY their own quote(s), never competitors' prices
+                $ownQuotes = $allQuotes->filter(
+                    fn ($q) => !empty($q->store_id) && in_array((int) $q->store_id, $supplierStoreIds, true)
+                );
+                $sanitized->quotes = $ownQuotes->map(fn ($q) => [
+                    'id' => $q->id,
+                    'trade_rfq_id' => $q->trade_rfq_id,
+                    'store_id' => $q->store_id,
+                    'supplier_name' => $q->supplier_name,
+                    'quoted_unit_price_ghs' => $q->quoted_unit_price_ghs,
+                    'incoterm' => $q->incoterm ?? null,
+                    'lead_time_days' => $q->lead_time_days ?? null,
+                    'compliance_docs' => $q->compliance_docs ?? null,
+                    'status' => $q->status ?? 'submitted',
+                ])->values();
+            } else {
+                $sanitized->quotes = [];
+            }
+
+            return $sanitized;
         });
 
         return response()->json([
@@ -170,6 +259,11 @@ class TradeController extends Controller
                 'message' => 'New RFQ commitments are currently disabled pending an approved fulfilment workflow.',
                 'code' => 'rfq_commitments_disabled',
             ], 403);
+        }
+
+        $actorId = $request->user('api')?->id ?? auth('api')->id();
+        if (! $actorId) {
+            return response()->json(['message' => 'Authentication is required to create an RFQ.'], 401);
         }
 
         if (! Schema::hasTable('trade_rfqs')) {
@@ -198,7 +292,7 @@ class TradeController extends Controller
         ]);
 
         $id = DB::table('trade_rfqs')->insertGetId([
-            'user_id' => auth('api')->id(),
+            'user_id' => $actorId,
             'buyer_name' => trim($data['buyer_name']),
             'buyer_company' => isset($data['buyer_company']) ? trim($data['buyer_company']) : null,
             'buyer_phone' => trim($data['buyer_phone']),
@@ -237,6 +331,14 @@ class TradeController extends Controller
             ], 403);
         }
 
+        $supplierStoreIds = $this->resolveSupplierStoreIds($request);
+        if (empty($supplierStoreIds)) {
+            return response()->json([
+                'message' => 'Only authenticated, approved farm/store suppliers can submit RFQ quotes.',
+                'code' => 'supplier_auth_required',
+            ], 403);
+        }
+
         if (! Schema::hasTable('trade_rfqs') || ! Schema::hasTable('trade_rfq_quotes')) {
             return response()->json(['message' => 'RFQ tables not initialized yet.'], 503);
         }
@@ -257,9 +359,17 @@ class TradeController extends Controller
             'notes' => 'nullable|string|max:1000',
         ]);
 
+        $resolvedStoreId = isset($data['store_id']) ? (int) $data['store_id'] : $supplierStoreIds[0];
+        if (! in_array($resolvedStoreId, $supplierStoreIds, true)) {
+            return response()->json([
+                'message' => 'You do not have permission to submit a quote on behalf of this store.',
+                'code' => 'supplier_store_mismatch',
+            ], 403);
+        }
+
         $quoteId = DB::table('trade_rfq_quotes')->insertGetId([
             'trade_rfq_id' => $rfq->id,
-            'store_id' => $data['store_id'] ?? null,
+            'store_id' => $resolvedStoreId,
             'supplier_name' => trim($data['supplier_name']),
             'supplier_phone' => trim($data['supplier_phone']),
             'quoted_unit_price_ghs' => round((float) $data['quoted_unit_price_ghs'], 2),

@@ -73,6 +73,11 @@ class RegionalTourController extends Controller
 
     public function register(Request $request)
     {
+        if (! app(\App\Services\FeatureFlagService::class)->allowsNewTransactions('regional_tours')) {
+            return response()->json([
+                'errors' => [['code' => 'feature_disabled', 'message' => 'Regional tour registrations are currently disabled.']],
+            ], 403);
+        }
         if (! Schema::hasTable('regional_tour_registrations')) {
             return response()->json([
                 'errors' => [['code' => 'unavailable', 'message' => 'Regional tours are not ready yet.']],

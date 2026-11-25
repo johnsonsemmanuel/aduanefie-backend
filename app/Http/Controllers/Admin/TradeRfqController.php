@@ -41,11 +41,41 @@ class TradeRfqController extends Controller
         return back();
     }
 
-    public function acceptQuote($quoteId)
+    public function acceptQuote(Request $request, $quoteId)
     {
+        if (! app(\App\Services\FeatureFlagService::class)->allowsNewTransactions('rfq_new_commitments')) {
+            $msg = 'Accepting RFQ quotes is disabled until an approved fulfilment arrangement is enabled.';
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $msg, 'code' => 'rfq_commitments_disabled'], 403);
+            }
+            Toastr::error($msg);
+            return back();
+        }
+
         $quote = DB::table('trade_rfq_quotes')->where('id', $quoteId)->first();
         if (! $quote) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Quote not found.'], 404);
+            }
             Toastr::error('Quote not found.');
+            return back();
+        }
+
+        $rfq = DB::table('trade_rfqs')->where('id', $quote->trade_rfq_id)->first();
+        if (! $rfq) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'RFQ not found.'], 404);
+            }
+            Toastr::error('RFQ not found.');
+            return back();
+        }
+
+        if (($rfq->status ?? 'open') === 'awarded') {
+            $msg = 'This RFQ has already been awarded.';
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $msg], 422);
+            }
+            Toastr::error($msg);
             return back();
         }
 

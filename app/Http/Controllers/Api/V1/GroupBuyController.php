@@ -85,6 +85,9 @@ class GroupBuyController extends Controller
 
     public function store(Request $request)
     {
+        if (! app(\App\Services\FeatureFlagService::class)->allowsNewTransactions('group_buys')) {
+            return response()->json(['errors' => [['code' => 'feature_disabled', 'message' => 'Creating new group buys is currently disabled.']]], 403);
+        }
         $validator = Validator::make($request->all(), [
             'item_id' => 'required|integer|exists:items,id',
             'target_value_ghs' => 'nullable|numeric|min:1',
@@ -151,6 +154,9 @@ class GroupBuyController extends Controller
 
     public function join(Request $request, $id)
     {
+        if (! app(\App\Services\FeatureFlagService::class)->allowsNewTransactions('group_buys')) {
+            return response()->json(['errors' => [['code' => 'feature_disabled', 'message' => 'Joining group buys is currently disabled.']]], 403);
+        }
         $group = GroupBuy::find($id);
         if (! $group) {
             return response()->json(['errors' => [['code' => 'group_buy', 'message' => 'Group buy not found.']]], 404);

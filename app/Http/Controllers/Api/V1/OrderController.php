@@ -320,6 +320,19 @@ class OrderController extends Controller
             : null;
         $crossBorderService = app(ShippingQuoteService::class);
         $isCrossBorder = $store && $destinationCountry && $crossBorderService->isCrossBorder($store, $destinationCountry);
+        $isDomesticWholesale = !$isCrossBorder && $store && (int) $store->module_id === 2;
+
+        if ($isCrossBorder && !app(\App\Services\FeatureFlagService::class)->allowsNewTransactions('cross_border_trade')) {
+            return response()->json([
+                'errors' => [['code' => 'cross_border_disabled', 'message' => 'Cross-border trade orders are currently disabled.']],
+            ], 403);
+        }
+
+        if ($isDomesticWholesale && !app(\App\Services\FeatureFlagService::class)->allowsNewTransactions('domestic_wholesale')) {
+            return response()->json([
+                'errors' => [['code' => 'domestic_wholesale_disabled', 'message' => 'Domestic wholesale orders are currently disabled.']],
+            ], 403);
+        }
 
         if (!$zone && !$isCrossBorder) {
             $errors = [];
@@ -329,10 +342,10 @@ class OrderController extends Controller
             ], 403);
         }
 
-        // Enforce operational delivery serviceability (opt-in via BusinessSetting
-        // or config so farmers can register anywhere while retail deliveries are
-        // restricted to approved delivery zones and maximum radius).
-        if ($request->order_type === 'delivery' && !$isCrossBorder) {
+        // Enforce operational retail delivery serviceability (opt-in via BusinessSetting
+        // so farmers can register anywhere and domestic wholesale remains available,
+        // while retail deliveries are restricted to approved delivery zones and max radius).
+        if ($request->order_type === 'delivery' && !$isCrossBorder && !$isDomesticWholesale) {
             $allowedDeliveryZonesRaw = Helpers::get_business_settings('retail_delivery_zone_ids');
             $allowedDeliveryZoneIds = is_array($allowedDeliveryZonesRaw)
                 ? array_values(array_filter(array_map('intval', $allowedDeliveryZonesRaw)))
@@ -2589,8 +2602,9 @@ class OrderController extends Controller
         $distance = max(0, (float) ($request->input('distance') ?? 0));
         $store_id = $request->input('store_id');
         $store = $store_id ? Store::find($store_id) : null;
+        $isDomesticWholesale = $store && (int) $store->module_id === 2;
 
-        if ($order_type === 'delivery') {
+        if ($order_type === 'delivery' && !$isDomesticWholesale) {
             $maxDeliveryRadiusKm = (float) (Helpers::get_business_settings('max_retail_delivery_distance_km') ?? 0);
             if ($maxDeliveryRadiusKm > 0 && $distance > $maxDeliveryRadiusKm) {
                 return response()->json([
