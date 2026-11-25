@@ -46,6 +46,7 @@ class Kernel extends HttpKernel
         ],
 
         'api' => [
+            \App\Http\Middleware\EnsurePreviewAccess::class,
             \App\Http\Middleware\DefaultBrowseContextMiddleware::class,
             'throttle:api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,

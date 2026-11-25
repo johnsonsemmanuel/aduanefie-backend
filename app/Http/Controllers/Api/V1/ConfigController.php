@@ -246,6 +246,7 @@ class ConfigController extends Controller
 //            'landing_page_settings_full_url'=> $data['web_app_landing_page_settings_storage']??'public',
             'social_media' => SocialMedia::active()->get()->toArray(),
             'footer_text' => isset($settings['footer_text']) ? $settings['footer_text'] : '',
+            'public_access_enabled' => app(\App\Services\PreviewAccessService::class)->isPublicAccessOpen(),
             'feature_flags' => ($featureFlags = app(\App\Services\FeatureFlagService::class)->all()),
             'footer_links' => isset($settings['footer_links']) && is_string($settings['footer_links'])
                 ? json_decode($settings['footer_links'], true)

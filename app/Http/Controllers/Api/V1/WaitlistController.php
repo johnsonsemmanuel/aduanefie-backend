@@ -84,8 +84,14 @@ class WaitlistController extends Controller
             ], 403);
         }
 
+        $previewService = app(\App\Services\PreviewAccessService::class);
+        $ttl = 60 * 60 * 24 * 30; // 30 days
+        $token = $previewService->issueToken($ttl);
+
         return response()->json([
             'unlocked' => true,
+            'preview_token' => $token,
+            'expires_in' => $ttl,
             'message' => 'Platform access unlocked.',
         ], 200);
     }
