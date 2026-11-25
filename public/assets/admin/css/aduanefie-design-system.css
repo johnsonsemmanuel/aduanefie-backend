@@ -28,12 +28,13 @@ nav.tabs a, .mobile-bottom-nav a { min-height: 44px; }
     border-radius: 16px;
     padding: 28px;
 }
-.auth-wrapper-form .auth-header .title { color: var(--adf-ink); }
+.auth-wrapper-form .auth-header .title { color: var(--adf-ink) !important; }
 .auth-wrapper-form .btn--primary {
-    background-color: var(--adf-brand);
-    border-color: var(--adf-brand);
+    background: var(--adf-brand) !important;
+    border-color: var(--adf-brand) !important;
     color: #fff;
 }
+.auth-wrapper-form .btn--primary:hover { background: #204A32 !important; }
 .adf-mobile-brand { display: none; }
 @media (max-width: 991.98px) {
     .adf-mobile-brand {
