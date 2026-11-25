@@ -54,10 +54,14 @@
         <div class="auth-wrapper-right">
             <div class="auth-wrapper-form">
                 <div class="auth-header">
+                    <div class="adf-mobile-brand">
+                        <img class="onerror-image" data-onerror-image="{{ asset('/public/assets/admin/img/favicon.png') }}" src="{{ $brand_logo_url }}" alt="">
+                        <span>Aduanefie</span>
+                    </div>
                     <div class="mb-5">
-                        <h2 class="title">
+                        <h1 class="title">
                             {{ $isAdmin ? translate('messages.signin') : ($isMarketer ? translate('Marketer Sign In') : translate('messages.store_signin')) }}
-                        </h2>
+                        </h1>
                         <div>
                             {{ $isAdmin ? translate('messages.welcome_back_login_to_your_panel') : ($isMarketer ? translate('Sign in to your marketer panel') : translate('messages.signin_to_your_store_panel')) }}.
                         </div>
@@ -80,12 +84,12 @@
                         <label class="input-label text-capitalize" for="signinSrEmail">{{ translate('messages.your_email') }}</label>
                         <input type="email" class="form-control form-control-lg" name="email" id="signinSrEmail"
                                tabindex="1" placeholder="email@address.com" value="{{ $email ?? old('email') }}"
-                               aria-label="email@address.com" required
+                               aria-label="email@address.com" autocomplete="username" required
                                data-msg="{{ translate('Please_enter_a_valid_email_address.') }}">
                     </div>
 
                     <div class="js-form-message form-group mb-2">
-                        <label class="input-label" for="signupSrPassword" tabindex="0">
+                        <label class="input-label" for="signupSrPassword">
                             <span class="d-flex justify-content-between align-items-center">
                                 {{ translate('messages.password') }}
                             </span>
@@ -93,9 +97,9 @@
                         <div class="input-group input-group-merge">
                             <input type="password" class="js-toggle-password form-control form-control-lg"
                                    name="password" id="signupSrPassword"
-                                   placeholder="{{ translate('messages.password_length_placeholder', ['length' => '6+']) }}"
+                                   placeholder="{{ translate('Enter your password') }}" autocomplete="current-password"
                                    value="{{ $password ?? '' }}"
-                                   aria-label="{{ translate('messages.password_length_placeholder', ['length' => '6+']) }}"
+                                   aria-label="{{ translate('messages.password') }}"
                                    required
                                    data-msg="{{ translate('messages.invalid_password_warning') }}"
                                    data-hs-toggle-password-options='{
@@ -105,9 +109,9 @@
                                        "classChangeTarget": "#changePassIcon"
                                    }'>
                             <div id="changePassTarget" class="input-group-append">
-                                <a class="input-group-text" href="javascript:">
+                                <button type="button" class="input-group-text" aria-label="{{ translate('Show or hide password') }}">
                                     <i id="changePassIcon" class="tio-visible-outlined"></i>
-                                </a>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -142,9 +146,9 @@
                         </div>
                         <div class="form-group" id="forget-password">
                             <div class="custom-control">
-                                <span type="button" data-toggle="modal" class="text-primary" data-target="#forgetPassModal">
+                                <button type="button" data-toggle="modal" class="btn btn-link p-0 text-primary" data-target="#forgetPassModal">
                                     {{ $isAdmin ? translate('Forget Password') : translate('messages.Forget Password') }}?
-                                </span>
+                                </button>
                             </div>
                         </div>
                     </div>

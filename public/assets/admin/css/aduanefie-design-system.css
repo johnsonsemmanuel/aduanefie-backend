@@ -22,6 +22,31 @@ nav.tabs a, .mobile-bottom-nav a { min-height: 44px; }
 .btn:not(.btn-icon), button[type="submit"] { min-height: 44px; }
 .card { border-radius: 12px; }
 .table-responsive { overscroll-behavior-x: contain; }
+.auth-wrapper-form {
+    background: #fff;
+    border: 1px solid var(--adf-line);
+    border-radius: 16px;
+    padding: 28px;
+}
+.auth-wrapper-form .auth-header .title { color: var(--adf-ink); }
+.auth-wrapper-form .btn--primary {
+    background-color: var(--adf-brand);
+    border-color: var(--adf-brand);
+    color: #fff;
+}
+.adf-mobile-brand { display: none; }
+@media (max-width: 991.98px) {
+    .adf-mobile-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--adf-ink);
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 24px;
+    }
+    .adf-mobile-brand img { max-width: 120px; height: 36px; object-fit: contain; }
+}
 @media (max-width: 767.98px) {
     input[type="text"], input[type="email"], input[type="tel"], input[type="password"],
     input[type="number"], select, textarea { font-size: 16px; }
