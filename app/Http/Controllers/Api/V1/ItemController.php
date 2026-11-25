@@ -834,8 +834,17 @@ class ItemController extends Controller
         }
 
         $zoneIds = json_decode($request->header('zoneId'), true);
-        if (!is_array($zoneIds) || empty($zoneIds)) {
-            $zoneIds = [(int) $request->header('zoneId')];
+        if (!is_array($zoneIds)) {
+            $singleZone = filter_var($request->header('zoneId'), FILTER_VALIDATE_INT);
+            $zoneIds = $singleZone !== false && $singleZone > 0 ? [$singleZone] : [];
+        } else {
+            $zoneIds = array_values(array_filter(array_map('intval', $zoneIds), fn ($id) => $id > 0));
+        }
+
+        if (empty($zoneIds)) {
+            return response()->json([
+                'errors' => [['code' => 'zoneId', 'message' => translate('messages.zone_id_required')]],
+            ], 403);
         }
 
         $limit = max(1, min(30, (int) $request->query('limit', 12)));
@@ -897,7 +906,7 @@ class ItemController extends Controller
         $hasPersonalSignals = $interestCatIds->isNotEmpty() || $boughtItemIds->isNotEmpty() || $affinityCatIds->isNotEmpty();
 
         $moduleData = config('module.current_module_data');
-        $candidates = Item::with(['store', 'rating'])
+        $candidates = Item::with(['store'])
             ->whereHas('store', function ($query) use ($zoneIds, $moduleData) {
                 $query->when($moduleData, function ($q) use ($moduleData) {
                     $q->where('module_id', $moduleData['id'])
