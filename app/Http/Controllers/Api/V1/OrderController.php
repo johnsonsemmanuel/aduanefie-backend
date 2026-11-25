@@ -328,6 +328,31 @@ class OrderController extends Controller
                 'errors' => $errors
             ], 403);
         }
+
+        // Enforce operational delivery serviceability (opt-in via BusinessSetting
+        // or config so farmers can register anywhere while retail deliveries are
+        // restricted to approved delivery zones and maximum radius).
+        if ($request->order_type === 'delivery' && !$isCrossBorder) {
+            $allowedDeliveryZonesRaw = Helpers::get_business_settings('retail_delivery_zone_ids');
+            $allowedDeliveryZoneIds = is_array($allowedDeliveryZonesRaw)
+                ? array_values(array_filter(array_map('intval', $allowedDeliveryZonesRaw)))
+                : (is_string($allowedDeliveryZonesRaw) && trim($allowedDeliveryZonesRaw) !== ''
+                    ? array_values(array_filter(array_map('intval', json_decode($allowedDeliveryZonesRaw, true) ?: explode(',', $allowedDeliveryZonesRaw))))
+                    : []);
+
+            if (!empty($allowedDeliveryZoneIds) && $zone && !in_array((int) $zone->id, $allowedDeliveryZoneIds, true)) {
+                return response()->json([
+                    'errors' => [['code' => 'coordinates', 'message' => translate('messages.out_of_coverage')]],
+                ], 403);
+            }
+
+            $maxDeliveryRadiusKm = (float) (Helpers::get_business_settings('max_retail_delivery_distance_km') ?? 0);
+            if ($maxDeliveryRadiusKm > 0 && (float) $distance_data > $maxDeliveryRadiusKm) {
+                return response()->json([
+                    'errors' => [['code' => 'distance', 'message' => translate('messages.out_of_coverage')]],
+                ], 403);
+            }
+        }
         if( $zone && $zone->increased_delivery_fee_status == 1){
             $increased=$zone->increased_delivery_fee ?? 0;
         }
@@ -2564,6 +2589,28 @@ class OrderController extends Controller
         $distance = max(0, (float) ($request->input('distance') ?? 0));
         $store_id = $request->input('store_id');
         $store = $store_id ? Store::find($store_id) : null;
+
+        if ($order_type === 'delivery') {
+            $maxDeliveryRadiusKm = (float) (Helpers::get_business_settings('max_retail_delivery_distance_km') ?? 0);
+            if ($maxDeliveryRadiusKm > 0 && $distance > $maxDeliveryRadiusKm) {
+                return response()->json([
+                    'errors' => [['code' => 'distance', 'message' => translate('messages.out_of_coverage')]],
+                ], 403);
+            }
+
+            $allowedDeliveryZonesRaw = Helpers::get_business_settings('retail_delivery_zone_ids');
+            $allowedDeliveryZoneIds = is_array($allowedDeliveryZonesRaw)
+                ? array_values(array_filter(array_map('intval', $allowedDeliveryZonesRaw)))
+                : (is_string($allowedDeliveryZonesRaw) && trim($allowedDeliveryZonesRaw) !== ''
+                    ? array_values(array_filter(array_map('intval', json_decode($allowedDeliveryZonesRaw, true) ?: explode(',', $allowedDeliveryZonesRaw))))
+                    : []);
+
+            if (!empty($allowedDeliveryZoneIds) && $store && !in_array((int) $store->zone_id, $allowedDeliveryZoneIds, true)) {
+                return response()->json([
+                    'errors' => [['code' => 'coordinates', 'message' => translate('messages.out_of_coverage')]],
+                ], 403);
+            }
+        }
 
         $tax_rate = ($store && $store->tax > 0) ? (float) $store->tax : 0;
         $tax_amount = ($tax_rate > 0 && $order_amount > 0)

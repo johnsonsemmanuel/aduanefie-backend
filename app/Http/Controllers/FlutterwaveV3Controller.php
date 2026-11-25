@@ -132,26 +132,25 @@ class FlutterwaveV3Controller extends Controller
                 $amountPaid = $res->data->charged_amount;
                 $amountToPay = $res->data->meta->price;
                 if ($amountPaid >= $amountToPay) {
-
-                    $this->payment::where(['id' => $request['payment_id']])->update([
-                        'payment_method' => 'flutterwave',
-                        'is_paid' => 1,
-                        'transaction_id' => $txid,
-                    ]);
-
-                    $data = $this->payment::where(['id' => $request['payment_id']])->first();
-
-                    if (isset($data) && function_exists($data->success_hook)) {
-                        call_user_func($data->success_hook, $data);
+                    try {
+                        $data = $this->finalizePaymentSuccess(
+                            'id',
+                            (string) $request['payment_id'],
+                            'flutterwave',
+                            (string) $txid,
+                            (float) $amountPaid,
+                            isset($res->data->currency) ? (string) $res->data->currency : null
+                        );
+                        if ($data && (int) $data->is_paid === 1) {
+                            return $this->payment_response($data, 'success');
+                        }
+                    } catch (\Throwable $e) {
+                        info('Flutterwave callback verification failed: ' . $e->getMessage());
                     }
-                    return $this->payment_response($data,'success');
                 }
             }
         }
-        $payment_data = $this->payment::where(['id' => $request['payment_id']])->first();
-        if (isset($payment_data) && function_exists($payment_data->failure_hook)) {
-            call_user_func($payment_data->failure_hook, $payment_data);
-        }
-        return $this->payment_response($payment_data,'fail');
+        $payment_data = $this->finalizePaymentFailure('id', (string) $request['payment_id']);
+        return $this->payment_response($payment_data, 'fail');
     }
 }

@@ -117,7 +117,14 @@ if (! function_exists('collect_cash_success')) {
 
 if (! function_exists('order_place')) {
     function order_place($data) {
-        $order = Order::find($data->attribute_id);
+        $order = Order::where('id', $data->attribute_id)->lockForUpdate()->first();
+        if (!$order) {
+            return false;
+        }
+        if ($order->payment_status === 'paid' && in_array($order->order_status, ['confirmed', 'processing', 'handover', 'picked_up', 'delivered'], true)) {
+            return true;
+        }
+        $wasAlreadyPaid = ($order->payment_status === 'paid');
         $order->order_status='confirmed';
         if($order->payment_method != 'partial_payment'){
             $order->payment_method=$data->payment_method;
@@ -129,7 +136,7 @@ if (! function_exists('order_place')) {
 
 
 
-        if( $order?->store?->is_valid_subscription == 1 && $order?->store?->store_sub?->max_order != "unlimited" && $order?->store?->store_sub?->max_order > 0){
+        if(!$wasAlreadyPaid && $order?->store?->is_valid_subscription == 1 && $order?->store?->store_sub?->max_order != "unlimited" && $order?->store?->store_sub?->max_order > 0){
             $order?->store?->store_sub?->decrement('max_order' , 1);
         }
 
@@ -209,7 +216,10 @@ if (! function_exists('trip_payment_fail')) {
 
 if (! function_exists('order_failed')) {
     function order_failed($data) {
-        $order = Order::find($data->attribute_id);
+        $order = Order::where('id', $data->attribute_id)->lockForUpdate()->first();
+        if (!$order || $order->payment_status === 'paid') {
+            return;
+        }
         $order->order_status='failed';
         if($order->payment_method != 'partial_payment'){
             $order->payment_method=$data->payment_method;
@@ -221,7 +231,10 @@ if (! function_exists('order_failed')) {
 
 if (! function_exists('wallet_success')) {
     function wallet_success($data) {
-        $order = WalletPayment::find($data->attribute_id);
+        $order = WalletPayment::where('id', $data->attribute_id)->lockForUpdate()->first();
+        if (!$order || $order->payment_status === 'success') {
+            return;
+        }
         $order->payment_method=$data->payment_method;
         // $order->transaction_reference=$data->transaction_ref;
         $order->payment_status='success';
@@ -242,9 +255,12 @@ if (! function_exists('wallet_success')) {
     }
 }
 
-if (! function_exists('wallet_success')) {
+if (! function_exists('wallet_failed')) {
     function wallet_failed($data) {
-        $order = WalletPayment::find($data->attribute_id);
+        $order = WalletPayment::where('id', $data->attribute_id)->lockForUpdate()->first();
+        if (!$order || $order->payment_status === 'success') {
+            return;
+        }
         $order->payment_status='failed';
         $order->payment_method=$data->payment_method;
         $order->save();

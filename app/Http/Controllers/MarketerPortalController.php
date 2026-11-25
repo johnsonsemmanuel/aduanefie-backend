@@ -149,11 +149,16 @@ class MarketerPortalController extends Controller
             ]);
         }
 
-        // Verification is the moment the bounty is earned. The ledger row is
-        // immediately requestable through the ordinary payout flow.
-        $this->commissions->creditBounty($marketer, $store->fresh());
+        // Credit the onboarding bounty only if the store already meets the
+        // bounty policy (including administrative approval `status === 1`).
+        // If the store is still awaiting Admin approval, field verification is
+        // recorded and the bounty will be credited once Admin approves the store.
+        $credited = $this->commissions->creditBounty($marketer, $store->fresh());
+        $message = $credited
+            ? "Verified active farming status for {$store->name}. Onboarding bounty credited."
+            : "Recorded field verification for {$store->name}. Onboarding bounty unlocks upon Admin store approval.";
 
-        return back()->with('status', "Verified active farming status for {$store->name}.");
+        return back()->with('status', $message);
     }
 
     public function backyardFarms(Request $request)

@@ -86,11 +86,117 @@ trait  Processor
 
     public function payment_response($payment_info, $payment_flag): Application|JsonResponse|Redirector|RedirectResponse|\Illuminate\Contracts\Foundation\Application
     {
-        $payment_info = PaymentRequest::find($payment_info->id);
+        if (!$payment_info) {
+            return redirect()->route('payment-fail', ['token' => base64_encode('')]);
+        }
+        $payment_info = PaymentRequest::find($payment_info->id) ?? $payment_info;
         $token_string = 'payment_method=' . $payment_info->payment_method . '&&attribute_id=' . $payment_info->attribute_id . '&&transaction_reference=' . $payment_info->transaction_id;
         if (in_array($payment_info->payment_platform, ['web', 'app']) && $payment_info['external_redirect_link'] != null) {
             return redirect($payment_info['external_redirect_link'] . '?flag=' . $payment_flag . '&&token=' . base64_encode($token_string));
         }
         return redirect()->route('payment-' . $payment_flag, ['token' => base64_encode($token_string)]);
+    }
+
+    /**
+     * Atomically finalize a payment request, verify amount/currency/reference,
+     * and execute the downstream success_hook inside a row-locked transaction.
+     *
+     * - Duplicate or concurrent callbacks see `is_paid === 1` after acquiring
+     *   the row lock and return the existing record without re-running the hook.
+     * - If the downstream `success_hook` throws an exception, the transaction
+     *   rolls back (`is_paid` remains `0`) so a subsequent retry can complete.
+     */
+    protected function finalizePaymentSuccess(
+        string $lookupColumn,
+        string|int $lookupValue,
+        string $gateway,
+        string $transactionId,
+        ?float $verifiedAmount = null,
+        ?string $verifiedCurrency = null
+    ): ?PaymentRequest {
+        return DB::transaction(function () use (
+            $lookupColumn,
+            $lookupValue,
+            $gateway,
+            $transactionId,
+            $verifiedAmount,
+            $verifiedCurrency
+        ) {
+            /** @var PaymentRequest|null $payment */
+            $payment = PaymentRequest::where($lookupColumn, $lookupValue)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$payment) {
+                return null;
+            }
+
+            if ((int) $payment->is_paid === 1) {
+                return $payment;
+            }
+
+            if ($verifiedAmount !== null) {
+                $expected = round((float) $payment->payment_amount, 2);
+                $actual = round($verifiedAmount, 2);
+                if ($actual + 0.01 < $expected) {
+                    throw new \RuntimeException("Payment amount mismatch: expected {$expected}, got {$actual}.");
+                }
+            }
+
+            if ($verifiedCurrency !== null && !empty($payment->currency_code)) {
+                if (strtoupper(trim($verifiedCurrency)) !== strtoupper(trim((string) $payment->currency_code))) {
+                    throw new \RuntimeException("Payment currency mismatch: expected {$payment->currency_code}, got {$verifiedCurrency}.");
+                }
+            }
+
+            if ($transactionId !== '') {
+                $duplicateRef = PaymentRequest::where('transaction_id', $transactionId)
+                    ->where('id', '!=', $payment->id)
+                    ->where('is_paid', 1)
+                    ->exists();
+                if ($duplicateRef) {
+                    throw new \RuntimeException("Duplicate transaction reference: {$transactionId}.");
+                }
+            }
+
+            $payment->payment_method = $gateway;
+            $payment->is_paid = 1;
+            $payment->transaction_id = $transactionId;
+            $payment->save();
+
+            if (!empty($payment->success_hook) && function_exists($payment->success_hook)) {
+                call_user_func($payment->success_hook, $payment);
+            }
+
+            return $payment->fresh();
+        });
+    }
+
+    /**
+     * Atomically record a failed payment attempt only if the payment has not
+     * already succeeded (`is_paid === 0`). Never downgrades a paid request.
+     */
+    protected function finalizePaymentFailure(string $lookupColumn, string|int $lookupValue): ?PaymentRequest
+    {
+        return DB::transaction(function () use ($lookupColumn, $lookupValue) {
+            /** @var PaymentRequest|null $payment */
+            $payment = PaymentRequest::where($lookupColumn, $lookupValue)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$payment) {
+                return null;
+            }
+
+            if ((int) $payment->is_paid === 1) {
+                return $payment;
+            }
+
+            if (!empty($payment->failure_hook) && function_exists($payment->failure_hook)) {
+                call_user_func($payment->failure_hook, $payment);
+            }
+
+            return $payment->fresh();
+        });
     }
 }

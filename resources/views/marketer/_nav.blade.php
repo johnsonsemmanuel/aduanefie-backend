@@ -1,11 +1,25 @@
 @php
     $active = $active ?? '';
-    $navPendingBackyard = \Illuminate\Support\Facades\Schema::hasTable('backyard_farm_applications')
-        ? \App\Models\BackyardFarmApplication::where('status', 'pending')->count()
-        : 0;
-    $navOpenTours = \Illuminate\Support\Facades\Schema::hasTable('regional_tours')
-        ? \App\Models\RegionalTour::whereIn('status', ['upcoming', 'open', 'in_progress'])->count()
-        : 0;
+    $currentMarketer = $marketer ?? \Illuminate\Support\Facades\Auth::guard('admin')->user();
+    $accessService = app(\App\Services\MarketerAccessService::class);
+
+    if (isset($pendingBackyardCount)) {
+        $navPendingBackyard = (int) $pendingBackyardCount;
+    } elseif ($currentMarketer) {
+        $bq = $accessService->backyardQuery($currentMarketer);
+        $navPendingBackyard = $bq ? $bq->where('status', 'pending')->count() : 0;
+    } else {
+        $navPendingBackyard = 0;
+    }
+
+    if (isset($upcomingToursCount)) {
+        $navOpenTours = (int) $upcomingToursCount;
+    } elseif ($currentMarketer) {
+        $tq = $accessService->tourQuery($currentMarketer);
+        $navOpenTours = $tq ? $tq->whereIn('status', ['upcoming', 'open', 'in_progress'])->count() : 0;
+    } else {
+        $navOpenTours = 0;
+    }
 @endphp
 <a href="{{ route('marketer.dashboard') }}" class="{{ $active === 'dashboard' ? 'active' : '' }}">Dashboard</a>
 <a href="{{ route('marketer.register-farmer') }}" class="{{ $active === 'register' ? 'active' : '' }}">Register Farmer</a>

@@ -206,6 +206,12 @@ class MarketerCommissionService
             return false;
         }
 
+        $holdingDays = max(0, (int) config('marketer.bounty_policy.holding_days', 0));
+        $initialStatus = $holdingDays > 0
+            ? MarketerCommission::STATUS_PENDING
+            : MarketerCommission::STATUS_ELIGIBLE;
+        $eligibleAt = $holdingDays > 0 ? now()->addDays($holdingDays) : now();
+
         $inserted = DB::table('marketer_commissions')->insertOrIgnore([
             'marketer_id' => $marketer->id,
             'store_id' => $store->id,
@@ -217,8 +223,8 @@ class MarketerCommissionService
             'rate' => 100,
             'amount' => $amount,
             'currency' => $this->currency(),
-            'status' => MarketerCommission::STATUS_ELIGIBLE,
-            'eligible_at' => now(),
+            'status' => $initialStatus,
+            'eligible_at' => $eligibleAt,
             'payout_id' => null,
             'void_reason' => null,
             'created_at' => now(),
@@ -242,12 +248,7 @@ class MarketerCommissionService
 
         $query = Store::withoutGlobalScope(ZoneScope::class)
             ->whereNotNull('marketer_id')
-            ->where(function ($query) {
-                $query->where('status', 1);
-                if (Schema::hasColumn('stores', 'marketer_verified')) {
-                    $query->orWhere('marketer_verified', true);
-                }
-            })
+            ->where('status', 1)
             ->with('marketer');
 
         if ($marketer) {
@@ -267,13 +268,94 @@ class MarketerCommissionService
         return $created;
     }
 
-    private function storeIsVerified(Store $store): bool
+    /**
+     * Evaluate whether a store satisfies the configured onboarding bounty
+     * eligibility policy.
+     *
+     * A marketer's own field verification (`marketer_verified = true`) records
+     * field inspection progress, never independent financial approval.
+     */
+    public function storeIsVerified(Store $store): bool
     {
-        if ((int) $store->status === 1) {
-            return true;
+        $requireAdminApproval = (bool) config('marketer.bounty_policy.require_admin_approval', true);
+        if ($requireAdminApproval && (int) $store->status !== 1) {
+            return false;
         }
 
-        return Schema::hasColumn('stores', 'marketer_verified') && (bool) $store->marketer_verified;
+        if (!$requireAdminApproval && (int) $store->status !== 1) {
+            if (!Schema::hasColumn('stores', 'marketer_verified') || !(bool) $store->marketer_verified) {
+                return false;
+            }
+        }
+
+        if (Schema::hasColumn('stores', 'active') && $store->getAttribute('active') === 0 && (int) $store->status !== 1) {
+            return false;
+        }
+
+        if ((bool) config('marketer.bounty_policy.require_active_listing', false)) {
+            $hasActiveListing = Schema::hasTable('items')
+                && DB::table('items')
+                    ->where('store_id', $store->id)
+                    ->where('status', 1)
+                    ->exists();
+            if (!$hasActiveListing) {
+                return false;
+            }
+        }
+
+        if ((bool) config('marketer.bounty_policy.require_completed_order', false)) {
+            $hasCompletedOrder = Schema::hasTable('orders')
+                && Order::withoutGlobalScope(ZoneScope::class)
+                    ->where('store_id', $store->id)
+                    ->where('order_status', 'delivered')
+                    ->exists();
+            if (!$hasCompletedOrder) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Audit existing bounty ledger rows for stores that are not yet
+     * administratively approved (`stores.status !== 1`), without deleting or
+     * reversing historical payouts.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function auditPrematureBounties(): array
+    {
+        if (!Schema::hasTable('marketer_commissions') || !Schema::hasColumn('marketer_commissions', 'type')) {
+            return [];
+        }
+
+        return MarketerCommission::query()
+            ->where('type', MarketerCommission::TYPE_BOUNTY)
+            ->with(['store' => fn ($q) => $q->withoutGlobalScope(ZoneScope::class), 'marketer', 'payout'])
+            ->get()
+            ->filter(function (MarketerCommission $c) {
+                $store = $c->store;
+                return !$store || (int) $store->status !== 1;
+            })
+            ->map(function (MarketerCommission $c) {
+                return [
+                    'commission_id' => $c->id,
+                    'marketer_id' => $c->marketer_id,
+                    'marketer_email' => $c->marketer?->email,
+                    'store_id' => $c->store_id,
+                    'store_name' => $c->store?->name,
+                    'store_status' => $c->store?->status,
+                    'marketer_verified' => (bool) ($c->store?->marketer_verified ?? false),
+                    'amount' => $c->amount,
+                    'currency' => $c->currency,
+                    'commission_status' => $c->status,
+                    'payout_id' => $c->payout_id,
+                    'payout_status' => $c->payout?->status,
+                ];
+            })
+            ->values()
+            ->all();
     }
 
     /**
@@ -566,8 +648,26 @@ class MarketerCommissionService
             throw new RuntimeException('This payout has no valid commissions left.');
         }
 
-        // A bounty has no order behind it. Once credited it stays payable, so
-        // a bounty-only payout must not be rejected for having "no orders".
+        // A bounty has no order behind it, but its store must remain
+        // administratively approved (`status === 1`) at payout approval/payment
+        // time so a suspended or unapproved store cannot be cashed out.
+        $bountyStoreIds = MarketerCommission::where('payout_id', $payout->id)
+            ->where('status', '!=', MarketerCommission::STATUS_VOID)
+            ->whereNull('order_id')
+            ->pluck('store_id')
+            ->filter()
+            ->values();
+
+        if ($bountyStoreIds->isNotEmpty()) {
+            $unapprovedBountyStore = Store::withoutGlobalScope(ZoneScope::class)
+                ->whereIn('id', $bountyStoreIds)
+                ->where('status', '!=', 1)
+                ->exists();
+            if ($unapprovedBountyStore) {
+                throw new RuntimeException('This payout contains a bounty for a store that is not administratively approved.');
+            }
+        }
+
         $orderIds = $payableRows->pluck('order_id')->filter()->values();
         if ($orderIds->isEmpty()) {
             return;
@@ -648,24 +748,39 @@ class MarketerCommissionService
             ->pluck('id');
 
         $storeCount = $storeIds->count();
-        $verifiedStoreCount = Store::withoutGlobalScope(ZoneScope::class)
+        $approvedStoreCount = Store::withoutGlobalScope(ZoneScope::class)
             ->where('marketer_id', $marketer->id)
-            ->where(function ($q) {
-                $q->where('status', 1);
-                if (\Illuminate\Support\Facades\Schema::hasColumn('stores', 'marketer_verified')) {
-                    $q->orWhere('marketer_verified', true);
-                }
-            })
+            ->where('status', 1)
             ->count();
+
+        $fieldVerifiedStoreCount = \Illuminate\Support\Facades\Schema::hasColumn('stores', 'marketer_verified')
+            ? Store::withoutGlobalScope(ZoneScope::class)
+                ->where('marketer_id', $marketer->id)
+                ->where('marketer_verified', true)
+                ->count()
+            : $approvedStoreCount;
+
+        $verifiedStoreCount = $approvedStoreCount;
+
+        $activeListingStoreCount = 0;
+        if ($storeCount > 0 && Schema::hasTable('items')) {
+            $activeListingStoreCount = (int) DB::table('items')
+                ->whereIn('store_id', $storeIds)
+                ->where('status', 1)
+                ->distinct('store_id')
+                ->count('store_id');
+        }
 
         $totalSales = 0.0;
         $deliveredOrdersCount = 0;
-        if ($storeCount > 0) {
+        $transactingStoreCount = 0;
+        if ($storeCount > 0 && Schema::hasTable('orders')) {
             $salesQuery = Order::withoutGlobalScope(ZoneScope::class)
                 ->whereIn('store_id', $storeIds)
                 ->where('order_status', 'delivered');
             $totalSales = (float) (clone $salesQuery)->sum('order_amount');
             $deliveredOrdersCount = (int) (clone $salesQuery)->count();
+            $transactingStoreCount = (int) (clone $salesQuery)->distinct('store_id')->count('store_id');
         }
 
         $bountyRate = method_exists($marketer, 'marketerOnboardingBounty')
@@ -697,6 +812,10 @@ class MarketerCommissionService
             'next_eligible_at' => $nextEligible,
             'stores' => $storeCount,
             'verified_stores' => $verifiedStoreCount,
+            'approved_stores' => $approvedStoreCount,
+            'field_verified_stores' => $fieldVerifiedStoreCount,
+            'active_listing_stores' => $activeListingStoreCount,
+            'transacting_stores' => $transactingStoreCount,
             'onboarding_bounty_rate' => $bountyRate,
             'onboarding_bounty_earned' => round($bountyEarned, 2),
             'verified_bounty_earned' => round($bountyEarned, 2),

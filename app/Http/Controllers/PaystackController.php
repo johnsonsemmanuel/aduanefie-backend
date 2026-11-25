@@ -72,24 +72,52 @@ class PaystackController extends Controller
 
     public function handleGatewayCallback(Request $request)
     {
-        $paymentDetails = Paystack::getPaymentData();
-        if ($paymentDetails['status'] == true) {
-            $this->payment::where(['attribute_id' => $paymentDetails['data']['metadata']['orderID']])->update([
-                'payment_method' => 'paystack',
-                'is_paid' => 1,
-                'transaction_id' => $request['trxref'],
-            ]);
-            $data = $this->payment::where(['attribute_id' => $paymentDetails['data']['metadata']['orderID']])->first();
-            if (isset($data) && function_exists($data->success_hook)) {
-                call_user_func($data->success_hook, $data);
-            }
-            return $this->payment_response($data, 'success');
+        $paymentDetails = $this->fetchPaymentData();
+        $metadata = $paymentDetails['data']['metadata'] ?? [];
+        $paymentId = $metadata['payment_id'] ?? $request->input('payment_id');
+        $orderId = $metadata['orderID'] ?? $request->input('orderID');
+
+        $lookupCol = !empty($paymentId) ? 'id' : 'attribute_id';
+        $lookupVal = !empty($paymentId) ? $paymentId : $orderId;
+
+        if (empty($lookupVal)) {
+            return redirect()->route('payment-fail');
         }
 
-        $payment_data = $this->payment::where(['attribute_id' => $paymentDetails['data']['metadata']['orderID']])->first();
-        if (isset($payment_data) && function_exists($payment_data->failure_hook)) {
-            call_user_func($payment_data->failure_hook, $payment_data);
+        $gatewayStatus = ($paymentDetails['status'] ?? false) === true
+            && (($paymentDetails['data']['status'] ?? 'success') === 'success');
+
+        if ($gatewayStatus) {
+            $reference = (string) ($paymentDetails['data']['reference'] ?? $request->input('trxref') ?? $request->input('reference') ?? '');
+            $amountKobo = $paymentDetails['data']['amount'] ?? null;
+            $verifiedAmount = is_numeric($amountKobo) ? ((float) $amountKobo / 100.0) : null;
+            $verifiedCurrency = isset($paymentDetails['data']['currency']) ? (string) $paymentDetails['data']['currency'] : null;
+
+            try {
+                $data = $this->finalizePaymentSuccess(
+                    $lookupCol,
+                    $lookupVal,
+                    'paystack',
+                    $reference,
+                    $verifiedAmount,
+                    $verifiedCurrency
+                );
+                if ($data && (int) $data->is_paid === 1) {
+                    return $this->payment_response($data, 'success');
+                }
+            } catch (\Throwable $e) {
+                info('Paystack callback verification failed: ' . $e->getMessage());
+                $existing = $this->payment::where($lookupCol, $lookupVal)->first();
+                return $this->payment_response($existing, 'fail');
+            }
         }
+
+        $payment_data = $this->finalizePaymentFailure($lookupCol, $lookupVal);
         return $this->payment_response($payment_data, 'fail');
+    }
+
+    protected function fetchPaymentData(): array
+    {
+        return (array) Paystack::getPaymentData();
     }
 }

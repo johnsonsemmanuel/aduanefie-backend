@@ -44,4 +44,20 @@ return [
     | Ledger currency. Null reads business_settings.currency at accrual time.
     */
     'currency' => env('MARKETER_CURRENCY'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Onboarding Bounty Eligibility Policy
+    |--------------------------------------------------------------------------
+    | A marketer must never be able to self-approve their own financial reward.
+    | At minimum, `require_admin_approval` requires `stores.status === 1`
+    | (administrative approval). Additional commercial gates can be toggled via
+    | environment or BusinessSetting without code changes.
+    */
+    'bounty_policy' => [
+        'require_admin_approval' => (bool) env('MARKETER_BOUNTY_REQUIRE_ADMIN_APPROVAL', true),
+        'require_active_listing' => (bool) env('MARKETER_BOUNTY_REQUIRE_ACTIVE_LISTING', false),
+        'require_completed_order' => (bool) env('MARKETER_BOUNTY_REQUIRE_COMPLETED_ORDER', false),
+        'holding_days' => (int) env('MARKETER_BOUNTY_HOLDING_DAYS', 0),
+    ],
 ];

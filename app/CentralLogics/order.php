@@ -97,6 +97,9 @@ class OrderLogic
     }
     public static function create_transaction($order, $received_by=false, $status = null)
     {
+        if (OrderTransaction::where('order_id', $order->id)->exists()) {
+            return true;
+        }
         $type = $order->order_type;
         $dm_tips_manage_status = BusinessSetting::where('key', 'dm_tips_status')->first()->value;
         $admin_subsidy = 0;
