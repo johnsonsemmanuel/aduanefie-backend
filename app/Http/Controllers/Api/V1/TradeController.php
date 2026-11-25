@@ -165,6 +165,13 @@ class TradeController extends Controller
 
     public function store_rfq(Request $request)
     {
+        if (! app(\App\Services\FeatureFlagService::class)->allowsNewTransactions('rfq_new_commitments')) {
+            return response()->json([
+                'message' => 'New RFQ commitments are currently disabled pending an approved fulfilment workflow.',
+                'code' => 'rfq_commitments_disabled',
+            ], 403);
+        }
+
         if (! Schema::hasTable('trade_rfqs')) {
             return response()->json(['message' => 'RFQ table not initialized yet.'], 503);
         }
@@ -223,6 +230,13 @@ class TradeController extends Controller
 
     public function store_quote(Request $request, $id)
     {
+        if (! app(\App\Services\FeatureFlagService::class)->allowsNewTransactions('rfq_new_commitments')) {
+            return response()->json([
+                'message' => 'New RFQ quotes are currently disabled pending an approved fulfilment workflow.',
+                'code' => 'rfq_commitments_disabled',
+            ], 403);
+        }
+
         if (! Schema::hasTable('trade_rfqs') || ! Schema::hasTable('trade_rfq_quotes')) {
             return response()->json(['message' => 'RFQ tables not initialized yet.'], 503);
         }
@@ -273,6 +287,18 @@ class TradeController extends Controller
 
     public function accept_quote(Request $request, $id, $quoteId)
     {
+        if (! app(\App\Services\FeatureFlagService::class)->allowsNewTransactions('rfq_new_commitments')) {
+            return response()->json([
+                'message' => 'Accepting RFQ quotes is currently disabled pending an approved order or Admin-assisted fulfilment workflow.',
+                'code' => 'rfq_commitments_disabled',
+            ], 403);
+        }
+
+        $actorId = $request->user('api')?->id ?? auth('api')->id();
+        if (! $actorId) {
+            return response()->json(['message' => 'Authentication is required to accept an RFQ quote.'], 401);
+        }
+
         if (! Schema::hasTable('trade_rfqs') || ! Schema::hasTable('trade_rfq_quotes')) {
             return response()->json(['message' => 'RFQ tables not initialized yet.'], 503);
         }
@@ -280,6 +306,10 @@ class TradeController extends Controller
         $rfq = DB::table('trade_rfqs')->where('id', (int) $id)->first();
         if (! $rfq) {
             return response()->json(['message' => 'RFQ not found.'], 404);
+        }
+
+        if (! empty($rfq->user_id) && (int) $rfq->user_id !== (int) $actorId) {
+            return response()->json(['message' => 'Only the RFQ buyer can accept a quote on this request.'], 403);
         }
 
         if (($rfq->status ?? 'open') === 'awarded') {
