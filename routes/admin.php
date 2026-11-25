@@ -331,6 +331,12 @@ Route::group(['namespace' => 'Admin', 'as' => 'admin.'], function () {
             Route::delete('destroy/{id}', 'TradeRfqController@destroy')->name('destroy');
         });
 
+        Route::group(['prefix' => 'trade-buyers', 'as' => 'trade-buyers.', 'middleware' => ['module:settings']], function () {
+            Route::get('/', 'TradeBuyerReviewController@index')->name('index');
+            Route::get('{id}', 'TradeBuyerReviewController@show')->name('show');
+            Route::post('transition/{id}', 'TradeBuyerReviewController@transition')->name('transition');
+        });
+
         Route::group(['prefix' => 'group-buys', 'as' => 'group-buys.', 'middleware' => ['module:settings']], function () {
             Route::get('/', 'GroupBuyController@index')->name('index');
             Route::get('{id}', 'GroupBuyController@show')->name('show');

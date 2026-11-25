@@ -86,6 +86,7 @@ class Kernel extends HttpKernel
         'subscription' => \App\Http\Middleware\Subscription::class,
         'admin-rental-module' => \App\Http\Middleware\AdminRentalModuleCheckMiddleware::class,
         'provider-rental-module' => \App\Http\Middleware\ProviderRentalModuleCheckMiddleware::class,
+        'trade.approved' => \App\Http\Middleware\EnsureApprovedTradeBuyer::class,
 
     ];
 }

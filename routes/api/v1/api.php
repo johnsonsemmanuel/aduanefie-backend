@@ -639,6 +639,11 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
             Route::get('fx-rates', 'TradeController@fx_rates');
             Route::post('orders/{id}/esperworks-invoice', 'TradeController@esperworks_invoice');
             Route::post('orders/{id}/esperworks-contract', 'TradeController@esperworks_contract');
+
+            Route::group(['prefix' => 'access'], function () {
+                Route::post('apply', 'TradeAccessController@apply');
+                Route::get('status', 'TradeAccessController@status');
+            });
         });
 
         Route::group(['prefix' => 'common-condition'], function () {

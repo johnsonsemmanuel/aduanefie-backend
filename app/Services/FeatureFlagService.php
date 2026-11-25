@@ -87,6 +87,13 @@ class FeatureFlagService
                 'allow_historical_access' => true,
                 'allow_background_queries' => false,
             ],
+            'trade_access_applications' => [
+                'public_visible' => false,
+                'route_enabled' => false,
+                'allow_new_transactions' => false,
+                'allow_historical_access' => true,
+                'allow_background_queries' => false,
+            ],
         ];
     }
 
@@ -145,6 +152,11 @@ class FeatureFlagService
     {
         $all = $this->all();
         return (bool) ($all[$feature][$dimension] ?? false);
+    }
+
+    public function isRouteEnabled(string $feature): bool
+    {
+        return $this->flag($feature, 'route_enabled');
     }
 
     public function allowsNewTransactions(string $feature): bool
