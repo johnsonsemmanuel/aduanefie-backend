@@ -246,15 +246,16 @@ class ConfigController extends Controller
 //            'landing_page_settings_full_url'=> $data['web_app_landing_page_settings_storage']??'public',
             'social_media' => SocialMedia::active()->get()->toArray(),
             'footer_text' => isset($settings['footer_text']) ? $settings['footer_text'] : '',
+            'feature_flags' => ($featureFlags = app(\App\Services\FeatureFlagService::class)->all()),
             'footer_links' => isset($settings['footer_links']) && is_string($settings['footer_links'])
                 ? json_decode($settings['footer_links'], true)
                 : [
-                    'markets' => [
-                        ['label' => 'B2B Cross-Border Trade', 'href' => '/trade', 'active' => true],
-                        ['label' => 'Live Farming', 'href' => '/live-farming', 'active' => true],
-                        ['label' => 'Ghana Agro Index', 'href' => '/market-prices', 'active' => true],
+                    'markets' => array_values(array_filter([
+                        ['label' => 'B2B Cross-Border Trade', 'href' => '/trade', 'active' => (bool) ($featureFlags['cross_border_trade']['public_visible'] ?? true), 'feature' => 'cross_border_trade'],
+                        ['label' => 'Live Farming', 'href' => '/live-farming', 'active' => (bool) ($featureFlags['live_farming']['public_visible'] ?? true), 'feature' => 'live_farming'],
+                        ['label' => 'Ghana Agro Index', 'href' => '/market-prices', 'active' => (bool) ($featureFlags['agro_prices']['public_visible'] ?? true), 'feature' => 'agro_prices'],
                         ['label' => 'Track Order', 'href' => '/track-order', 'active' => true],
-                    ],
+                    ], fn ($link) => !empty($link['active']))),
                     'partners' => [
                         ['label' => 'Register Your Farm', 'href' => '/store-registration', 'active' => true, 'key' => 'restaurant_owner'],
                         ['label' => 'Logistics Partner', 'href' => '/deliveryman-registration', 'active' => true, 'key' => 'delivery_man'],
