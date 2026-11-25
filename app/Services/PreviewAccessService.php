@@ -64,13 +64,23 @@ class PreviewAccessService
             return false;
         }
 
-        $expectedSig = $this->sign($exp);
+        try {
+            $expectedSig = $this->sign($exp);
+        } catch (\RuntimeException $e) {
+            return false;
+        }
         return hash_equals($expectedSig, strtolower($sigPart));
     }
 
     private function sign(int $exp): string
     {
-        $secret = (string) (config('app.key') ?: env('APP_KEY', 'aduanefie-preview-fallback-key'));
+        // Dedicated, rotatable secret. Falls back to APP_KEY so existing
+        // tokens keep working until PREVIEW_ACCESS_SECRET is set. Rotating
+        // PREVIEW_ACCESS_SECRET revokes every issued preview token.
+        $secret = (string) (config('app.preview_access_secret') ?: config('app.key'));
+        if ($secret === '') {
+            throw new \RuntimeException('Preview access secret is not configured.');
+        }
         return hash_hmac('sha256', "aduanefie-preview-v1:{$exp}", $secret);
     }
 

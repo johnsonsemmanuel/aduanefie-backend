@@ -123,6 +123,9 @@ return [
 
     'key' => env('APP_KEY'),
 
+    // Signs private-preview access tokens. Optional; falls back to APP_KEY.
+    'preview_access_secret' => env('PREVIEW_ACCESS_SECRET'),
+
     'cipher' => 'AES-256-CBC',
 
     /*

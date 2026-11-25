@@ -155,6 +155,19 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute(15)->by('api-auth|' . Str::lower((string) $key) . '|' . $request->ip());
         });
 
+        // Owner access-code checks: tight per-IP limits to slow brute force.
+        RateLimiter::for('preview-access', function (Request $request) {
+            return [
+                Limit::perMinute(5)->by('preview-access-m|' . $request->ip()),
+                Limit::perDay(40)->by('preview-access-d|' . $request->ip()),
+            ];
+        });
+
+        // Token re-validation from the website server (HMAC check only).
+        RateLimiter::for('preview-token', function (Request $request) {
+            return Limit::perMinute(120)->by('preview-token|' . $request->ip());
+        });
+
         RateLimiter::for('api-otp', function (Request $request) {
             $key = $request->input('phone') ?: $request->input('email') ?: 'anon';
             return Limit::perMinute(6)->by('api-otp|' . Str::lower((string) $key) . '|' . $request->ip());

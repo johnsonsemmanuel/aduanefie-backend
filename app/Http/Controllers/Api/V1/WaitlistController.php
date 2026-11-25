@@ -95,4 +95,20 @@ class WaitlistController extends Controller
             'message' => 'Platform access unlocked.',
         ], 200);
     }
+
+    /**
+     * Lets the website's server confirm a preview token before it issues its
+     * own Edge session cookie. Returns only a boolean and the expiry.
+     */
+    public function verifyToken(Request $request)
+    {
+        $token = $request->input('token');
+        $service = app(\App\Services\PreviewAccessService::class);
+        $valid = $service->verifyToken(is_string($token) ? $token : null);
+
+        return response()->json([
+            'valid' => $valid,
+            'expires_at' => $valid ? (int) explode('.', trim($token), 2)[0] : null,
+        ], $valid ? 200 : 403);
+    }
 }

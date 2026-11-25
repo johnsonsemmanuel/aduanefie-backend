@@ -36,7 +36,8 @@ Route::group(['namespace' => 'Api\V1', 'middleware'=>'localization'], function (
 
     Route::get('offline_payment_method_list', 'ConfigController@offline_payment_method_list');
     Route::post('waitlist', 'WaitlistController@store')->middleware('throttle:api-auth');
-    Route::post('waitlist/verify-access', 'WaitlistController@verifyAccess')->middleware('throttle:api-auth');
+    Route::post('waitlist/verify-access', 'WaitlistController@verifyAccess')->middleware('throttle:preview-access');
+    Route::post('waitlist/verify-token', 'WaitlistController@verifyToken')->middleware('throttle:preview-token');
     Route::group(['prefix' => 'auth', 'namespace' => 'Auth'], function () {
         Route::post('sign-up', 'CustomerAuthController@register')->middleware('throttle:api-auth');
         Route::post('login', 'CustomerAuthController@login')->middleware('throttle:api-auth');

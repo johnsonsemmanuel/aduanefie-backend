@@ -121,4 +121,28 @@ class PreviewAccessGateTest extends TestCase
         $authedCookieReq->cookies->set(PreviewAccessService::COOKIE_NAME, $token);
         $this->assertSame(200, $middleware->handle($authedCookieReq, $okNext)->getStatusCode());
     }
+
+    public function test_verify_token_endpoint_and_secret_rotation_revoke_tokens(): void
+    {
+        config(['app.preview_access_secret' => 'first-secret-for-tests']);
+        $service = app(PreviewAccessService::class);
+        $controller = new WaitlistController();
+
+        $token = $service->issueToken(3600);
+        $ok = $controller->verifyToken(Request::create('/api/v1/waitlist/verify-token', 'POST', ['token' => $token]));
+        $this->assertSame(200, $ok->getStatusCode());
+        $this->assertTrue($ok->getData(true)['valid']);
+        $this->assertSame((int) explode('.', $token)[0], $ok->getData(true)['expires_at']);
+
+        foreach ([null, '', 'garbage', (time() + 3600) . '.' . str_repeat('a', 64), '1000000000.' . str_repeat('b', 64)] as $bad) {
+            $res = $controller->verifyToken(Request::create('/api/v1/waitlist/verify-token', 'POST', ['token' => $bad]));
+            $this->assertSame(403, $res->getStatusCode());
+            $this->assertFalse($res->getData(true)['valid']);
+        }
+
+        // Rotating the dedicated secret revokes previously issued tokens.
+        config(['app.preview_access_secret' => 'rotated-secret-for-tests']);
+        $this->assertFalse($service->verifyToken($token));
+        $this->assertTrue($service->verifyToken($service->issueToken(3600)));
+    }
 }
