@@ -105,13 +105,24 @@ class StripePaymentController extends Controller
         $session = Session::retrieve($request->get('session_id'));
 
         if ($session->payment_status == 'paid' && $session->status == 'complete') {
-            $data = $this->finalizePaymentSuccess(
-                'id',
-                (string) $request['payment_id'],
-                'stripe',
-                (string) $session->payment_intent
-            );
-            return $this->payment_response($data, 'success');
+            try {
+                $data = $this->finalizePaymentSuccess(
+                    'id',
+                    (string) $request['payment_id'],
+                    'stripe',
+                    (string) $session->payment_intent
+                );
+                if ($data && (int) $data->is_paid === 1) {
+                    return $this->payment_response($data, 'success');
+                }
+            } catch (\Throwable $e) {
+                info('Stripe callback verification failed: ' . $e->getMessage());
+                $existing = $this->payment::where('id', (string) $request['payment_id'])->first();
+                if ($existing && (int) $existing->is_paid === 1) {
+                    return $this->payment_response($existing, 'success');
+                }
+                return $this->payment_response($existing, 'fail');
+            }
         }
         $payment_data = $this->finalizePaymentFailure('id', (string) $request['payment_id']);
         return $this->payment_response($payment_data, 'fail');

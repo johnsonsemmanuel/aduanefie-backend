@@ -146,6 +146,10 @@ class FlutterwaveV3Controller extends Controller
                         }
                     } catch (\Throwable $e) {
                         info('Flutterwave callback verification failed: ' . $e->getMessage());
+                        $existing = $this->payment::where('id', (string) $request['payment_id'])->first();
+                        if ($existing && (int) $existing->is_paid === 1) {
+                            return $this->payment_response($existing, 'success');
+                        }
                     }
                 }
             }

@@ -173,8 +173,8 @@ if (! function_exists('order_place')) {
                         Mail::to($address['contact_person_email'])->send(new OrderVerificationMail($committedOrder->otp, $committedOrder?->customer?->f_name));
                     }
                 }
-            } catch (\Exception $e) {
-                info($e);
+            } catch (\Throwable $e) {
+                info('Post-commit order notification/mail failed for order #' . $orderId . ': ' . $e->getMessage());
             }
         });
 

@@ -108,6 +108,9 @@ class PaystackController extends Controller
             } catch (\Throwable $e) {
                 info('Paystack callback verification failed: ' . $e->getMessage());
                 $existing = $this->payment::where($lookupCol, $lookupVal)->first();
+                if ($existing && (int) $existing->is_paid === 1) {
+                    return $this->payment_response($existing, 'success');
+                }
                 return $this->payment_response($existing, 'fail');
             }
         }

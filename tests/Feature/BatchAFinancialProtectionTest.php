@@ -30,6 +30,17 @@ namespace {
             }
         }
     }
+
+    if (!function_exists('batch_a_post_commit_throwable_hook')) {
+        function batch_a_post_commit_throwable_hook($data)
+        {
+            order_place($data);
+            \Illuminate\Support\Facades\DB::afterCommit(function () {
+                $GLOBALS['batch_a_post_commit_attempts'] = ($GLOBALS['batch_a_post_commit_attempts'] ?? 0) + 1;
+                throw new \Error('Simulated fatal mail/template error after DB commit');
+            });
+        }
+    }
 }
 
 namespace Tests\Feature {
@@ -985,6 +996,63 @@ class BatchAFinancialProtectionTest extends TestCase
         DB::table('business_settings')->updateOrInsert(['key' => 'max_retail_delivery_distance_km'], ['value' => '35']);
         \Illuminate\Support\Facades\Cache::flush();
         $this->assertSame(403, $controller->checkout_summary($makeReq())->getStatusCode());
+    }
+
+    public function test_post_commit_notification_throwable_cannot_reverse_or_misreport_confirmed_payment(): void
+    {
+        $order = Order::create([
+            'order_amount' => 220.00,
+            'payment_status' => 'unpaid',
+            'order_status' => 'pending',
+            'payment_method' => 'digital_payment',
+        ]);
+
+        $payment = PaymentRequest::create([
+            'id' => '00000000-0000-0000-0000-000000000088',
+            'payer_id' => 1,
+            'payment_amount' => 220.00,
+            'currency_code' => 'GHS',
+            'attribute' => 'order',
+            'attribute_id' => $order->id,
+            'success_hook' => 'batch_a_post_commit_throwable_hook',
+            'is_paid' => 0,
+        ]);
+
+        $GLOBALS['batch_a_post_commit_attempts'] = 0;
+
+        $controller = new class($payment) extends PaystackController {
+            private array $payload;
+            public function __construct(PaymentRequest $payment)
+            {
+                parent::__construct(new PaymentRequest(), new User());
+                $this->payload = [
+                    'status' => true,
+                    'data' => [
+                        'status' => 'success',
+                        'reference' => 'PSK-POSTCOMMIT-888',
+                        'amount' => 22000,
+                        'currency' => 'GHS',
+                        'metadata' => ['payment_id' => $payment->id, 'orderID' => $payment->attribute_id],
+                    ],
+                ];
+            }
+            protected function fetchPaymentData(): array { return $this->payload; }
+        };
+
+        $req = Request::create('/paystack/callback', 'GET', ['trxref' => 'PSK-POSTCOMMIT-888']);
+        $res1 = $controller->handleGatewayCallback($req);
+
+        // Payment and order remain committed as paid, AND response redirects to payment-success (not payment-fail)
+        $this->assertSame(1, (int) $payment->fresh()->is_paid);
+        $this->assertSame('paid', $order->fresh()->payment_status);
+        $this->assertSame('confirmed', $order->fresh()->order_status);
+        $this->assertSame(1, $GLOBALS['batch_a_post_commit_attempts']);
+        $this->assertStringContainsString('payment-success', $res1->headers->get('Location', ''));
+
+        // Retry / duplicate callback after commit returns payment-success without re-invoking afterCommit
+        $res2 = $controller->handleGatewayCallback($req);
+        $this->assertStringContainsString('payment-success', $res2->headers->get('Location', ''));
+        $this->assertSame(1, $GLOBALS['batch_a_post_commit_attempts']);
     }
 }
 }
