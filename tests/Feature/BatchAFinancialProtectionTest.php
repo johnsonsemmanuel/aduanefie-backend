@@ -18,6 +18,18 @@ namespace {
             order_place($data);
         }
     }
+
+    if (!function_exists('batch_a_failing_after_commit_probe_hook')) {
+        function batch_a_failing_after_commit_probe_hook($data)
+        {
+            \Illuminate\Support\Facades\DB::afterCommit(function () {
+                $GLOBALS['batch_a_after_commit_notifications'] = ($GLOBALS['batch_a_after_commit_notifications'] ?? 0) + 1;
+            });
+            if (!empty($GLOBALS['batch_a_should_fail_after_registering_after_commit'])) {
+                throw new \RuntimeException('Simulated downstream failure after registering afterCommit');
+            }
+        }
+    }
 }
 
 namespace Tests\Feature {
@@ -760,6 +772,219 @@ class BatchAFinancialProtectionTest extends TestCase
         ]);
         $pickupRes = $controller->checkout_summary($pickupReq);
         $this->assertSame(200, $pickupRes->getStatusCode());
+    }
+
+    public function test_non_db_side_effects_are_deferred_until_commit_and_not_duplicated_on_rollback_retry(): void
+    {
+        $order = Order::create([
+            'order_amount' => 150.00,
+            'payment_status' => 'unpaid',
+            'order_status' => 'pending',
+            'payment_method' => 'digital_payment',
+        ]);
+
+        $payment = PaymentRequest::create([
+            'id' => '00000000-0000-0000-0000-000000000055',
+            'payer_id' => 1,
+            'payment_amount' => 150.00,
+            'currency_code' => 'GHS',
+            'attribute' => 'order',
+            'attribute_id' => $order->id,
+            'success_hook' => 'batch_a_failing_after_commit_probe_hook',
+            'is_paid' => 0,
+        ]);
+
+        $GLOBALS['batch_a_after_commit_notifications'] = 0;
+        $GLOBALS['batch_a_should_fail_after_registering_after_commit'] = true;
+
+        $controller = new class($payment) extends PaystackController {
+            private array $payload;
+            public function __construct(PaymentRequest $payment)
+            {
+                parent::__construct(new PaymentRequest(), new User());
+                $this->payload = [
+                    'status' => true,
+                    'data' => [
+                        'status' => 'success',
+                        'reference' => 'PSK-AFTERCOMMIT-001',
+                        'amount' => 15000,
+                        'currency' => 'GHS',
+                        'metadata' => ['payment_id' => $payment->id, 'orderID' => $payment->attribute_id],
+                    ],
+                ];
+            }
+            protected function fetchPaymentData(): array { return $this->payload; }
+        };
+
+        // First callback throws inside transaction -> DB rolls back AND afterCommit side effect does NOT fire
+        $req1 = Request::create('/paystack/callback', 'GET', ['trxref' => 'PSK-AFTERCOMMIT-001']);
+        $res1 = $controller->handleGatewayCallback($req1);
+        $this->assertSame(302, $res1->getStatusCode());
+        $this->assertSame(0, $GLOBALS['batch_a_after_commit_notifications']);
+        $this->assertSame(0, (int) $payment->fresh()->is_paid);
+
+        // Retry succeeds -> DB commits and afterCommit side effect fires exactly once
+        $GLOBALS['batch_a_should_fail_after_registering_after_commit'] = false;
+        $controller->handleGatewayCallback($req1);
+        $this->assertSame(1, $GLOBALS['batch_a_after_commit_notifications']);
+        $this->assertSame(1, (int) $payment->fresh()->is_paid);
+
+        // Duplicate callback after commit -> idempotent no-op, still exactly 1 side effect
+        $controller->handleGatewayCallback($req1);
+        $this->assertSame(1, $GLOBALS['batch_a_after_commit_notifications']);
+    }
+
+    public function test_duplicate_transaction_reference_across_different_payments_is_rejected(): void
+    {
+        $orderA = Order::create(['order_amount' => 100.00, 'payment_status' => 'unpaid', 'order_status' => 'pending']);
+        $orderB = Order::create(['order_amount' => 100.00, 'payment_status' => 'unpaid', 'order_status' => 'pending']);
+
+        $paymentA = PaymentRequest::create([
+            'id' => '00000000-0000-0000-0000-000000000061',
+            'payer_id' => 1,
+            'payment_amount' => 100.00,
+            'currency_code' => 'GHS',
+            'attribute' => 'order',
+            'attribute_id' => $orderA->id,
+            'is_paid' => 1,
+            'transaction_id' => 'PSK-REUSED-REF-999',
+        ]);
+        $paymentB = PaymentRequest::create([
+            'id' => '00000000-0000-0000-0000-000000000062',
+            'payer_id' => 2,
+            'payment_amount' => 100.00,
+            'currency_code' => 'GHS',
+            'attribute' => 'order',
+            'attribute_id' => $orderB->id,
+            'is_paid' => 0,
+        ]);
+
+        $controller = new class($paymentB) extends PaystackController {
+            private array $payload;
+            public function __construct(PaymentRequest $payment)
+            {
+                parent::__construct(new PaymentRequest(), new User());
+                $this->payload = [
+                    'status' => true,
+                    'data' => [
+                        'status' => 'success',
+                        'reference' => 'PSK-REUSED-REF-999',
+                        'amount' => 10000,
+                        'currency' => 'GHS',
+                        'metadata' => ['payment_id' => $payment->id, 'orderID' => $payment->attribute_id],
+                    ],
+                ];
+            }
+            protected function fetchPaymentData(): array { return $this->payload; }
+        };
+
+        $req = Request::create('/paystack/callback', 'GET', ['trxref' => 'PSK-REUSED-REF-999']);
+        $res = $controller->handleGatewayCallback($req);
+        $this->assertSame(0, (int) $paymentB->fresh()->is_paid);
+        $this->assertSame(1, (int) $paymentA->fresh()->is_paid);
+    }
+
+    public function test_reinstated_store_preserves_legitimate_bounty_without_duplication_and_allows_payout(): void
+    {
+        $marketer = Admin::create([
+            'f_name' => 'Ama',
+            'l_name' => 'Boateng',
+            'email' => 'ama.reinstated@aduanefie.com',
+            'role_id' => 5,
+            'onboarding_bounty_ghs' => 25.00,
+        ]);
+        $admin = Admin::create([
+            'f_name' => 'Super',
+            'l_name' => 'Admin',
+            'email' => 'admin.reinstated@aduanefie.com',
+            'role_id' => 1,
+        ]);
+        $store = Store::create([
+            'name' => 'Reinstated Cocoa Farm',
+            'zone_id' => 2,
+            'marketer_id' => $marketer->id,
+            'marketer_assigned_at' => now(),
+            'status' => 1,
+            'tax' => 0,
+        ]);
+
+        $service = new MarketerCommissionService();
+
+        // 1. Approved store credits legitimate bounty once
+        $this->assertTrue($service->creditBounty($marketer, $store));
+        $this->assertSame(1, MarketerCommission::where('store_id', $store->id)->count());
+
+        // 2. Marketer requests payout while approved
+        $payout = $service->requestPayout($marketer, [
+            'network' => 'MTN',
+            'account_name' => 'Ama Boateng',
+            'account_number' => '0244000111',
+            'country' => 'GH',
+        ]);
+
+        // 3. Store is temporarily suspended -> payout approval blocked, ledger row preserved
+        $store->update(['status' => 0]);
+        try {
+            $service->approve($payout, $admin);
+            $this->fail('Expected payout approval to be blocked while store is suspended.');
+        } catch (RuntimeException $e) {
+            $this->assertStringContainsString('not administratively approved', $e->getMessage());
+        }
+        $this->assertSame(1, MarketerCommission::where('store_id', $store->id)->count());
+
+        // 4. Store is reinstated -> bounty is NOT duplicated and payout can now be approved
+        $store->update(['status' => 1]);
+        $this->assertFalse($service->creditBounty($marketer, $store));
+        $this->assertSame(1, MarketerCommission::where('store_id', $store->id)->count());
+
+        $approved = $service->approve($payout, $admin);
+        $this->assertSame(MarketerPayout::STATUS_APPROVED, $approved->status);
+    }
+
+    public function test_delivery_serviceability_handles_absent_empty_invalid_disabled_and_enabled_settings(): void
+    {
+        $store = Store::create([
+            'name' => 'Remote Farm',
+            'zone_id' => 115,
+            'status' => 1,
+            'tax' => 0,
+        ]);
+        $controller = new OrderController();
+        $makeReq = fn () => Request::create('/api/v1/customer/order/checkout-summary', 'POST', [
+            'order_type' => 'delivery',
+            'order_amount' => 100,
+            'distance' => 80,
+            'store_id' => $store->id,
+        ]);
+
+        // 1. Absent settings -> opt-in inactive (currently allows order)
+        DB::table('business_settings')->whereIn('key', ['retail_delivery_zone_ids', 'max_retail_delivery_distance_km'])->delete();
+        \Illuminate\Support\Facades\Cache::flush();
+        $this->assertSame(200, $controller->checkout_summary($makeReq())->getStatusCode());
+
+        // 2. Empty settings -> inactive
+        DB::table('business_settings')->updateOrInsert(['key' => 'retail_delivery_zone_ids'], ['value' => '']);
+        DB::table('business_settings')->updateOrInsert(['key' => 'max_retail_delivery_distance_km'], ['value' => '']);
+        \Illuminate\Support\Facades\Cache::flush();
+        $this->assertSame(200, $controller->checkout_summary($makeReq())->getStatusCode());
+
+        // 3. Invalid / malformed settings -> fail-safe without 500
+        DB::table('business_settings')->updateOrInsert(['key' => 'retail_delivery_zone_ids'], ['value' => '{not-valid-json']);
+        DB::table('business_settings')->updateOrInsert(['key' => 'max_retail_delivery_distance_km'], ['value' => 'abc']);
+        \Illuminate\Support\Facades\Cache::flush();
+        $this->assertSame(200, $controller->checkout_summary($makeReq())->getStatusCode());
+
+        // 4. Disabled explicitly (0 / []) -> inactive
+        DB::table('business_settings')->updateOrInsert(['key' => 'retail_delivery_zone_ids'], ['value' => '[]']);
+        DB::table('business_settings')->updateOrInsert(['key' => 'max_retail_delivery_distance_km'], ['value' => '0']);
+        \Illuminate\Support\Facades\Cache::flush();
+        $this->assertSame(200, $controller->checkout_summary($makeReq())->getStatusCode());
+
+        // 5. Enabled -> blocks out-of-zone and over-radius delivery
+        DB::table('business_settings')->updateOrInsert(['key' => 'retail_delivery_zone_ids'], ['value' => json_encode([2])]);
+        DB::table('business_settings')->updateOrInsert(['key' => 'max_retail_delivery_distance_km'], ['value' => '35']);
+        \Illuminate\Support\Facades\Cache::flush();
+        $this->assertSame(403, $controller->checkout_summary($makeReq())->getStatusCode());
     }
 }
 }

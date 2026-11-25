@@ -151,24 +151,32 @@ if (! function_exists('order_place')) {
             }
         }
 
-        try {
-            Helpers::send_order_notification($order);
-            $address = json_decode($order->delivery_address, true);
-
-
-            if(Helpers::getNotificationStatusData('customer','customer_delivery_verification','mail_status')  && Helpers::get_mail_status('order_verification_mail_status_user') == 1 && config('mail.status')){
-
-                if ( config('order_delivery_verification') == 1  && $order->is_guest == 0) {
-                    Mail::to($order->customer->email)->send(new OrderVerificationMail($order->otp,$order->customer->f_name));
+        // Defer non-transactional external side effects (push notifications & mail)
+        // until after the surrounding DB transaction commits so a rollback + retry
+        // can never emit duplicate notifications or emails.
+        $orderId = $order->id;
+        \Illuminate\Support\Facades\DB::afterCommit(function () use ($orderId) {
+            try {
+                $committedOrder = Order::find($orderId);
+                if (!$committedOrder) {
+                    return;
                 }
+                Helpers::send_order_notification($committedOrder);
+                $address = json_decode($committedOrder->delivery_address, true);
 
-                if ($order->is_guest == 1   && isset($address['contact_person_email'])) {
-                    Mail::to($address['contact_person_email'])->send(new OrderVerificationMail($order->otp,$order?->customer?->f_name));
+                if (Helpers::getNotificationStatusData('customer', 'customer_delivery_verification', 'mail_status') && Helpers::get_mail_status('order_verification_mail_status_user') == 1 && config('mail.status')) {
+                    if (config('order_delivery_verification') == 1 && $committedOrder->is_guest == 0 && $committedOrder->customer?->email) {
+                        Mail::to($committedOrder->customer->email)->send(new OrderVerificationMail($committedOrder->otp, $committedOrder->customer->f_name));
+                    }
+
+                    if ($committedOrder->is_guest == 1 && isset($address['contact_person_email'])) {
+                        Mail::to($address['contact_person_email'])->send(new OrderVerificationMail($committedOrder->otp, $committedOrder?->customer?->f_name));
+                    }
                 }
+            } catch (\Exception $e) {
+                info($e);
             }
-        } catch (\Exception $e) {
-            info($e);
-        }
+        });
 
     }
 

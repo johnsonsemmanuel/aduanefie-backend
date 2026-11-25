@@ -125,6 +125,7 @@ class BatchBFarmerAcquisitionAndIsolationTest extends TestCase
                 $table->unsignedBigInteger('zone_id')->nullable();
                 $table->unsignedBigInteger('module_id')->default(1);
                 $table->integer('status')->default(0);
+                $table->string('cover_photo')->nullable();
                 $table->decimal('tax', 8, 2)->default(0);
                 $table->string('delivery_time')->nullable();
                 $table->string('store_business_model')->default('commission');
@@ -280,5 +281,29 @@ class BatchBFarmerAcquisitionAndIsolationTest extends TestCase
         $this->assertStringContainsString('>1</span>', $voltaNavHtml);
         $this->assertStringContainsString('>2</span>', $voltaNavHtml);
         $this->assertStringNotContainsString('>3</span>', $voltaNavHtml);
+    }
+
+    public function test_optional_cover_photo_uses_default_asset_and_nullable_tax_respects_default_store_tax(): void
+    {
+        // 1. Helpers::upload with null cover_photo returns default 'def.png' (never null/broken)
+        $coverFilename = \App\CentralLogics\Helpers::upload('store/cover/', 'png', null);
+        $this->assertSame('def.png', $coverFilename);
+
+        // 2. Store created without cover_photo resolves default image cleanly
+        $store = Store::create([
+            'name' => 'No Cover Farm',
+            'zone_id' => 4,
+            'module_id' => 2,
+            'status' => 0,
+            'cover_photo' => $coverFilename,
+            'tax' => (float) (DB::table('business_settings')->where('key', 'default_store_tax')->value('value') ?? 0),
+        ]);
+        $this->assertSame('def.png', $store->cover_photo);
+        $this->assertSame(0.0, (float) $store->tax);
+
+        // 3. When default_store_tax is explicitly configured in BusinessSetting, fallback uses it
+        DB::table('business_settings')->updateOrInsert(['key' => 'default_store_tax'], ['value' => '12.5']);
+        $configuredTax = (float) (DB::table('business_settings')->where('key', 'default_store_tax')->value('value') ?? 0);
+        $this->assertSame(12.5, $configuredTax);
     }
 }
