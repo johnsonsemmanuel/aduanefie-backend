@@ -1,0 +1,32 @@
+/* Shared foundation for operations, suppliers, marketers and logistics. */
+:root {
+    --adf-brand: #2E6545;
+    --adf-ink: #253D30;
+    --adf-muted: #58665D;
+    --adf-line: #DCE4DD;
+    --adf-surface: #F7F9F7;
+    --primary-clr: var(--adf-brand);
+    --ink: var(--adf-ink);
+    --brand: var(--adf-brand);
+    --muted: var(--adf-muted);
+    --line: var(--adf-line);
+    --bg: var(--adf-surface);
+}
+body { background-color: var(--adf-surface); }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible,
+textarea:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid var(--adf-brand);
+    outline-offset: 3px;
+}
+nav.tabs a, .mobile-bottom-nav a { min-height: 44px; }
+.btn:not(.btn-icon), button[type="submit"] { min-height: 44px; }
+.card { border-radius: 12px; }
+.table-responsive { overscroll-behavior-x: contain; }
+@media (max-width: 767.98px) {
+    input[type="text"], input[type="email"], input[type="tel"], input[type="password"],
+    input[type="number"], select, textarea { font-size: 16px; }
+    .wrap { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+}

@@ -39,15 +39,7 @@ class GroupBuyController extends Controller
         $query = GroupBuy::with(['item:id,name,price,image,module_id,moq,bulk_pricing_tiers', 'store:id,name'])
             ->withCount('participants')
             ->whereIn('module_id', $compatibleModuleIds)
-            ->whereHas('item', function ($q) {
-                $q->where('moq', '>', 1)
-                    ->orWhere(function ($q2) {
-                        $q2->whereNotNull('bulk_pricing_tiers')
-                            ->where('bulk_pricing_tiers', '!=', '[]')
-                            ->where('bulk_pricing_tiers', '!=', 'null');
-                    })
-                    ->orWhereHas('bulkPricingTiers');
-            })
+            ->whereHas('item', fn ($q) => $q->bulkEligible())
             ->when($scopedModuleId !== null, fn ($q) => $q->where('module_id', $scopedModuleId))
             ->when($request->filled('store_id'), fn ($q) => $q->where('store_id', (int) $request->store_id))
             ->when($request->filled('status') && $request->status !== 'all', fn ($q) => $q->where('status', $request->status))

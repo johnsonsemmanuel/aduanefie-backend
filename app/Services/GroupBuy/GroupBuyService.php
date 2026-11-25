@@ -56,15 +56,7 @@ class GroupBuyService
             return Item::withoutGlobalScopes()
                 ->where('module_id', $moduleId)
                 ->where('status', 1)
-                ->where(function ($q) {
-                    $q->where('moq', '>', 1)
-                        ->orWhere(function ($q2) {
-                            $q2->whereNotNull('bulk_pricing_tiers')
-                                ->where('bulk_pricing_tiers', '!=', '[]')
-                                ->where('bulk_pricing_tiers', '!=', 'null');
-                        })
-                        ->orWhereHas('bulkPricingTiers');
-                })
+                ->bulkEligible()
                 ->exists();
         });
     }

@@ -38,6 +38,7 @@
     <link rel="stylesheet" href="{{ asset('public/assets/admin/css/style.css?v=2.3') }}">
     <link rel="stylesheet" href="{{ asset('public/assets/admin') }}/css/toastr.css">
     <link rel="stylesheet" href="{{ asset('public/assets/admin/css/custom.css') }}">
+    @include('shared.design-system')
 </head>
 
 <body>

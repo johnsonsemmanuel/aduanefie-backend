@@ -145,6 +145,7 @@
             .mobile-bottom-nav .nav-ico { font-size: 16px; line-height: 1; }
         }
     </style>
+    @include('shared.design-system')
 </head>
 <body>
 @hasSection('topbar')

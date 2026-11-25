@@ -41,6 +41,7 @@
 
     <script src="{{asset('public/assets/admin')}}/vendor/hs-navbar-vertical-aside/hs-navbar-vertical-aside-mini-cache.js"></script>
     <link rel="stylesheet" href="{{asset('public/assets/admin')}}/css/toastr.css">
+    @include('shared.design-system')
 </head>
 
 <body class="footer-offset">

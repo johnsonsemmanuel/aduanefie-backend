@@ -402,6 +402,27 @@ class Item extends Model
         return $this->hasMany(BulkPricingTier::class, 'item_id')->where('status', 'active')->orderBy('min_quantity', 'asc');
     }
 
+    /** Catalogue eligibility shared by group discovery and module checks. */
+    public function scopeBulkEligible($query)
+    {
+        return $query->where(function ($eligible) {
+            $eligible->where('moq', '>', 1)
+                ->orWhere(function ($tiers) {
+                    if ($tiers->getConnection()->getDriverName() === 'pgsql') {
+                        // PostgreSQL json has no equality operator. Guard scalar
+                        // JSON as well: only non-empty arrays define price tiers.
+                        $column = $tiers->getQuery()->getGrammar()->wrap(
+                            $tiers->getModel()->qualifyColumn('bulk_pricing_tiers')
+                        );
+                        $tiers->whereRaw("CASE WHEN jsonb_typeof(CAST({$column} AS jsonb)) = 'array' THEN jsonb_array_length(CAST({$column} AS jsonb)) ELSE 0 END > 0");
+                    } else {
+                        $tiers->whereJsonLength('bulk_pricing_tiers', '>', 0);
+                    }
+                })
+                ->orWhereHas('bulkPricingTiers');
+        });
+    }
+
     /**
      * Get effective price for a given quantity with bulk discount.
      */
