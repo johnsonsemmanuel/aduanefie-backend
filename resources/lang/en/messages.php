@@ -7629,4 +7629,6 @@ Smartly or Earn. ',
   'store_signin' => 'Store signin',
   'Marketer Sign In' => 'Marketer Sign In',
   'Sign in to your marketer panel' => 'Sign in to your marketer panel',
+  'Enter your password' => 'Enter your password',
+  'Show or hide password' => 'Show or hide password',
 );
