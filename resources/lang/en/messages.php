@@ -7626,4 +7626,7 @@ Smartly or Earn. ',
   'Unsupported incoterm.' => 'Unsupported incoterm.',
   'amount_crossed_maximum_cod_order_amount' => 'Amount crossed maximum cod order amount',
   'You_can_not_place_empty_orders' => 'You can not place empty orders',
+  'store_signin' => 'Store signin',
+  'Marketer Sign In' => 'Marketer Sign In',
+  'Sign in to your marketer panel' => 'Sign in to your marketer panel',
 );
