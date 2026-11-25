@@ -1,0 +1,31 @@
+# Retire the legacy MySQL role portals. Current role guards and data live on
+# the Railway operations host. Old submitted forms must never be replayed.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    RewriteCond %{HTTP_HOST} ^(partners|marketer|logistics)\.aduanefie\.com$ [NC]
+    RewriteCond %{REQUEST_METHOD} !^(GET|HEAD)$ [NC]
+    RewriteRule ^ - [R=404,L]
+
+    RewriteCond %{HTTP_HOST} ^(partners|marketer)\.aduanefie\.com$ [NC]
+    RewriteCond %{REQUEST_URI} ^/$
+    RewriteRule ^ https://admin.aduanefie.com/marketer-login [R=302,L]
+
+    RewriteCond %{HTTP_HOST} ^(partners|marketer)\.aduanefie\.com$ [NC]
+    RewriteCond %{REQUEST_URI} ^/(marketer([/-]|$)|public/|assets/|storage/)
+    RewriteRule ^ https://admin.aduanefie.com%{REQUEST_URI} [R=302,L,NE]
+
+    RewriteCond %{HTTP_HOST} ^(partners|marketer)\.aduanefie\.com$ [NC]
+    RewriteRule ^ - [R=404,L]
+
+    RewriteCond %{HTTP_HOST} ^logistics\.aduanefie\.com$ [NC]
+    RewriteCond %{REQUEST_URI} ^/$
+    RewriteRule ^ https://admin.aduanefie.com/rider-login [R=302,L]
+
+    RewriteCond %{HTTP_HOST} ^logistics\.aduanefie\.com$ [NC]
+    RewriteCond %{REQUEST_URI} ^/(rider([/-]|$)|public/|assets/|storage/)
+    RewriteRule ^ https://admin.aduanefie.com%{REQUEST_URI} [R=302,L,NE]
+
+    RewriteCond %{HTTP_HOST} ^logistics\.aduanefie\.com$ [NC]
+    RewriteRule ^ - [R=404,L]
+</IfModule>
