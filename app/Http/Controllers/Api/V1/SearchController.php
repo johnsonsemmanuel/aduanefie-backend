@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Support\SearchFilterIds;
+
 use App\Models\Item;
 use App\Models\Category;
 use Illuminate\Http\Request;
@@ -36,8 +38,8 @@ class SearchController extends Controller
 
         $limit = $request['limit'] ?? 10;
         $offset = $request['offset'] ?? 1;
-        $category_ids = $request['category_ids'] ? (is_array($request['category_ids']) ? $request['category_ids'] : json_decode($request['category_ids'])) : '';
-        $brand_ids = $request['brand_ids'] ? (is_array($request['brand_ids']) ? $request['brand_ids'] : json_decode($request['brand_ids'])) : '';
+        $category_ids = SearchFilterIds::normalize($request->input('category_ids'));
+        $brand_ids = SearchFilterIds::normalize($request->input('brand_ids'));
         $filter = $request['filter'] ? (is_array($request['filter']) ? $request['filter'] : str_getcsv(trim($request['filter'], "[]"), ',')) : '';
         $type = $request->query('type', 'all');
         $min = $request->query('min_price');
